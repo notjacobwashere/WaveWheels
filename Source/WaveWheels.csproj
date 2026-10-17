@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/WaveWheels.ico</ApplicationIcon>
+    <AssemblyName>WaveWheels</AssemblyName>
+    <RootNamespace>WaveWheels</RootNamespace>
+    <Version>0.3.1</Version>
+    <Description>Edge-triggered volume wheels for Elgato Wave Link</Description>
+    <Company>WaveWheels</Company>
+    <Product>WaveWheels</Product>
+    <Copyright>Copyright 2026 notjacobwashere</Copyright>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- WPF owns the process and reads PerMonitorV2 from its manifest. WinForms is only used for NotifyIcon. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+</Project>

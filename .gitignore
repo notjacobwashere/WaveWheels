@@ -1,0 +1,21 @@
+# Compiled application, build outputs, generated renders, and test profiles
+App/
+artifacts/
+**/bin/
+**/obj/
+**/test-profile/
+**/test-artifacts/
+**/render-profile/
+
+# Personal settings, logs, credentials, and editor state
+settings.json
+settings.json.*
+*.log
+*.recovery-*
+.env
+.env.*
+.vs/
+.vscode/
+*.user
+*.suo
+*.zip

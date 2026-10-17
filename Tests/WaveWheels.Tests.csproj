@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>disable</ImplicitUsings><AssemblyName>WaveWheels.Tests</AssemblyName></PropertyGroup>
+ <PropertyGroup><WaveWheelsAssembly Condition="'$(WaveWheelsAssembly)'==''">../App/WaveWheels.dll</WaveWheelsAssembly></PropertyGroup>
+ <ItemGroup><Reference Include="WaveWheels"><HintPath>$(WaveWheelsAssembly)</HintPath></Reference></ItemGroup>
+</Project>

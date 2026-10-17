@@ -1,0 +1,146 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using WaveWheels;
+
+internal static class UiRendering
+{
+    public static void Run(string path)
+    {
+        Exception? error=null;
+        var thread=new Thread(()=>
+        {
+            try
+            {
+                var app=new App();app.InitializeComponent();
+                var store=new SettingsStore(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,"render-profile"));
+                var vm=new MainViewModel(store,true);
+                while(vm.Wheels.Count>3)vm.RemoveWheel(vm.Wheels[^1]);
+                while(vm.Wheels.Count<3)vm.AddWheel();
+                vm.Wheels[0].Name="Music";vm.Wheels[0].Color="#36BBD3";vm.Wheels[0].ChannelId="music";vm.Wheels[0].MixId="personal";
+                vm.Wheels[1].Name="Game";vm.Wheels[1].Color="#DA5DAD";vm.Wheels[1].ChannelId="game";vm.Wheels[1].MixId="personal";
+                vm.Wheels[2].Name="Voice";vm.Wheels[2].Color="#A99AFF";vm.Wheels[2].ChannelId="voice";vm.Wheels[2].MixId="personal";
+                vm.Update(new(true,"Preview data · no mixer connection","Wave Link 3",new[]{
+                    new Channel("music","Music",.68,false,true,new[]{new ChannelMix("personal",.68,false)}),
+                    new Channel("game","Game",.82,false,true,new[]{new ChannelMix("personal",.82,false)}),
+                    new Channel("voice","Voice chat",.55,false,true,new[]{new ChannelMix("personal",.55,false)})
+                },new[]{new Mix("personal","Headphones")}));
+                vm.SelectedWheel=vm.Wheels[0];vm.WheelSizePercent=100;vm.AnimateWheels=true;
+                vm.Message="Preview with example channels · configuration rendered without desktop input";
+                var window=new SettingsWindow(vm);
+                var root=(FrameworkElement)window.Content;
+                window.Content=null;root.DataContext=vm;root.Resources=window.Resources;
+                System.Windows.Documents.TextElement.SetFontFamily(root,new FontFamily("Segoe UI"));
+                System.Windows.Documents.TextElement.SetFontSize(root,14);
+                System.Windows.Documents.TextElement.SetForeground(root,new SolidColorBrush(Color.FromRgb(243,240,250)));
+                root.Measure(new Size(1160,860));root.Arrange(new Rect(0,0,1160,860));root.UpdateLayout();
+                var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
+                foreach(var wheel in Descendants(root).OfType<WheelControl>()) {wheel.BeginAnimation(WheelControl.DisplayLevelProperty,null);wheel.DisplayLevel=wheel.Wheel?.Level??0;}
+                root.UpdateLayout();
+                var bitmap=new RenderTargetBitmap(1160,860,96,96,PixelFormats.Pbgra32);bitmap.Render(root);
+                var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using(var output=File.Create(path))encoder.Save(output);
+                var list=(ListBox)window.FindName("WheelList");
+                if(list.ItemContainerGenerator.ContainerFromIndex(0) is not ListBoxItem firstItem)throw new Exception("Wheel list items were not generated.");
+                var top=firstItem.TranslatePoint(new Point(0,0),list).Y;
+                if(window.InsertionAt(top+2)!=0||window.InsertionAt(top+firstItem.ActualHeight-2)!=1)throw new Exception("Drop hit testing must distinguish the top and bottom halves of a row.");
+                window.ShowDropIndicator(2);root.UpdateLayout();
+                if(window.DropIndicatorY==null)throw new Exception("The reorder drop indicator is missing its adorner layer.");
+                Save(root,Path.Combine(Path.GetDirectoryName(path)!,Path.GetFileNameWithoutExtension(path)+"-reorder.png"),1160,860);
+                window.ClearDropMarker();
+                var settingsNav=(Button)window.FindName("SettingsNav");
+                if(!settingsNav.Content.ToString()!.Contains("Settings"))throw new Exception("An explicitly named Settings tab is required.");
+                settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                root.UpdateLayout();
+                if(((FrameworkElement)window.FindName("SettingsPage")).Visibility!=Visibility.Visible)throw new Exception("Settings navigation did not open the page.");
+                Save(root,Path.Combine(Path.GetDirectoryName(path)!,Path.GetFileNameWithoutExtension(path)+"-settings.png"),1160,860);
+                var sizeSlider=(Slider)window.FindName("WheelSizeSlider");
+                sizeSlider.SetCurrentValue(Slider.ValueProperty,145d);
+                if(vm.WheelSizePercent!=145)throw new Exception("The Settings size slider did not change the actual view model.");
+                ((Button)window.FindName("WheelsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                root.Measure(new Size(1000,740));root.Arrange(new Rect(0,0,1000,740));root.UpdateLayout();
+                Save(root,Path.Combine(Path.GetDirectoryName(path)!,Path.GetFileNameWithoutExtension(path)+"-compact.png"),1000,740);
+                // Exercise the actual collection move and persistence code without a visible window.
+                var first=vm.Wheels[0];var original=vm.Wheels.Select(w=>w.Id).ToArray();
+                vm.MoveToInsertion(first,vm.Wheels.Count);
+                if(vm.Wheels[^1]!=first||vm.SelectedWheel!=first||vm.Wheels.Select(w=>w.Id).Distinct().Count()!=3)throw new Exception("Reordering lost identity or selection.");
+                for(var i=0;i<vm.Wheels.Count;i++)if(vm.Wheels[i].Position!=i)throw new Exception("Order numbers did not update.");
+                vm.WheelSizePercent=145;vm.AnimateWheels=false;vm.Save();var restored=store.Load();
+                if(restored.WheelSizePercent!=145||restored.AnimateWheels||restored.Wheels[^1].Id!=first.Id)throw new Exception("Size, animation, or order did not survive save.");
+                vm.MoveToInsertion(first,0);if(!vm.Wheels.Select(w=>w.Id).SequenceEqual(original))throw new Exception("Upward insertion did not restore the original order.");
+                VerifyOverlay(vm,Path.GetDirectoryName(path)!);
+                vm.Dispose();
+            }
+            catch(Exception ex){error=ex;}
+        });
+        thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();if(error!=null)throw error;
+    }
+    private static void VerifyOverlay(MainViewModel vm,string directory)
+    {
+        var overlay=new OverlayWindow(vm);
+        var surface=(Grid)overlay.Content;overlay.Content=null;
+        surface.Measure(new Size(350,384));surface.Arrange(new Rect(0,0,350,384));surface.UpdateLayout();
+        if(surface.Background!=null)throw new Exception("The overlay must have no background panel.");
+        foreach(var wheel in Descendants(surface).OfType<WheelControl>()) {wheel.BeginAnimation(WheelControl.DisplayLevelProperty,null);wheel.DisplayLevel=wheel.Wheel!.Level;}
+        var motion=overlay.Motion;
+        motion.Enter(350,true,true,()=>{});motion.Seek(TimeSpan.Zero);
+        if(motion.Slide.X> -349 || Math.Abs(motion.Scale.ScaleX-.72)>.001 || surface.Opacity!=1)throw new Exception("Entrance must start off-screen, reduced in size, and fully opaque.");
+        motion.Seek(TimeSpan.FromMilliseconds(100));
+        if(motion.Slide.X is <= -350 or >= -10 || motion.Scale.ScaleX is <= .72 or >= 1)throw new Exception("Entrance must move and grow between frames.");
+        Save(surface,Path.Combine(directory,"overlay-enter-100ms.png"),350,384);
+        motion.Seek(TimeSpan.FromMilliseconds(220));
+        Save(surface,Path.Combine(directory,"overlay-enter-220ms.png"),350,384);
+        motion.Seek(TimeSpan.FromMilliseconds(380));
+        if(Math.Abs(motion.Slide.X)>.001||Math.Abs(motion.Scale.ScaleX-1)>.001)throw new Exception("Entrance must finish at the configured size and position.");
+        Save(surface,Path.Combine(directory,"overlay.png"),350,384);
+        var bitmap=new RenderTargetBitmap(350,384,96,96,PixelFormats.Pbgra32);bitmap.Render(surface);
+        var pixel=new byte[4];bitmap.CopyPixels(new Int32Rect(345,180,1,1),pixel,4,0);
+        if(pixel[3]!=0)throw new Exception("The desktop around the wheels must remain transparent.");
+        motion.Exit(350,true,()=>{});motion.Seek(TimeSpan.FromMilliseconds(130));
+        if(motion.Slide.X>= -20||motion.Scale.ScaleX>=.99||surface.Opacity!=1)throw new Exception("Exit must slide and shrink without fading.");
+        Save(surface,Path.Combine(directory,"overlay-exit-130ms.png"),350,384);
+        var reversingX=motion.Slide.X;var reversingScale=motion.Scale.ScaleX;
+        motion.Enter(350,false,true,()=>{});motion.Seek(TimeSpan.Zero);
+        if(Math.Abs(motion.Slide.X-reversingX)>.001||Math.Abs(motion.Scale.ScaleX-reversingScale)>.001)throw new Exception("Reopening during exit must reverse from the current pose.");
+        var completed=false;motion.Exit(350,false,()=>completed=true);
+        if(!completed||motion.Slide.X!= -350||motion.Scale.ScaleX!=.72)throw new Exception("Disabling motion must finish immediately.");
+        // Drive the real wheel controls using the same router used by the global hook.
+        var controls=Descendants(surface).OfType<WheelControl>().ToArray();var router=overlay.Input;
+        long now=0;
+        foreach(var control in controls)
+        {
+            if(control.ToolTip!=null)throw new Exception("Wheel hover tooltips must be removed.");
+            control.CanAdjustVolume=()=>router.CanAdjust(now);
+        }
+        var before=vm.Wheels.Select(w=>w.Level).ToArray();
+        for(now=0;now<=2000;now+=20)
+        {
+            var route=router.Route(2,2,now);
+            if(route.Index>=0)controls[route.Index].Adjust(1);
+            // Protect the control's own wheel/drag path as well as the global hook path.
+            foreach(var control in controls)control.Adjust(.25);
+        }
+        if(!vm.Wheels.Select(w=>w.Level).SequenceEqual(before))throw new Exception("The entire opening gesture must leave every bound channel unchanged.");
+        now=2250;var armed=router.Route(2,0,now);controls[armed.Index].Adjust(1);
+        if(vm.Wheels[2].Level!=Math.Round(before[2]+.01,2)||vm.Wheels[0].Level!=before[0]||vm.Wheels[1].Level!=before[1])throw new Exception("The first post-pause scroll must adjust only its target, with no accumulated opening input.");
+        now=2260;armed=router.Route(0,2,now);controls[armed.Index].Adjust(1);
+        if(vm.Wheels[0].Level!=Math.Round(before[0]+.01,2)||vm.Wheels[1].Level!=before[1])throw new Exception("Top-wheel adjustment must work after activation.");
+        router.Close();now=3000;var reopened=router.Route(0,0,now);
+        if(!reopened.Reveal||reopened.Index!=-1)throw new Exception("Reopening must reset input suppression.");
+        overlay.Close();
+    }
+    private static void Save(FrameworkElement root,string path,int width,int height)
+    {
+        root.UpdateLayout();
+        var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32);bitmap.Render(root);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using(var output=File.Create(path))encoder.Save(output);
+    }
+    private static System.Collections.Generic.IEnumerable<DependencyObject> Descendants(DependencyObject parent)
+    {
+        for(var i=0;i<VisualTreeHelper.GetChildrenCount(parent);i++){var child=VisualTreeHelper.GetChild(parent,i);yield return child;foreach(var nested in Descendants(child))yield return nested;}
+    }
+}

@@ -1,0 +1,11 @@
+const {spawn}=require('node:child_process');
+const path=require('node:path');
+const legacy=process.argv.includes('--legacy');
+const option=name=>process.argv.find(a=>a.startsWith('--'+name+'='))?.split('=').slice(1).join('=');
+const assembly=option('assembly')||path.join(__dirname,'bin/Release/net9.0-windows/WaveWheels.Tests.dll');
+const profile=option('profile')||path.join(__dirname,'test-artifacts',legacy?'legacy':'modern');
+const server=spawn(process.execPath,[path.join(__dirname,'wave-link-simulator.cjs'),...(legacy?['--legacy']:[])],{windowsHide:true,stdio:['ignore','pipe','inherit']});
+let started=false,pending='';
+const timeout=setTimeout(()=>{console.error('Test orchestration timeout');server.kill();process.exitCode=1;},30000);
+server.stdout.on('data',chunk=>{pending+=chunk;let i;while((i=pending.indexOf('\n'))>=0){const line=pending.slice(0,i);pending=pending.slice(i+1);if(!started){const ready=JSON.parse(line);started=true;const test=spawn('dotnet',[assembly,String(ready.port),profile],{windowsHide:true,stdio:'inherit'});test.on('exit',code=>{clearTimeout(timeout);server.kill();process.exitCode=code??1;});test.on('error',e=>{console.error(e);server.kill();clearTimeout(timeout);process.exitCode=1;});}else console.log('Simulator: '+line);}});
+server.on('error',e=>{console.error(e);clearTimeout(timeout);process.exitCode=1;});
