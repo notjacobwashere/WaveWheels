@@ -32,7 +32,7 @@ public partial class SettingsWindow : Window
         SelectedPreview.MuteRequested += model.ToggleMute;
         Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); } };
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
-        Activated += (_,_) => { model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
+        Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
     }
     private void TitleDrag(object sender,MouseButtonEventArgs e) { if(e.ClickCount==2) WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;else if(e.LeftButton==MouseButtonState.Pressed) DragMove(); }
     private void Minimize(object sender,RoutedEventArgs e) => WindowState=WindowState.Minimized;
@@ -44,8 +44,16 @@ public partial class SettingsWindow : Window
         StartupPage.Visibility=section=="Startup"?Visibility.Visible:Visibility.Collapsed;
         SettingsPage.Visibility=section=="Settings"?Visibility.Visible:Visibility.Collapsed;
         ConnectionPage.Visibility=section=="Connection"?Visibility.Visible:Visibility.Collapsed;
-        foreach(var button in new[]{WheelsNav,SettingsNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(39,33,50):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(223,201,255):Color.FromRgb(151,138,167)); }
+        ProfilesPage.Visibility=section=="Profiles"?Visibility.Visible:Visibility.Collapsed;
+        PlacementPage.Visibility=section=="Placement"?Visibility.Visible:Visibility.Collapsed;
+        UpdatesPage.Visibility=section=="Updates"?Visibility.Visible:Visibility.Collapsed;
+        foreach(var button in new[]{WheelsNav,SettingsNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(39,33,50):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(223,201,255):Color.FromRgb(151,138,167)); }
     }
+    private void NewProfile(object sender,RoutedEventArgs e)=>model.AddProfile(false);
+    private void DuplicateProfile(object sender,RoutedEventArgs e)=>model.AddProfile(true);
+    private void RemoveProfile(object sender,RoutedEventArgs e)=>model.RemoveProfile();
+    private async void CheckUpdates(object sender,RoutedEventArgs e)=>await model.CheckForUpdatesAsync();
+    private void OpenRelease(object sender,RoutedEventArgs e)=>model.OpenReleasePage();
     private void Add(object sender,RoutedEventArgs e) => model.AddWheel();
     private void Remove(object sender,RoutedEventArgs e) => model.RemoveWheel();
     private void RowUp(object sender,RoutedEventArgs e) { if(sender is Button {Tag:Wheel wheel}) { model.SelectedWheel=wheel; AnimateReorder(()=>model.Move(-1)); } }

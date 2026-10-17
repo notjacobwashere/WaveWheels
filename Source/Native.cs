@@ -52,7 +52,7 @@ public sealed class EdgeHook : IDisposable
         try { while (Native.GetMessage(out var message, IntPtr.Zero,0,0) > 0) { Native.TranslateMessage(ref message); Native.DispatchMessage(ref message); } }
         finally { Native.UnhookWindowsHookEx(hook); }
     }
-    private IntPtr OnHook(int code, IntPtr message, IntPtr data)
+    internal IntPtr OnHook(int code, IntPtr message, IntPtr data)
     {
         if (code >= 0 && message.ToInt64() == 0x20A)
         {

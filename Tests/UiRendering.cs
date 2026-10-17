@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,8 +20,10 @@ internal static class UiRendering
             try
             {
                 var app=new App();app.InitializeComponent();
+                Console.WriteLine("UI: initialized resources");
                 var store=new SettingsStore(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,"render-profile"));
                 var vm=new MainViewModel(store,true);
+                Console.WriteLine("UI: loaded profile and monitor choices");
                 while(vm.Wheels.Count>3)vm.RemoveWheel(vm.Wheels[^1]);
                 while(vm.Wheels.Count<3)vm.AddWheel();
                 vm.Wheels[0].Name="Music";vm.Wheels[0].Color="#36BBD3";vm.Wheels[0].ChannelId="music";vm.Wheels[0].MixId="personal";
@@ -31,15 +34,17 @@ internal static class UiRendering
                     new Channel("game","Game",.82,false,true,new[]{new ChannelMix("personal",.82,false)}),
                     new Channel("voice","Voice chat",.55,false,true,new[]{new ChannelMix("personal",.55,false)})
                 },new[]{new Mix("personal","Headphones")}));
-                vm.SelectedWheel=vm.Wheels[0];vm.WheelSizePercent=100;vm.AnimateWheels=true;
+                vm.SelectedWheel=vm.Wheels[0];vm.WheelSizePercent=100;vm.AnimateWheels=true;vm.ScreenEdge="Left";vm.MonitorId="";vm.PositionPercent=50;vm.WheelSpacing=0;vm.EdgeEnabled=true;vm.CheckUpdatesAutomatically=true;
                 vm.Message="Preview with example channels · configuration rendered without desktop input";
                 var window=new SettingsWindow(vm);
+                Console.WriteLine("UI: constructed studio");
                 var root=(FrameworkElement)window.Content;
                 window.Content=null;root.DataContext=vm;root.Resources=window.Resources;
                 System.Windows.Documents.TextElement.SetFontFamily(root,new FontFamily("Segoe UI"));
                 System.Windows.Documents.TextElement.SetFontSize(root,14);
                 System.Windows.Documents.TextElement.SetForeground(root,new SolidColorBrush(Color.FromRgb(243,240,250)));
                 root.Measure(new Size(1160,860));root.Arrange(new Rect(0,0,1160,860));root.UpdateLayout();
+                Console.WriteLine("UI: arranged studio");
                 var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
                 foreach(var wheel in Descendants(root).OfType<WheelControl>()) {wheel.BeginAnimation(WheelControl.DisplayLevelProperty,null);wheel.DisplayLevel=wheel.Wheel?.Level??0;}
                 root.UpdateLayout();
@@ -58,6 +63,14 @@ internal static class UiRendering
                 settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 root.UpdateLayout();
                 if(((FrameworkElement)window.FindName("SettingsPage")).Visibility!=Visibility.Visible)throw new Exception("Settings navigation did not open the page.");
+                foreach(var section in new[]{"Profiles","Placement","Updates"})
+                {
+                    ((Button)window.FindName(section+"Nav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
+                    if(((FrameworkElement)window.FindName(section+"Page")).Visibility!=Visibility.Visible)throw new Exception(section+" navigation failed.");
+                    if(section=="Profiles"&&!Descendants((ComboBox)window.FindName("ProfilePicker")).OfType<TextBlock>().Any(t=>t.Text==vm.ActiveProfile!.Name))throw new Exception("The profile picker must show its friendly name.");
+                    Save(root,Path.Combine(Path.GetDirectoryName(path)!,section.ToLowerInvariant()+".png"),1160,860);
+                }
+                settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
                 Save(root,Path.Combine(Path.GetDirectoryName(path)!,Path.GetFileNameWithoutExtension(path)+"-settings.png"),1160,860);
                 var sizeSlider=(Slider)window.FindName("WheelSizeSlider");
                 sizeSlider.SetCurrentValue(Slider.ValueProperty,145d);
@@ -74,6 +87,15 @@ internal static class UiRendering
                 if(restored.WheelSizePercent!=145||restored.AnimateWheels||restored.Wheels[^1].Id!=first.Id)throw new Exception("Size, animation, or order did not survive save.");
                 vm.MoveToInsertion(first,0);if(!vm.Wheels.Select(w=>w.Id).SequenceEqual(original))throw new Exception("Upward insertion did not restore the original order.");
                 VerifyOverlay(vm,Path.GetDirectoryName(path)!);
+                var baseline=vm.ActiveProfile!;var ids=vm.Wheels.Select(w=>w.Id).ToArray();
+                vm.AddProfile(true);var copy=vm.ActiveProfile!;copy.Name="Gaming";
+                if(vm.Wheels.Count!=3||vm.Wheels.Any(w=>ids.Contains(w.Id)))throw new Exception("Duplicate profiles must clone layout with independent wheel identities.");
+                vm.Wheels[0].Name="Gaming only";vm.ActiveProfile=baseline;
+                if(vm.Wheels[0].Name=="Gaming only"||!vm.Wheels.Select(w=>w.Id).SequenceEqual(ids))throw new Exception("Profile switching leaked edits or lost bindings.");
+                vm.ActiveProfile=copy;vm.ScreenEdge="Right";vm.PositionPercent=25;vm.WheelSpacing=12;vm.CheckUpdatesAutomatically=false;vm.Save();
+                var profileSaved=store.Load();
+                if(profileSaved.ActiveProfileId!=copy.Id||profileSaved.Profiles.Count<2||profileSaved.Wheels[0].Name!="Gaming only"||profileSaved.ScreenEdge!="Right"||profileSaved.PositionPercent!=25||profileSaved.WheelSpacing!=12||profileSaved.CheckUpdatesAutomatically)throw new Exception("Profiles, placement, or update preference did not survive reload.");
+                vm.RemoveProfile();if(vm.ActiveProfile!=baseline)throw new Exception("Removing a profile did not preserve the remaining layout.");
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}
@@ -83,6 +105,18 @@ internal static class UiRendering
     private static void VerifyOverlay(MainViewModel vm,string directory)
     {
         var overlay=new OverlayWindow(vm);
+        // Exercise the real native callback and overlay handler without injecting desktop input.
+        overlay.Input.Preview();
+        using(var hook=new EdgeHook())
+        {
+            hook.WheelInput=overlay.OnGlobalWheel;
+            var monitor=System.Windows.Forms.Screen.AllScreens[0];
+            var data=new Native.MouseData {Point=new Native.Point {X=monitor.Bounds.Left,Y=monitor.Bounds.Top},MouseDataValue=120u<<16};
+            var memory=Marshal.AllocHGlobal(Marshal.SizeOf<Native.MouseData>());
+            try {Marshal.StructureToPtr(data,memory,false);if(hook.OnHook(0,new IntPtr(0x20A),memory)!=new IntPtr(1))throw new Exception("Outermost edge scrolling must be consumed by the native hook.");}
+            finally {Marshal.FreeHGlobal(memory);}
+        }
+        overlay.Input.Close();
         var surface=(Grid)overlay.Content;overlay.Content=null;
         surface.Measure(new Size(350,384));surface.Arrange(new Rect(0,0,350,384));surface.UpdateLayout();
         if(surface.Background!=null)throw new Exception("The overlay must have no background panel.");
@@ -109,6 +143,14 @@ internal static class UiRendering
         if(Math.Abs(motion.Slide.X-reversingX)>.001||Math.Abs(motion.Scale.ScaleX-reversingScale)>.001)throw new Exception("Reopening during exit must reverse from the current pose.");
         var completed=false;motion.Exit(350,false,()=>completed=true);
         if(!completed||motion.Slide.X!= -350||motion.Scale.ScaleX!=.72)throw new Exception("Disabling motion must finish immediately.");
+        foreach(var edge in new[]{"Right","Top","Bottom"})
+        {
+            motion.SetEdge(edge);motion.Enter(350,true,true,()=>{});motion.Seek(TimeSpan.Zero);
+            var offset=edge=="Right"?motion.Slide.X:motion.Slide.Y;
+            if(offset!=(edge=="Top"?-350:350))throw new Exception("Entrance must originate from the selected edge.");
+            motion.Seek(TimeSpan.FromMilliseconds(380));
+            if(Math.Abs(motion.Slide.X)>.001||Math.Abs(motion.Slide.Y)>.001)throw new Exception("Edge entrance must finish at its resting position.");
+        }
         // Drive the real wheel controls using the same router used by the global hook.
         var controls=Descendants(surface).OfType<WheelControl>().ToArray();var router=overlay.Input;
         long now=0;

@@ -57,11 +57,28 @@ public sealed class Preferences
     public int PortOverride { get; set; }
     public int WheelSizePercent { get; set; } = 100;
     public bool AnimateWheels { get; set; } = true;
+    public string ScreenEdge { get; set; } = "Left";
+    public string MonitorId { get; set; } = "";
+    public int PositionPercent { get; set; } = 50;
+    public int WheelSpacing { get; set; }
+    public bool CheckUpdatesAutomatically { get; set; } = true;
+    public string LastNotifiedUpdate { get; set; } = "";
+    public string ActiveProfileId { get; set; } = "";
+    public List<WheelProfile> Profiles { get; set; } = new();
     public List<Wheel> Wheels { get; set; } = new() {
         new Wheel { Name = "Music", Color = "#36BBD3" },
         new Wheel { Name = "Game", Color = "#DA5DAD" },
         new Wheel { Name = "Voice", Color = "#A99AFF" }
     };
+}
+
+public sealed class WheelProfile : Observable
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    private string name="Default";
+    public string Name { get=>name; set=>Set(ref name,string.IsNullOrWhiteSpace(value)?"Untitled":value); }
+    public List<Wheel> Wheels { get; set; } = new();
+    public override string ToString()=>Name;
 }
 
 public sealed class SettingsStore
@@ -75,13 +92,28 @@ public sealed class SettingsStore
     {
         try
         {
-            if (!File.Exists(FilePath)) return new();
-            var p = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath), options) ?? new();
+            var p = File.Exists(FilePath) ? JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath), options) ?? new() : new Preferences();
             p.Wheels ??= new();
             p.Wheels = p.Wheels.Where(w => w != null).Take(12).ToList();
             if (p.Wheels.Count == 0) p.Wheels.Add(new Wheel());
             var ids = new HashSet<string>();
             foreach (var w in p.Wheels) if (string.IsNullOrEmpty(w.Id) || !ids.Add(w.Id)) { w.Id = Guid.NewGuid().ToString("N"); ids.Add(w.Id); }
+            p.Profiles ??= new();
+            p.Profiles=p.Profiles.Where(x=>x!=null).Take(20).ToList();
+            if(p.Profiles.Count==0)p.Profiles.Add(new WheelProfile { Wheels=p.Wheels });
+            var profileIds=new HashSet<string>();
+            foreach(var profile in p.Profiles)
+            {
+                if(string.IsNullOrEmpty(profile.Id)||!profileIds.Add(profile.Id)) { profile.Id=Guid.NewGuid().ToString("N");profileIds.Add(profile.Id); }
+                profile.Wheels=(profile.Wheels??new()).Where(w=>w!=null).Take(12).ToList();
+                if(profile.Wheels.Count==0)profile.Wheels.Add(new Wheel());
+                var wheelIds=new HashSet<string>();
+                foreach(var wheel in profile.Wheels)if(string.IsNullOrEmpty(wheel.Id)||!wheelIds.Add(wheel.Id)) { wheel.Id=Guid.NewGuid().ToString("N");wheelIds.Add(wheel.Id); }
+            }
+            var active=p.Profiles.FirstOrDefault(x=>x.Id==p.ActiveProfileId)??p.Profiles[0];
+            p.ActiveProfileId=active.Id;p.Wheels=active.Wheels;
+            p.ScreenEdge=new[]{"Left","Right","Top","Bottom"}.Contains(p.ScreenEdge)?p.ScreenEdge:"Left";
+            p.MonitorId??="";p.PositionPercent=Math.Clamp(p.PositionPercent,0,100);p.WheelSpacing=Math.Clamp(p.WheelSpacing,0,36);
             p.EdgeWidth = Math.Clamp(p.EdgeWidth, 2, 32);
             p.IdleMilliseconds = Math.Clamp(p.IdleMilliseconds, 500, 5000);
             p.WheelSizePercent = Math.Clamp(p.WheelSizePercent, 50, 180);

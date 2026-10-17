@@ -31,7 +31,7 @@ internal static class Program
             Assert(!router.CanAdjust(2249),"Direct wheel input must remain blocked until the full quiet gap.");
             Assert(router.Route(2,0,2250)==new ScrollRoute(false,2),"The first scroll after a quiet gap must adjust the hovered wheel.");
             Assert(router.Route(0,2,2260)==new ScrollRoute(false,0),"Once armed, continuous scrolling must work on the top wheel too.");
-            Assert(router.Route(-1,2,2270)==new ScrollRoute(false,2),"Edge scrolling must retain the selected wheel after activation.");
+            Assert(router.Route(-1,2,2270)==new ScrollRoute(false,-1),"The edge must never adjust the previously hovered wheel.");
             Assert(opening.Index==-1,"A queued opening decision must remain ignored even after activation.");
             router.Close();Assert(router.Route(1,2,3000)==new ScrollRoute(true,-1),"Every reopening must reveal without adjusting.");
             for(var now=3020;now<=5000;now+=20)router.ObserveUnclaimedScroll(now);
@@ -40,6 +40,14 @@ internal static class Program
             router.Close();router.Preview();
             Assert(router.Route(1,0,6000)==new ScrollRoute(false,1),"An explicit preview must allow adjustment immediately.");
             Console.WriteLine("PASS: opening burst suppression, quiet-gap activation, off-overlay scrolling, queued decisions, reopen reset, and preview.");
+            var region=new EdgeRegion(-1920,-200,0,880,1.5);
+            Assert(region.IsTrigger(-1920,0,"Left",6)&&region.IsTrigger(-1912,0,"Left",6)&&!region.IsTrigger(-1911,0,"Left",6),"The physical outermost edge and scaled strip must be included.");
+            Assert(region.IsTrigger(-1,0,"Right",6)&&region.IsTrigger(-100,-200,"Top",6)&&region.IsTrigger(-100,879,"Bottom",6),"All four edges must include their outermost pixel.");
+            Assert(!region.IsTrigger(0,0,"Right",6)&&!region.IsTrigger(-100,880,"Bottom",6),"Adjacent displays must not share boundary pixels.");
+            var current=new Version(0,4,0,0);
+            Assert(ReleaseUpdates.Parse("""{"tag_name":"v0.4.1","draft":false,"prerelease":false,"html_url":"https://evil.invalid"}""",current)?.Url=="https://github.com/notjacobwashere/WaveWheels/releases/tag/v0.4.1","Update links must be restricted to this repository.");
+            Assert(ReleaseUpdates.Parse("""{"tag_name":"v0.4.0"}""",current)==null&&ReleaseUpdates.Parse("""{"tag_name":"v0.5.0","prerelease":true}""",current)==null,"Current versions and prereleases must not trigger notifications.");
+            Console.WriteLine("PASS: physical monitor edges, DPI scaling, display boundaries, update versions and trusted links.");
             Assert(WheelOrdering.Destination(0,4,4)==3&&WheelOrdering.Destination(3,0,4)==0,"Reorder must work at both ends.");
             Assert(WheelOrdering.Destination(1,1,4)==1&&WheelOrdering.Destination(1,2,4)==1&&WheelOrdering.Destination(1,3,4)==2,"Insertion before/after must not have downward off-by-one errors.");
             var small=OverlaySizing.Calculate(3,50,1920,1080);var large=OverlaySizing.Calculate(3,150,1920,1080);var fitted=OverlaySizing.Calculate(12,180,1920,1080);

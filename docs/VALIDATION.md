@@ -1,4 +1,4 @@
-# Validation · WaveWheels 0.3.1
+# Validation · WaveWheels 0.4.0
 
 Checked October 17, 2026 on Windows.
 
@@ -10,3 +10,6 @@ Checked October 17, 2026 on Windows.
 - Modern fake Wave Link regression passes: handshake, channel/mix enumeration, scoped volume/mute writes, retained levels on mute, external changes, channel removal, and reconnection. The Wave Link transport implementation is unchanged.
 
 Component renders use fixture channels without controlling desktop input or writing real mixer volumes. Physical edge scrolling, mixed-DPI monitor behavior, and exclusive-fullscreen visibility remain manual checks.
+
+
+0.4.0 adds compiled-control checks for independent profile duplication/switching/persistence, legacy migration, placement settings, all four motion directions, and stable update parsing. The production native mouse callback and overlay handler return a consumed-event result at the physical display corner, without injecting desktop input. Edge routing never selects a previous wheel. Full physical input delivery and mixed-DPI desktop ergonomics remain manual checks.

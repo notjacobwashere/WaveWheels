@@ -23,7 +23,8 @@ internal sealed class OverlayInputRouter
                 return new(false, -1);
             }
             waiting = false;
-            return new(false, hoveredIndex >= 0 ? hoveredIndex : Math.Max(0, selectedIndex));
+            // The activation strip only reveals/keeps the overlay open. It is never a fader.
+            return new(false, hoveredIndex);
         }
     }
     public bool CanAdjust(long now)
@@ -51,13 +52,24 @@ internal readonly record struct OverlaySize(double Width, double Height, double 
 internal static class OverlaySizing
 {
     public const double StackWidth = 328;
-    public static double StackHeight(int count) => Math.Clamp(count, 1, 12) * 120 + 24;
-    public static OverlaySize Calculate(int count, int percent, double availableWidth, double availableHeight)
+    public static double StackHeight(int count, int spacing = 0) => Math.Clamp(count, 1, 12) * 120 + 24 + (Math.Clamp(count,1,12)-1)*Math.Clamp(spacing,0,36);
+    public static OverlaySize Calculate(int count, int percent, double availableWidth, double availableHeight, int spacing = 0)
     {
-        var height = StackHeight(count);
+        var height = StackHeight(count, spacing);
         var scale = Math.Min(Math.Clamp(percent, 50, 180) / 100d,
             Math.Min(Math.Max(1, availableHeight - 32) / height, Math.Max(1, availableWidth - 32) / 350));
         return new(350 * scale, height * scale, scale);
+    }
+}
+
+internal readonly record struct EdgeRegion(int Left, int Top, int Right, int Bottom, double Dpi)
+{
+    public bool Contains(int x,int y) => x>=Left&&x<Right&&y>=Top&&y<Bottom;
+    public bool IsTrigger(int x,int y,string edge,int width)
+    {
+        if(!Contains(x,y))return false;
+        var pixels=Math.Max(1,(int)Math.Ceiling(width*Dpi));
+        return edge switch { "Right"=>x>=Right-pixels,"Top"=>y<Top+pixels,"Bottom"=>y>=Bottom-pixels,_=>x<Left+pixels };
     }
 }
 

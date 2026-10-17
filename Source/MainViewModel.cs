@@ -3,6 +3,10 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -19,6 +23,26 @@ public sealed class MainViewModel : Observable
     public Preferences Preferences { get; }
     public WaveLinkClient Client { get; } = new();
     public ObservableCollection<Wheel> Wheels { get; }
+    public ObservableCollection<WheelProfile> Profiles { get; }
+    public ObservableCollection<Choice> Monitors { get; } = new();
+    public string[] Edges { get; } = new[]{"Left","Right","Top","Bottom"};
+    private WheelProfile? activeProfile;
+    private bool switchingProfile;
+    public WheelProfile? ActiveProfile { get=>activeProfile; set { if(value!=null&&value!=activeProfile&&Profiles.Contains(value))SwitchProfile(value); } }
+    public string ScreenEdge { get=>Preferences.ScreenEdge;set { if(!Edges.Contains(value)||value==Preferences.ScreenEdge)return;Preferences.ScreenEdge=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
+    public string MonitorId { get=>Preferences.MonitorId;set { value??="";if(value==Preferences.MonitorId)return;Preferences.MonitorId=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
+    public int PositionPercent { get=>Preferences.PositionPercent;set { value=Math.Clamp(value,0,100);if(value==Preferences.PositionPercent)return;Preferences.PositionPercent=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
+    public int WheelSpacing { get=>Preferences.WheelSpacing;set { value=Math.Clamp(value,0,36);if(value==Preferences.WheelSpacing)return;Preferences.WheelSpacing=value;Changed();ScheduleSave();LayoutChanged?.Invoke(); } }
+    private readonly CancellationTokenSource updateLifetime=new();
+    private readonly DispatcherTimer updateTimer=new() { Interval=TimeSpan.FromHours(6) };
+    private string updateStatus="Check GitHub for a newer version.",updateUrl=ReleaseUpdates.ReleasesUrl;
+    private bool checkingUpdates;
+    public string AppVersion=>ReleaseUpdates.CurrentVersion;
+    public string UpdateStatus { get=>updateStatus;private set=>Set(ref updateStatus,value); }
+    public bool CheckingUpdates { get=>checkingUpdates;private set=>Set(ref checkingUpdates,value); }
+    public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
+    public event Action<string>? UpdateAvailable;
+    private string notifiedVersion="";
     public ObservableCollection<Choice> Channels { get; } = new();
     public ObservableCollection<Choice> MixChoices { get; } = new();
     private Wheel? selected;
@@ -72,6 +96,11 @@ public sealed class MainViewModel : Observable
     {
         this.store = store; this.isolated = isolated;
         Preferences = store.Load();
+        notifiedVersion=Preferences.LastNotifiedUpdate;
+        if(Preferences.Profiles.Count==0)Preferences.Profiles.Add(new WheelProfile { Wheels=Preferences.Wheels });
+        Profiles=new(Preferences.Profiles);
+        activeProfile=Profiles.FirstOrDefault(p=>p.Id==Preferences.ActiveProfileId)??Profiles[0];
+        foreach(var profile in Profiles)profile.PropertyChanged+=ProfileChanged;
         dispatcher = Application.Current.Dispatcher;
         portText = Preferences.PortOverride > 0 ? Preferences.PortOverride.ToString() : "";
         Wheels = new(Preferences.Wheels);
@@ -85,10 +114,50 @@ public sealed class MainViewModel : Observable
         SelectedWheel = Wheels.FirstOrDefault();
         Message = store.Warning ?? "Scroll at the left edge of a screen to bring up your wheels.";
         Update(snapshot);
+        RefreshMonitors();
+        updateTimer.Tick+=async(_,_)=> { if(CheckUpdatesAutomatically)await CheckForUpdatesAsync(); };
     }
-    public void Start() => Client.Start(Preferences.PortOverride);
+    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    public void RefreshMonitors()
+    {
+        var choices=System.Windows.Forms.Screen.AllScreens.Select((s,i)=>new Choice(s.DeviceName,$"Display {i+1}{(s.Primary?" · primary":"")} · {s.Bounds.Width}×{s.Bounds.Height}")).ToList();
+        choices.Insert(0,new("","All displays"));
+        if(MonitorId.Length>0&&!choices.Any(x=>x.Id==MonitorId))choices.Add(new(MonitorId,"Saved display · disconnected"));
+        ReplaceChoices(Monitors,choices.ToArray());
+    }
+    private void ProfileChanged(object? sender,PropertyChangedEventArgs e)=>ScheduleSave();
+    private void SwitchProfile(WheelProfile profile)
+    {
+        if(activeProfile!=null)activeProfile.Wheels=Wheels.ToList();
+        switchingProfile=true;
+        foreach(var w in Wheels)w.PropertyChanged-=WheelChanged;
+        Wheels.Clear();foreach(var w in profile.Wheels) {Wheels.Add(w);w.PropertyChanged+=WheelChanged;}
+        switchingProfile=false;activeProfile=profile;Preferences.ActiveProfileId=profile.Id;
+        SelectedWheel=Wheels.FirstOrDefault();UpdatePositions();Update(snapshot);
+        Changed(nameof(ActiveProfile));Changed(nameof(WheelCount));ScheduleSave();LayoutChanged?.Invoke();
+    }
+    public void AddProfile(bool duplicate)
+    {
+        if(Profiles.Count>=20) {Message="You can keep up to 20 profiles.";return;}
+        var profile=new WheelProfile { Name=duplicate?(ActiveProfile?.Name??"Profile")+" copy":"Profile "+(Profiles.Count+1),Wheels=duplicate?Wheels.Select(w=>new Wheel {Name=w.Name,Color=w.Color,ChannelId=w.ChannelId,MixId=w.MixId}).ToList():new(){new Wheel {Name="New wheel"}} };
+        profile.PropertyChanged+=ProfileChanged;Profiles.Add(profile);ActiveProfile=profile;
+    }
+    public void RemoveProfile()
+    {
+        if(Profiles.Count<2||activeProfile==null) {Message="Keep at least one profile.";return;}
+        var old=activeProfile;ActiveProfile=Profiles.First(p=>p!=old);old.PropertyChanged-=ProfileChanged;Profiles.Remove(old);ScheduleSave();
+    }
+    public async Task CheckForUpdatesAsync()
+    {
+        if(CheckingUpdates)return;CheckingUpdates=true;UpdateStatus="Checking GitHub…";
+        try { var update=await ReleaseUpdates.CheckAsync(updateLifetime.Token);updateUrl=update?.Url??ReleaseUpdates.ReleasesUrl;UpdateStatus=update==null?$"You're up to date · {AppVersion}":$"Version {update.Version} is available";if(update!=null&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
+        catch(Exception ex) when(ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException or System.Collections.Generic.KeyNotFoundException) {UpdateStatus="Couldn't check GitHub. Try again later.";}
+        finally {CheckingUpdates=false;}
+    }
+    public void OpenReleasePage() {try {Process.Start(new ProcessStartInfo(updateUrl) {UseShellExecute=true});}catch(Exception ex){Message="Could not open the browser: "+ex.Message;} }
     private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if(switchingProfile)return;
         if (e.OldItems != null) foreach (Wheel w in e.OldItems) w.PropertyChanged -= WheelChanged;
         if (e.NewItems != null) foreach (Wheel w in e.NewItems) w.PropertyChanged += WheelChanged;
         UpdatePositions(); Changed(nameof(WheelCount)); ScheduleSave(); Update(snapshot); LayoutChanged?.Invoke();
@@ -191,8 +260,8 @@ public sealed class MainViewModel : Observable
     public void Save()
     {
         saveTimer.Stop();
-        try { Preferences.Wheels = Wheels.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
+        try { Preferences.Wheels = Wheels.ToList();if(activeProfile!=null) {activeProfile.Wheels=Preferences.Wheels;Preferences.ActiveProfileId=activeProfile.Id;}Preferences.Profiles=Profiles.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
         catch (Exception ex) { SaveStatus = "Could not save changes"; Message = ex.Message; App.WriteLog("Settings: " + ex.Message); }
     }
-    public void Dispose() { Save(); Client.Dispose(); }
+    public void Dispose() { updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
 }

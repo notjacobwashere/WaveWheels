@@ -21,7 +21,9 @@ public sealed class OverlayWindow : Window
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(32) };
     private readonly EdgeHook hook = new();
     private readonly OverlayInputRouter input = new();
-    private volatile HitState hitState = new(false, true, 6, 0, Array.Empty<HitRow>());
+    private volatile HitState hitState = new(false, true, 6, 0, Array.Empty<HitRow>(),"Left","",Array.Empty<ScreenTarget>());
+    private ScreenTarget[] screens=Array.Empty<ScreenTarget>();
+    private long screenRefresh;
     private long lastActivity;
     private int generation;
     private bool shown;
@@ -29,7 +31,8 @@ public sealed class OverlayWindow : Window
     private Forms.Screen? activeScreen;
     private double activeDpi = 1;
     private sealed record HitRow(int Index, int Left, int Top, int Right, int Bottom, bool Available);
-    private sealed record HitState(bool Visible, bool Enabled, int EdgeWidth, int Generation, HitRow[] Rows, int SelectedIndex = 0);
+    private sealed record ScreenTarget(Forms.Screen Screen,EdgeRegion Region);
+    private sealed record HitState(bool Visible, bool Enabled, int EdgeWidth, int Generation, HitRow[] Rows,string Edge,string MonitorId,ScreenTarget[] Screens);
     internal OverlayMotion Motion => motion;
     internal OverlayInputRouter Input => input;
 
@@ -60,6 +63,7 @@ public sealed class OverlayWindow : Window
         MouseDown += (_, _) => lastActivity = Environment.TickCount64;
         timer.Tick += (_, _) =>
         {
+            if(Environment.TickCount64-screenRefresh>2000)RefreshScreens();
             if (!shown) return;
             UpdateHits(); // Actual animated positions, including monitor/DPI and hover transforms.
             if (IsMouseOver || controls.Any(c => c.IsMouseCaptured)) { lastActivity = Environment.TickCount64; return; }
@@ -74,7 +78,7 @@ public sealed class OverlayWindow : Window
         stack.Children.Clear(); controls.Clear(); stack.Children.Add(new Border { Height = 12 });
         foreach (var wheel in model.Wheels)
         {
-            var c = new WheelControl { Wheel = wheel, Margin = new Thickness(10,0,18,0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
             c.Selected += w => { model.SelectedWheel = w; lastActivity = Environment.TickCount64; };
             controls.Add(c); stack.Children.Add(c);
@@ -85,30 +89,33 @@ public sealed class OverlayWindow : Window
     }
     private void ApplyAppearance()
     {
+        RefreshScreens();motion.SetEdge(model.ScreenEdge);
+        var selected=screens.FirstOrDefault(s=>s.Screen.DeviceName==model.MonitorId);
+        if(shown&&selected!=null) {activeScreen=selected.Screen;activeDpi=selected.Region.Dpi;}
         if (shown) Position();
     }
-    private bool OnGlobalWheel(int x, int y, int delta)
+    private void RefreshScreens()
+    {
+        screens=Forms.Screen.AllScreens.Select(s=>new ScreenTarget(s,new EdgeRegion(s.Bounds.Left,s.Bounds.Top,s.Bounds.Right,s.Bounds.Bottom,ScaleFor(s.Bounds.Left+s.Bounds.Width/2,s.Bounds.Top+s.Bounds.Height/2)))).ToArray();
+        screenRefresh=Environment.TickCount64;UpdateHits();
+    }
+    internal bool OnGlobalWheel(int x, int y, int delta)
     {
         var state = hitState;
         if (!state.Enabled) return false;
-        var row = state.Visible ? state.Rows.FirstOrDefault(r => x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom) : null;
-        Forms.Screen? screen = null; var dpi = 1d;
-        if (row == null)
+        var target=state.Screens.FirstOrDefault(s=>s.Region.IsTrigger(x,y,state.Edge,state.EdgeWidth)&&(state.MonitorId.Length==0||state.MonitorId==s.Screen.DeviceName));
+        // The activation strip takes priority even when animated/expanded row bounds overlap it.
+        var row = target==null&&state.Visible ? state.Rows.FirstOrDefault(r => x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom) : null;
+        if(target==null&&row==null)
         {
-            screen = Forms.Screen.FromPoint(new System.Drawing.Point(x,y)); dpi = ScaleFor(x,y);
-            if (!screen.WorkingArea.Contains(x,y) || x < screen.Bounds.Left || x >= screen.Bounds.Left + Math.Ceiling(state.EdgeWidth * dpi))
-            {
-                input.ObserveUnclaimedScroll(Environment.TickCount64);
-                return false;
-            }
+            input.ObserveUnclaimedScroll(Environment.TickCount64);return false;
         }
-        var route = input.Route(row?.Index ?? -1, state.SelectedIndex, Environment.TickCount64);
+        var route = input.Route(row?.Index ?? -1, -1, Environment.TickCount64);
         Dispatcher.BeginInvoke(() =>
         {
             if (route.Reveal)
             {
-                var openingScreen = screen ?? Forms.Screen.FromPoint(new System.Drawing.Point(x,y));
-                Reveal(openingScreen, screen == null ? ScaleFor(x,y) : dpi);
+                if(target!=null)Reveal(target.Screen,target.Region.Dpi);
             }
             else if (!shown || (state.Visible && state.Generation != generation)) return;
             lastActivity = Environment.TickCount64;
@@ -124,16 +131,21 @@ public sealed class OverlayWindow : Window
     public void ShowAtCursor()
     {
         Native.GetCursorPos(out var point); input.Preview();
-        Reveal(Forms.Screen.FromPoint(new System.Drawing.Point(point.X,point.Y)),ScaleFor(point.X,point.Y));
+        RefreshScreens();var target=screens.FirstOrDefault(s=>model.MonitorId.Length>0?s.Screen.DeviceName==model.MonitorId:s.Region.Contains(point.X,point.Y))??screens.FirstOrDefault();
+        if(target!=null)Reveal(target.Screen,target.Region.Dpi);
     }
     private void Position()
     {
         if (activeScreen == null) return;
-        var size = OverlaySizing.Calculate(model.Wheels.Count, model.WheelSizePercent, activeScreen.WorkingArea.Width/activeDpi, activeScreen.WorkingArea.Height/activeDpi);
+        var size = OverlaySizing.Calculate(model.Wheels.Count, model.WheelSizePercent, activeScreen.WorkingArea.Width/activeDpi, activeScreen.WorkingArea.Height/activeDpi,model.WheelSpacing);
         Width = size.Width; Height = size.Height;
         viewport.Width = OverlaySizing.StackWidth*size.Scale;
-        viewport.Height = OverlaySizing.StackHeight(model.Wheels.Count)*size.Scale;
-        Native.SetWindowPos(handle,new IntPtr(-1),activeScreen.Bounds.Left,activeScreen.WorkingArea.Top+(activeScreen.WorkingArea.Height-(int)(Height*activeDpi))/2,(int)Math.Ceiling(Width*activeDpi),(int)Math.Ceiling(Height*activeDpi),0x0010|0x0040);
+        viewport.Height = OverlaySizing.StackHeight(model.Wheels.Count,model.WheelSpacing)*size.Scale;
+        var area=activeScreen.WorkingArea;var bounds=activeScreen.Bounds;var w=(int)Math.Ceiling(Width*activeDpi);var h=(int)Math.Ceiling(Height*activeDpi);var fraction=model.PositionPercent/100d;
+        var horizontal=model.ScreenEdge is "Top" or "Bottom";
+        var x=horizontal?area.Left+(int)((area.Width-w)*fraction):model.ScreenEdge=="Right"?bounds.Right-w:bounds.Left;
+        var y=horizontal?(model.ScreenEdge=="Bottom"?bounds.Bottom-h:bounds.Top):area.Top+(int)((area.Height-h)*fraction);
+        Native.SetWindowPos(handle,new IntPtr(-1),x,y,w,h,0x0010|0x0040);
         UpdateLayout(); UpdateHits();
     }
     private void Reveal(Forms.Screen screen,double dpi)
@@ -144,20 +156,21 @@ public sealed class OverlayWindow : Window
         if (wasHidden)
         {
             // Set the hidden pose before Show, preventing a full-size flash on the first frame.
-            motion.PrepareHidden(Width);
+            motion.PrepareHidden(MotionDistance);
             Show();
         }
         shown = true; Position(); lastActivity = Environment.TickCount64;
         foreach (var c in controls) c.ResetScroll();
-        motion.Enter(Width, wasHidden, model.AnimateWheels, () => { });
+        motion.Enter(MotionDistance, wasHidden, model.AnimateWheels, () => { });
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateHits);
     }
     private void Dismiss()
     {
         var current = ++generation;
         shown = false; input.Close(); UpdateHits();
-        motion.Exit(Width, model.AnimateWheels, () => { if (generation == current && !shown) Hide(); });
+        motion.Exit(MotionDistance, model.AnimateWheels, () => { if (generation == current && !shown) Hide(); });
     }
+    private double MotionDistance=>model.ScreenEdge is "Top" or "Bottom"?Height:Width;
     private void UpdateHits()
     {
         var rows = new List<HitRow>();
@@ -173,7 +186,7 @@ public sealed class OverlayWindow : Window
                 if(right>left&&bottom>top)rows.Add(new(i,left,top,right,bottom,c.Wheel?.Available==true));
             }
         }
-        hitState = new(shown,model.EdgeEnabled,model.Preferences.EdgeWidth,generation,rows.ToArray(), model.SelectedWheel == null ? 0 : model.Wheels.IndexOf(model.SelectedWheel));
+        hitState = new(shown,model.EdgeEnabled,model.Preferences.EdgeWidth,generation,rows.ToArray(),model.ScreenEdge,model.MonitorId,screens);
     }
     private IntPtr WindowProc(IntPtr hwnd,int message,IntPtr wp,IntPtr lp,ref bool handled)
     {

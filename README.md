@@ -1,6 +1,6 @@
 # WaveWheels
 
-An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from the left edge of your screen.
+An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from the edge of your screen.
 
 [Download the Windows release](https://github.com/notjacobwashere/WaveWheels/releases/latest) · [Report an issue](https://github.com/notjacobwashere/WaveWheels/issues)
 
@@ -10,6 +10,9 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 - Runs quietly in the Windows system tray; configuration opens when you choose it.
 - Reveals transparent volume wheels with a smooth slide-and-grow animation.
+- Saves independent profiles, with quick switching from the tray menu.
+- Supports left, right, top, or bottom edges, a chosen monitor, position along the edge, and wheel spacing.
+- Notifies you when a newer stable GitHub release is available.
 - Keeps the opening scroll gesture from changing volume. Pause briefly, then scroll over a wheel to adjust it.
 - Controls Wave Link input channels live, with independent whole-channel or per-mix volume and mute targets.
 - Supports 1–12 wheels with custom names, colors, order, and channel bindings.
@@ -19,7 +22,7 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.3.1-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download **`WaveWheels-0.4.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. The runtime is bundled; no separate .NET download or administrator account is needed.
 3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels.
 
@@ -27,13 +30,13 @@ Requires Windows 10/11 x64 and a running Wave Link installation with its local c
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
-For a portable alternative, extract `WaveWheels-0.3.1-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+For a portable alternative, extract `WaveWheels-0.4.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 
 ## Use your wheels
 
-Scroll at a monitor's left edge to reveal the overlay. The entire opening scroll burst leaves volume unchanged. Stop scrolling for at least **250 ms**, then hover any wheel and scroll again to change its volume. You can also drag the wheel up/down. Click its speaker button to mute or unmute the same channel/mix target; mute retains its level.
+Scroll at your configured monitor edge to reveal the overlay. The entire opening scroll burst leaves volume unchanged. Stop scrolling for at least **250 ms**, then hover an actual wheel and scroll again to change its volume. Scrolling on the activation strip never adjusts the last hovered wheel and is consumed so it does not scroll the application underneath. You can also drag the wheel up/down. Click its speaker button to mute or unmute the same channel/mix target; mute retains its level.
 
 Open **Settings** to choose wheel size or disable slide-and-grow motion. Larger stacks fit the available display height. Drag the grip in the wheel list and drop on the highlighted insertion line, use the row arrows, or press **Alt+Up/Down** to reorder.
 
@@ -41,6 +44,13 @@ Open **Settings** to choose wheel size or disable slide-and-grow motion. Larger 
 
 Settings save automatically in `%LOCALAPPDATA%\WaveWheels\settings.json`. They are separate from the app folder. No personal settings are bundled in downloads.
 
+## Profiles, placement, and updates
+
+Use **Profiles** to create, duplicate, rename, or remove layouts. Each profile keeps its wheel count, ordering, names, colors, and channel/mix bindings. The first launch migrates existing wheels into **Default** without changing mixer volumes. The tray's **Profiles** submenu switches layouts quickly. Size and placement are shared across profiles.
+
+Use **Placement** to choose any of the four edges, all displays or a specific display, the position along that edge, and spacing between wheels. The activation strip is a reveal area, not a fader; move onto a wheel to adjust it.
+
+Use **Updates** to check manually or turn automatic notifications off. Automatic checks contact the public GitHub Releases API at launch and every six hours. No saved wheel settings are sent. A newer stable release produces a tray notification and an in-app release link. Downloads and installation require your action; the app never runs an installer automatically.
 ## Startup and upgrades
 
 Enable **Start at Windows sign-in** on the **Startup** page to register the per-user Windows Run entry. Startup is off until enabled. Windows starts the app at user sign-in, not before login. Task Manager can enable or disable the entry.

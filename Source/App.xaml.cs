@@ -47,7 +47,7 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.3.1 version again. Your saved wheels will be kept.", "WaveWheels 0.3.1 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.4.0 version again. Your saved wheels will be kept.", "WaveWheels 0.4.0 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")) settingsSignal.Set();
             Shutdown();return;
         }
@@ -57,6 +57,7 @@ public partial class App : Application
         exitSignal=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\WaveWheels-Exit-"+identity);
         overlay=new OverlayWindow(model);
         CreateTray();
+        model.UpdateAvailable+=version=> { if(tray!=null) {tray.BalloonTipTitle="WaveWheels update";tray.BalloonTipText="Version "+version+" is available. Open Updates in configuration to download it.";tray.ShowBalloonTip(8000);} };
         signalWait=ThreadPool.RegisterWaitForSingleObject(settingsSignal,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration),null,Timeout.Infinite,false);
         exitWait=ThreadPool.RegisterWaitForSingleObject(exitSignal,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()),null,Timeout.Infinite,false);
         model.Start();overlay.StartHook();
@@ -68,15 +69,30 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 0.3.1",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 0.4.0",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
+        var profilesMenu=new Forms.ToolStripMenuItem("Profiles");
+        void RefreshProfiles()
+        {
+            while(profilesMenu.DropDownItems.Count>0) {var item=profilesMenu.DropDownItems[0];profilesMenu.DropDownItems.RemoveAt(0);item.Dispose();}
+            foreach(var profile in model!.Profiles)
+            {
+                var item=new Forms.ToolStripMenuItem(profile.Name) {Checked=profile==model.ActiveProfile};
+                item.Click+=(_,_)=>model.ActiveProfile=profile;profilesMenu.DropDownItems.Add(item);
+            }
+        }
+        RefreshProfiles();menu.Items.Add(profilesMenu);
+        foreach(var profile in model!.Profiles)profile.PropertyChanged+=(_,_)=>RefreshProfiles();
+        model.Profiles.CollectionChanged+=(_,e)=> {if(e.NewItems!=null)foreach(WheelProfile profile in e.NewItems)profile.PropertyChanged+=(_,_)=>RefreshProfiles();RefreshProfiles();};
+        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.ActiveProfile))RefreshProfiles();};
+        menu.Items.Add("Check for updates",null,async(_,_)=>await model.CheckForUpdatesAsync());
         var enabled=new Forms.ToolStripMenuItem("Enable edge scrolling"){Checked=model!.EdgeEnabled,CheckOnClick=true};
         enabled.CheckedChanged+=(_,_)=> {model.EdgeEnabled=enabled.Checked;};
         model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.EdgeEnabled))enabled.Checked=model.EdgeEnabled;};
         menu.Items.Add(enabled);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 0.3.1 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 0.4.0 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()
@@ -89,7 +105,7 @@ public partial class App : Application
                 try
                 {
                     var version = process.MainModule?.FileVersionInfo;
-                    if(version != null && (version.FileMajorPart != 0 || version.FileMinorPart != 3 || version.FileBuildPart != 1))
+                    if(version != null && (version.FileMajorPart != 0 || version.FileMinorPart != 4 || version.FileBuildPart != 0))
                         return $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}";
                 }
                 catch { }
