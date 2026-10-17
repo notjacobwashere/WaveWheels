@@ -121,8 +121,9 @@ internal static class MaximumEffectTests
                 Console.WriteLine("PASS: 150 ms directional number roll/fade, unchanged-value suppression, immediate retargeting, reduced motion, and rebind reset.");
                 Console.WriteLine("PASS: stationary unchanged digits across all frames, per-column transitions/carries, and stable units on digit-count changes.");
                 ChannelEditorSmoke.Run(Path.Combine(directory,"channel-editor-profile-"+Guid.NewGuid().ToString("N")));
+                BlacklistTests.Run(Path.Combine(directory,"blacklist-profile-"+Guid.NewGuid().ToString("N")));
             }
             catch(Exception ex){error=ex;}
-        });thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();if(error!=null)throw error;
+        });thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();if(error!=null)System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
     }
 }

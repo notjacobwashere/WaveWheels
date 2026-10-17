@@ -64,7 +64,8 @@ public static class IntroWizardSmoke {
     do{$introIds=Intro-Processes;$introSkip=[IntroWizardSmoke]::Button($introIds,'Skip intro');if($introSkip -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 250}}while($introSkip -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $introDeadline)
     if($introSkip -eq [IntPtr]::Zero){throw 'The first-install intro and skip button did not appear.'}
     Capture-Intro $introIds (Join-Path $PSScriptRoot 'artifacts/previews/setup-intro-controls.png')
-    $introNext=[IntroWizardSmoke]::Button($introIds,'Next >')
+    $introNext=[IntroWizardSmoke]::Button($introIds,'Next')
+    if($introNext -eq [IntPtr]::Zero){$introNext=[IntroWizardSmoke]::Button($introIds,'Next >')}
     if($introNext -eq [IntPtr]::Zero){throw 'The intro Next button is missing.'}
     [IntroWizardSmoke]::Click($introNext)
     Start-Sleep -Milliseconds 300
@@ -80,7 +81,7 @@ public static class IntroWizardSmoke {
     Write-Output 'PASS: first-install controls/settings pages, screenshots, Next, Skip intro, and cancellation before installation.'
     New-Item -ItemType Directory -Path $profile -Force | Out-Null
     $settingsFile = Join-Path $profile 'settings.json'
-    $fixture = @{ SchemaVersion=1;EdgeEnabled=$false;CheckUpdatesAutomatically=$false;PortOverride=65535;WheelSizePercent=125;AnimateWheels=$true;ScrollStepPercent=3;ShiftStepPercent=35;ShowShiftMarkers=$true;ScrollAccelerationEnabled=$false;IdleMilliseconds=2500;Wheels=@(@{Id='installer-fixture';Name='Kept through upgrades';Color='#36BBD3';ChannelId='fake-input';MixId='';MaximumVolumePercent=65}) }
+    $fixture = @{ SchemaVersion=1;EdgeEnabled=$false;CheckUpdatesAutomatically=$false;PortOverride=65535;WheelSizePercent=125;AnimateWheels=$true;ScrollStepPercent=3;ShiftStepPercent=35;ShowShiftMarkers=$true;ApplicationBlacklistEnabled=$true;BlacklistedApplications=@('fixture-game.exe');ScrollAccelerationEnabled=$false;IdleMilliseconds=2500;Wheels=@(@{Id='installer-fixture';Name='Kept through upgrades';Color='#36BBD3';ChannelId='fake-input';MixId='';MaximumVolumePercent=65}) }
     $fixture | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $settingsFile
     $runKey = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Run'
     New-Item -Path $runKey -Force | Out-Null
@@ -98,6 +99,7 @@ public static class IntroWizardSmoke {
         if ($saved.Wheels[0].Id -ne 'installer-fixture' -or $saved.Wheels[0].Name -ne 'Kept through upgrades' -or $saved.WheelSizePercent -ne 125) { throw 'Installation did not preserve saved wheel preferences.' }
         if ($saved.ScrollStepPercent -ne 3 -or $saved.ScrollAccelerationEnabled -or $saved.IdleMilliseconds -ne 2500 -or $saved.Wheels[0].MaximumVolumePercent -ne 65) {throw 'Update did not retain tuning and volume limits.'}
         if($saved.ShiftStepPercent -ne 35 -or -not $saved.ShowShiftMarkers){throw 'Update did not retain Shift increment and dot visibility.'}
+        if(-not $saved.ApplicationBlacklistEnabled -or $saved.BlacklistedApplications[0] -ne 'fixture-game.exe'){throw 'Update did not retain the application blacklist.'}
     }
     Run-Setup 'installer-install.log'
     $installTrace=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'artifacts/installer-install.log') -Raw

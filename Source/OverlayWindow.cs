@@ -55,6 +55,7 @@ public sealed class OverlayWindow : Window
         };
         model.LayoutChanged += Rebuild;
         model.StateChanged += UpdateHits;
+        model.ApplicationBlockChanged+=ApplyApplicationBlock;
         model.AppearanceChanged += ApplyAppearance;
         model.InputSettingsChanged += ApplyInputSettings;
         model.PreviewRequested += ShowAtCursor;
@@ -80,7 +81,7 @@ public sealed class OverlayWindow : Window
         stack.Children.Clear(); controls.Clear(); stack.Children.Add(new Border { Height = 12 });
         foreach (var wheel in model.Wheels)
         {
-            var c = new WheelControl { Wheel = wheel, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
             c.Selected += w => { model.SelectedWheel = w; lastActivity = Environment.TickCount64; };
             controls.Add(c); stack.Children.Add(c);
@@ -117,6 +118,7 @@ public sealed class OverlayWindow : Window
         var route = input.Route(row?.Index ?? -1, -1, Environment.TickCount64);
         Dispatcher.BeginInvoke(() =>
         {
+            if(!model.RefreshInteractionPolicy())return;
             if (route.Reveal)
             {
                 if(target!=null)Reveal(target.Screen,target.Region.Dpi);
@@ -134,6 +136,7 @@ public sealed class OverlayWindow : Window
     }
     public void ShowAtCursor()
     {
+        if(!model.RefreshInteractionPolicy())return;
         Native.GetCursorPos(out var point); input.Preview();
         RefreshScreens();var target=screens.FirstOrDefault(s=>model.MonitorId.Length>0?s.Screen.DeviceName==model.MonitorId:s.Region.Contains(point.X,point.Y))??screens.FirstOrDefault();
         if(target!=null)Reveal(target.Screen,target.Region.Dpi);
@@ -154,6 +157,7 @@ public sealed class OverlayWindow : Window
     }
     private void Reveal(Forms.Screen screen,double dpi)
     {
+        if(!model.RefreshInteractionPolicy())return;
         generation++; activeScreen = screen; activeDpi = dpi;
         var wasHidden = !IsVisible;
         model.SelectedWheel = model.Wheels.FirstOrDefault();
@@ -175,6 +179,16 @@ public sealed class OverlayWindow : Window
         motion.Exit(MotionDistance, model.AnimateWheels, () => { if (generation == current && !shown) Hide(); });
     }
     private double MotionDistance=>model.ScreenEdge is "Top" or "Bottom"?Height:Width;
+    private void ApplyApplicationBlock()
+    {
+        if(model.IsApplicationBlocked)
+        {
+            generation++;shown=false;input.Close();
+            foreach(var control in controls) {if(control.IsMouseCaptured)control.ReleaseMouseCapture();control.ResetScroll();}
+            if(IsVisible)Hide();
+        }
+        UpdateHits();
+    }
     private void UpdateHits()
     {
         var rows = new List<HitRow>();
@@ -190,7 +204,7 @@ public sealed class OverlayWindow : Window
                 if(right>left&&bottom>top)rows.Add(new(i,left,top,right,bottom,c.Wheel?.Available==true));
             }
         }
-        hitState = new(shown,model.EdgeEnabled,model.Preferences.EdgeWidth,generation,rows.ToArray(),model.ScreenEdge,model.MonitorId,screens);
+        hitState = new(shown,model.EdgeEnabled&&!model.IsApplicationBlocked,model.Preferences.EdgeWidth,generation,rows.ToArray(),model.ScreenEdge,model.MonitorId,screens);
     }
     private IntPtr WindowProc(IntPtr hwnd,int message,IntPtr wp,IntPtr lp,ref bool handled)
     {

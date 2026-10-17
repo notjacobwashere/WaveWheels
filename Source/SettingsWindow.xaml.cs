@@ -105,6 +105,13 @@ public partial class SettingsWindow : Window
         var app=Path.GetFileName(dialog.FileName);
         if(!ProfileAutomation.Matches(model.ActiveProfile.Applications,app))model.ActiveProfile.Applications+=(model.ActiveProfile.Applications.Trim().Length==0?"":", ")+app;
     }
+    private void AddBlacklistedApp(object sender,RoutedEventArgs e)=>model.AddBlacklistedApplication();
+    private void RemoveBlacklistedApp(object sender,RoutedEventArgs e)=>model.RemoveBlacklistedApplication();
+    private void BrowseBlacklistedApp(object sender,RoutedEventArgs e)
+    {
+        var dialog=new OpenFileDialog {Title="Choose an app to blacklist",Filter="Windows applications (*.exe)|*.exe",CheckFileExists=true};
+        if(dialog.ShowDialog(this)==true)model.AddBlacklistedApplication(Path.GetFileName(dialog.FileName));
+    }
     private void ExportProfile(object sender,RoutedEventArgs e)=>Export(false);
     private void ExportAllProfiles(object sender,RoutedEventArgs e)=>Export(true);
     private void Export(bool all)

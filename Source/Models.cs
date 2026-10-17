@@ -60,6 +60,8 @@ public sealed class Preferences
     public int ScrollStepPercent { get; set; } = 1;
     public int ShiftStepPercent { get; set; } = 20;
     public bool ShowShiftMarkers { get; set; }
+    public bool ApplicationBlacklistEnabled {get;set;}=true;
+    public List<string> BlacklistedApplications {get;set;}=new();
     public bool ScrollAccelerationEnabled { get; set; } = true;
     public bool AutomaticProfilesEnabled { get; set; }
     public string ManualProfileId { get; set; } = "";
@@ -129,6 +131,7 @@ public sealed class SettingsStore
             p.IdleMilliseconds = Math.Clamp(p.IdleMilliseconds, 500, 5000);
             p.ScrollStepPercent=Math.Clamp(p.ScrollStepPercent,1,10);
             p.ShiftStepPercent=Math.Clamp(p.ShiftStepPercent,5,50);
+            p.BlacklistedApplications=(p.BlacklistedApplications??new()).Select(ApplicationBlacklist.Normalize).Where(x=>x!=null).Select(x=>x!).Distinct(StringComparer.OrdinalIgnoreCase).Take(50).ToList();
             if(!p.Profiles.Any(x=>x.Id==p.ManualProfileId))p.ManualProfileId=active.Id;
             p.WheelSizePercent = Math.Clamp(p.WheelSizePercent, 50, 180);
             p.PortOverride = p.PortOverride is >= 1024 and <= 65535 ? p.PortOverride : 0;

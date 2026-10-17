@@ -24,7 +24,7 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.7.1-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download **`WaveWheels-0.8.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. First-time installs include a short, skippable intro to the controls and settings before configuration opens. Existing installations and saved settings bypass it. The runtime is bundled; no separate .NET download or administrator account is needed.
 3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels. Select **None** for an unbound wheel.
 
@@ -32,7 +32,7 @@ Requires Windows 10/11 x64 and a running Wave Link installation with its local c
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
-For a portable alternative, extract `WaveWheels-0.7.1-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+For a portable alternative, extract `WaveWheels-0.8.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 
@@ -60,6 +60,12 @@ On **Profiles**, turn on automatic switching and add executable names such as `d
 Use **Export profile** or **Export all** to save a `.wavewheels.json` file. **Import profiles** adds independent copies and resolves duplicate names. Files preserve wheels, bindings, volume limits, and app rules, but exclude live levels and global settings. Check channel bindings when moving between PCs.
 
 In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. Fractional hardware input accumulates into complete configured steps, with fresh input state after a volume boundary. Hold **Shift** over a wheel to snap between larger increments, with a 180 ms cooldown. Its separate setting defaults to 20% and supports 5–50%. **Show Shift increment dots** is off by default; enable it for dots at the snap positions, without numeric labels. Animation effects respect the animation setting and Windows motion preference. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
+
+## Application blacklist
+
+In **Settings → App blacklist**, add an executable name such as `game.exe`, or use **Browse app**. Names match exactly and case-insensitively, including dotted names; window titles and wildcards are never used. While a listed executable is focused, WaveWheels hides its overlay and ignores volume, mute, and preview interactions. Other apps remain unaffected, and configuration remains accessible from the tray.
+
+**Enable app blacklist** turns suppression on or off without removing entries. It starts enabled with an empty list, which has no effect. Use **Remove selected** to delete an entry. Up to 50 names are saved locally; no foreground-app history is recorded or sent anywhere. Automatic profile switching can stay enabled independently.
 
 ## Startup and upgrades
 

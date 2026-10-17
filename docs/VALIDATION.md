@@ -1,4 +1,4 @@
-# Validation · WaveWheels 0.7.1
+# Validation · WaveWheels 0.8.0
 
 Checked October 17, 2026 on Windows.
 
@@ -22,4 +22,6 @@ Component renders use fixture channels without controlling desktop input or writ
 
 0.7.0 checks the actual WPF animation clocks, endpoint-triggered maximum burst, no repeated capped writes/bursts, reduced motion, and per-digit layout across carries and digit-count changes. Pixel comparisons verify that Shift dots are hidden by default and only dot positions change when enabled, with no percentage labels. Snap targets, cooldown, dynamic increments, settings persistence, and normal-scroll boundary reversals are checked with default/10% steps, acceleration on/off, and custom caps. Channel editor tests verify initial and refreshed friendly selection, preview identity, and selectable None without focus changes. UI fixtures use fresh profile directories and a resource-only Application, preventing production tray/mixer/global-hook startup during binding dispatch. Desktop gestures and subjective animation feel remain manual checks.
 
-0.7.1 adds installer onboarding integration checks on the disposable Windows runner: show the first-install controls/settings pages, capture their windows, advance, skip, and cancel before any application files or preferences are written. A fixture with existing saved settings must bypass the intro, as must an in-app upgrade. The existing settings-retention and reopen/uninstall checks remain in place. Local preparation only compiles/parses the test helper; Setup is never launched on the user's machine for this validation.
+0.8.0 adds installer onboarding integration checks on the disposable Windows runner: show the first-install controls/settings pages, capture their windows, advance, skip, and cancel before any application files or preferences are written. A fixture with existing saved settings must bypass the intro, as must an in-app upgrade. The existing settings-retention and reopen/uninstall checks remain in place. Local preparation only compiles/parses the test helper; Setup is never launched on the user's machine for this validation.
+
+Blacklist regressions cover exact/case-insensitive/dotted executable names, rejected wildcard/path input, no title/substring matches, UI add/remove and duplicate handling, blocked volume/mute/preview paths, and edge events remaining unconsumed. Unmatched apps, disabled lists, re-enabling, removing the focused entry, coexistence with automatic profiles, and persisted settings are checked using controlled process names. Production foreground events plus the existing timer drive focus changes; volume/preview actions refresh the policy before acting. Actual cross-app foreground switching remains a manual desktop check.

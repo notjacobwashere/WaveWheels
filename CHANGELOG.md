@@ -1,7 +1,9 @@
 # Changelog
 
-## 0.7.1
+## 0.8.0
 
+- Added a saved app blacklist in Settings, with executable-name add/browse/remove controls and a global toggle. Empty or disabled lists have no effect.
+- Focused blacklisted executables hide the overlay and suppress all volume/mute/preview paths. Exact local matching shares foreground discovery with automatic profiles; window titles are never used.
 - Added a skippable two-page first-install intro in Setup, explaining edge activation, the opening-scroll pause, volume/mute controls, tray behavior, initial bindings, and main configuration settings.
 - Existing installations, saved settings, in-app upgrades, and silent installs bypass the intro. Onboarding never changes saved preferences.
 - Added disposable Windows runner checks for the real intro pages, Next/Skip behavior, cancellation before installation, and upgrade bypass.

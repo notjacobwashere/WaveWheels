@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.7.1"
+  #define AppVersion "0.8.0"
 #endif
 
 [Setup]
@@ -104,6 +104,7 @@ begin
     '1. Open Wave Link. In configuration, bind each wheel to an input channel and mix. Choose None to leave a wheel unbound.' + #13#10 +
     '2. Choose Preview wheels and try scrolling over a wheel.' + #13#10#13#10 +
     'Profiles - save layouts and optionally switch for focused apps.' + #13#10 +
+    'Blacklist - pause wheels while selected apps are focused.' + #13#10 +
     'Scroll - tune normal steps, acceleration, and hide delay.' + #13#10 +
     'Shift - snap in larger increments (20% default); optional dots.' + #13#10 +
     'Style - choose wheel count, order, names, colors, and size.' + #13#10 +

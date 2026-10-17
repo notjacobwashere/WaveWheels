@@ -26,6 +26,17 @@ public sealed class MainViewModel : Observable
     public WaveLinkClient Client { get; } = new();
     public ObservableCollection<Wheel> Wheels { get; }
     public ObservableCollection<WheelProfile> Profiles { get; }
+    public ObservableCollection<string> BlacklistedApplications {get;}
+    private ForegroundFocusMonitor? foregroundMonitor;
+    private string? focusedExecutable;
+    private bool isApplicationBlocked;
+    private string newBlacklistedApplication="";
+    public string NewBlacklistedApplication {get=>newBlacklistedApplication;set=>Set(ref newBlacklistedApplication,value);}
+    public string? SelectedBlacklistedApplication {get;set;}
+    public bool IsApplicationBlocked {get=>isApplicationBlocked;private set {if(Set(ref isApplicationBlocked,value))ApplicationBlockChanged?.Invoke();}}
+    public bool ApplicationBlacklistEnabled {get=>Preferences.ApplicationBlacklistEnabled;set {if(value==Preferences.ApplicationBlacklistEnabled)return;Preferences.ApplicationBlacklistEnabled=value;Changed();ScheduleSave();RefreshInteractionPolicy();}}
+    public string BlacklistStatus=>!ApplicationBlacklistEnabled?"Blacklist is off. Wheels work in all apps.":IsApplicationBlocked?"Wheels paused for "+focusedExecutable:BlacklistedApplications.Count==0?"No apps blocked. Add an executable name below.":"Blacklist is on. Wheels are available in the current app.";
+    public event Action? ApplicationBlockChanged;
     public ObservableCollection<Choice> Monitors { get; } = new();
     public string[] Edges { get; } = new[]{"Left","Right","Top","Bottom"};
     private WheelProfile? activeProfile;
@@ -122,6 +133,7 @@ public sealed class MainViewModel : Observable
     {
         this.store = store; this.isolated = isolated;
         Preferences = store.Load();
+        BlacklistedApplications=new(Preferences.BlacklistedApplications);
         notifiedVersion=Preferences.LastNotifiedUpdate;
         if(Preferences.Profiles.Count==0)Preferences.Profiles.Add(new WheelProfile { Wheels=Preferences.Wheels });
         Profiles=new(Preferences.Profiles);
@@ -137,6 +149,7 @@ public sealed class MainViewModel : Observable
         Wheels.CollectionChanged += CollectionChanged;
         saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
         saveTimer.Tick += (_, _) => Save();
+        BlacklistedApplications.CollectionChanged+=(_,_)=> {ScheduleSave();RefreshInteractionPolicy();};
         Client.Updated += data => dispatcher.BeginInvoke(() => Update(data));
         Client.Log = line => App.WriteLog(line);
         SelectedWheel = Wheels.FirstOrDefault();
@@ -144,9 +157,34 @@ public sealed class MainViewModel : Observable
         Update(snapshot);
         RefreshMonitors();
         updateTimer.Tick+=async(_,_)=> { if(CheckUpdatesAutomatically)await CheckForUpdatesAsync(); };
-        foregroundTimer.Tick+=(_,_)=> {if(AutomaticProfilesEnabled)ApplyForegroundProcess(ProfileAutomation.ForegroundProcess(),Environment.TickCount64);};
+        foregroundTimer.Tick+=(_,_)=>RefreshForeground();
     }
-    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    private void RefreshForeground()
+    {
+        if(AutomaticProfilesEnabled||ApplicationBlacklistEnabled&&BlacklistedApplications.Count>0)ApplyForegroundProcess(ProfileAutomation.ForegroundProcess(),Environment.TickCount64);
+        else UpdateBlacklist(null);
+    }
+    private void UpdateBlacklist(string? process)
+    {
+        focusedExecutable=process;
+        IsApplicationBlocked=ApplicationBlacklistEnabled&&ApplicationBlacklist.Matches(BlacklistedApplications,process);
+        Changed(nameof(BlacklistStatus));
+    }
+    internal bool RefreshInteractionPolicy()
+    {
+        UpdateBlacklist(!isolated&&ApplicationBlacklistEnabled&&BlacklistedApplications.Count>0?ProfileAutomation.ForegroundProcess():focusedExecutable);
+        return !IsApplicationBlocked;
+    }
+    public void AddBlacklistedApplication(string? executable=null)
+    {
+        var name=ApplicationBlacklist.Normalize(executable??NewBlacklistedApplication);
+        if(name==null) {Message="Enter an executable name, for example game.exe. Use Browse for a full path.";return;}
+        if(BlacklistedApplications.Contains(name)) {Message="That executable is already in the blacklist.";return;}
+        if(BlacklistedApplications.Count>=50) {Message="You can blacklist up to 50 applications.";return;}
+        BlacklistedApplications.Add(name);NewBlacklistedApplication="";Message="Added "+name+" to the blacklist.";
+    }
+    public void RemoveBlacklistedApplication() {if(SelectedBlacklistedApplication is string name)BlacklistedApplications.Remove(name);}
     public void RefreshMonitors()
     {
         var choices=System.Windows.Forms.Screen.AllScreens.Select((s,i)=>new Choice(s.DeviceName,$"Display {i+1}{(s.Primary?" · primary":"")} · {s.Bounds.Width}×{s.Bounds.Height}")).ToList();
@@ -157,6 +195,7 @@ public sealed class MainViewModel : Observable
     private void ProfileChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName==nameof(WheelProfile.Applications))automation.Reset();ScheduleSave();}
     internal void ApplyForegroundProcess(string? process,long now)
     {
+        UpdateBlacklist(process);
         if(!AutomaticProfilesEnabled)return;
         var target=automation.Evaluate(process,Profiles,Preferences.ManualProfileId,now);
         if(target==null)return;
@@ -329,7 +368,7 @@ public sealed class MainViewModel : Observable
     private void UpdatePositions() { for (var i = 0; i < Wheels.Count; i++) Wheels[i].Position = i; }
     public void SetLevel(Wheel wheel, double level)
     {
-        if (!Wheels.Contains(wheel)||!wheel.Available||!double.IsFinite(level)) return;
+        if (!Wheels.Contains(wheel)||!wheel.Available||!double.IsFinite(level)||!RefreshInteractionPolicy()) return;
         var cap=Wheels.Where(w=>w.ChannelId==wheel.ChannelId&&w.MixId==wheel.MixId).Select(w=>w.MaximumVolumePercent).DefaultIfEmpty(wheel.MaximumVolumePercent).Min()/100d;
         level = Math.Round(Math.Clamp(level, 0, cap), 2);
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) other.Level = level;
@@ -337,7 +376,7 @@ public sealed class MainViewModel : Observable
     }
     public void ToggleMute(Wheel wheel)
     {
-        if (!Wheels.Contains(wheel)||!wheel.Available) return;
+        if (!Wheels.Contains(wheel)||!wheel.Available||!RefreshInteractionPolicy()) return;
         var value = !wheel.Muted;
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) { other.Muted = value; other.Changed(nameof(Wheel.VolumeLabel)); }
         Client.QueueMute(new(wheel.ChannelId, wheel.MixId), value);
@@ -348,13 +387,13 @@ public sealed class MainViewModel : Observable
         Preferences.PortOverride = int.TryParse(PortText, out var p) ? p : 0;
         ScheduleSave(); Client.Reconnect(Preferences.PortOverride); Message = "Checking the local Wave Link connection…";
     }
-    public void Preview() => PreviewRequested?.Invoke();
+    public void Preview() {if(RefreshInteractionPolicy())PreviewRequested?.Invoke();}
     private void ScheduleSave() { SaveStatus = "Saving…"; saveTimer.Stop(); saveTimer.Start(); }
     public void Save()
     {
         saveTimer.Stop();
-        try { Preferences.Wheels = Wheels.ToList();if(activeProfile!=null) {activeProfile.Wheels=Preferences.Wheels;Preferences.ActiveProfileId=activeProfile.Id;}Preferences.Profiles=Profiles.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
+        try {Preferences.BlacklistedApplications=BlacklistedApplications.ToList(); Preferences.Wheels = Wheels.ToList();if(activeProfile!=null) {activeProfile.Wheels=Preferences.Wheels;Preferences.ActiveProfileId=activeProfile.Id;}Preferences.Profiles=Profiles.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
         catch (Exception ex) { SaveStatus = "Could not save changes"; Message = ex.Message; App.WriteLog("Settings: " + ex.Message); }
     }
-    public void Dispose() { foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
+    public void Dispose() {foregroundMonitor?.Dispose(); foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
 }
