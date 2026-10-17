@@ -48,6 +48,7 @@ internal static class UiRendering
                 System.Windows.Documents.TextElement.SetForeground(root,new SolidColorBrush(Color.FromRgb(243,240,250)));
                 root.Measure(new Size(1160,860));root.Arrange(new Rect(0,0,1160,860));root.UpdateLayout();
                 Console.WriteLine("UI: arranged studio");
+                TestHeader(window,root);
                 var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
                 foreach(var wheel in Descendants(root).OfType<WheelControl>()) {wheel.BeginAnimation(WheelControl.DisplayLevelProperty,null);wheel.DisplayLevel=wheel.Wheel?.Level??0;}
                 root.UpdateLayout();
@@ -190,6 +191,34 @@ internal static class UiRendering
         router.Close();now=3000;var reopened=router.Route(0,0,now);
         if(!reopened.Reveal||reopened.Index!=-1)throw new Exception("Reopening must reset input suppression.");
         overlay.Close();
+    }
+    private static void TestHeader(SettingsWindow window,FrameworkElement root)
+    {
+        var header=(Border)window.FindName("TitleBar");var drags=0;
+        foreach(var point in new[]{new Point(12,32),new Point(38,32),new Point(130,32),new Point(420,32),new Point(760,32),new Point(980,32)})
+        {
+            var source=VisualTreeHelper.HitTest(root,point)?.VisualHit;
+            if(!SettingsWindow.IsHeaderDragSource(source,header)||!window.HandleHeaderPress(source,1,()=>drags++))throw new Exception("Header hit test failed at "+point+" on "+source?.GetType().Name);
+        }
+        if(drags!=6)throw new Exception("Header presses must initiate exactly one drag each.");
+        foreach(var button in Descendants(header).OfType<Button>())
+        {
+            var source=Descendants(button).LastOrDefault()??button;
+            if(window.HandleHeaderPress(source,1,()=>drags++)||window.HandleHeaderPress(source,2,()=>drags++))throw new Exception("Caption buttons and template descendants must not drag or maximize.");
+        }
+        var host=(Grid)header.Child;
+        foreach(var control in new Control[]{new TextBox(),new ComboBox(),new Slider(),new CheckBox(),new Button()})
+        {
+            host.Children.Add(control);
+            if(window.HandleHeaderPress(control,1,()=>drags++))throw new Exception("Interactive header controls must keep their input.");
+            host.Children.Remove(control);
+        }
+        var link=new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run("link"));var text=new TextBlock(link);host.Children.Add(text);
+        if(window.HandleHeaderPress(link.Inlines.FirstInline,1,()=>drags++))throw new Exception("Header hyperlinks must not initiate dragging.");host.Children.Remove(text);
+        if(window.HandleHeaderPress(VisualTreeHelper.HitTest(root,new Point(400,150))?.VisualHit,1,()=>drags++)||window.HandleHeaderPress((Button)window.FindName("SettingsNav"),1,()=>drags++))throw new Exception("Body content and navigation must never drag the window.");
+        window.HandleHeaderPress(header,2,()=>drags++);if(window.WindowState!=WindowState.Maximized||drags!=6)throw new Exception("Double-clicking the header must maximize without dragging.");
+        window.HandleHeaderPress(header,2,()=>drags++);if(window.WindowState!=WindowState.Normal)throw new Exception("Double-clicking again must restore.");
+        Console.WriteLine("PASS: full-width header hit testing/drag dispatch, interactive descendants, body/navigation exclusion, and maximize/restore.");
     }
     private static void Save(FrameworkElement root,string path,int width,int height)
     {

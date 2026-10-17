@@ -38,7 +38,28 @@ public partial class SettingsWindow : Window
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
     }
-    private void TitleDrag(object sender,MouseButtonEventArgs e) { if(e.ClickCount==2) WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;else if(e.LeftButton==MouseButtonState.Pressed) DragMove(); }
+    internal static bool IsHeaderDragSource(DependencyObject? source,DependencyObject header)
+    {
+        for(var element=source;element!=null;element=GetAncestorNode(element))
+        {
+            if(element==header)return true;
+            // Include template children and content elements, so interactive descendants keep their input.
+            if(element is Control or Hyperlink)return false;
+        }
+        return false;
+    }
+    internal bool HandleHeaderPress(DependencyObject? source,int clickCount,Action drag)
+    {
+        if(!IsHeaderDragSource(source,TitleBar))return false;
+        if(clickCount==2)WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;
+        else drag();
+        return true;
+    }
+    private void TitleDrag(object sender,MouseButtonEventArgs e)
+    {
+        if(!e.Handled&&e.LeftButton==MouseButtonState.Pressed)
+            e.Handled=HandleHeaderPress(e.OriginalSource as DependencyObject,e.ClickCount,()=>DragMove());
+    }
     private void Minimize(object sender,RoutedEventArgs e) => WindowState=WindowState.Minimized;
     private void HideConfig(object sender,RoutedEventArgs e) { model.Save(); Hide(); }
     private void Navigate(object sender,RoutedEventArgs e)

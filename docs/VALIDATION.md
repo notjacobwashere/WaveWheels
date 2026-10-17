@@ -1,4 +1,4 @@
-# Validation · WaveWheels 0.6.0
+# Validation · WaveWheels 0.6.1
 
 Checked October 17, 2026 on Windows.
 
@@ -17,3 +17,5 @@ Component renders use fixture channels without controlling desktop input or writ
 0.5.0 adds controlled foreground-process rule tests for debounce, whole executable matching, manual override, and fallback; scroll tests for fractional input, acceleration, direction changes, and configuration resets; and compiled view-model checks for volume caps, duplicate targets, stale profile events, additive imports, and persistence. Import tests reject malformed, oversized, unsupported, and invalid-color files. Settings sliders are exercised through actual WPF controls. These tests do not switch desktop foreground apps or inject mouse input. Modern and legacy local simulator suites both pass; physical automatic switching remains a manual check.
 
 0.6.0 adds production download tests with a controlled HTTP transport: exact official asset selection, SHA-256 and size validation, HTTPS metadata, missing assets/digests, HTTP failure, cancellation, partial-file cleanup, progress, and safe installer arguments. View-model tests exercise save-before-launch, retry, no exit on failed/canceled/invalid downloads or failed handoff, single exit after successful handoff, and isolation protection. WPF component checks cover the install/cancel buttons and browser fallback. GitHub's disposable Windows runner tests the in-app installer flag, automatic configuration reopening, and retained scroll tuning/volume limits in addition to existing install/uninstall checks. No local installation is changed by the automated component or simulator suites.
+
+0.6.1 checks the arranged WPF visual tree at six header positions, including empty space and the status badge, then invokes the production drag-dispatch path with a recording action. Caption button templates, text boxes, selectors, sliders, checkboxes, hyperlink content, navigation, and body regions cannot initiate dragging or maximize/restore. Header double-click toggles maximize/restore without invoking drag. These tests do not move desktop windows; physical dragging remains a manual check.

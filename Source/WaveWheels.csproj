@@ -10,7 +10,7 @@
     <ApplicationIcon>Assets/WaveWheels.ico</ApplicationIcon>
     <AssemblyName>WaveWheels</AssemblyName>
     <RootNamespace>WaveWheels</RootNamespace>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
     <Description>Edge-triggered volume wheels for Elgato Wave Link</Description>
     <Company>WaveWheels</Company>
     <Product>WaveWheels</Product>

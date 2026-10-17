@@ -24,7 +24,7 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.6.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download **`WaveWheels-0.6.1-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. The runtime is bundled; no separate .NET download or administrator account is needed.
 3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels.
 
@@ -32,7 +32,7 @@ Requires Windows 10/11 x64 and a running Wave Link installation with its local c
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
-For a portable alternative, extract `WaveWheels-0.6.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+For a portable alternative, extract `WaveWheels-0.6.1-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 

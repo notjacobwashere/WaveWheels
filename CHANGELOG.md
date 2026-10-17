@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- The entire noninteractive configuration header now supports dragging, including empty space, title text, and the connection badge.
+- Caption buttons, interactive header descendants, navigation, and content controls retain their normal input. Double-click still maximizes/restores the window.
+- Added compiled WPF hit-test and drag-dispatch regressions across the header, interactive templates/content, and body exclusion.
+
 ## 0.6.0
 
 - Added Download and install on the Updates page, with progress, cancellation, retry, and the existing release-page fallback.
