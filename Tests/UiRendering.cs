@@ -19,9 +19,9 @@ internal static class UiRendering
         {
             try
             {
-                var app=new App();app.InitializeComponent();
+                var app=new ComponentApplication();app.InitializeComponent();
                 Console.WriteLine("UI: initialized resources");
-                var store=new SettingsStore(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,"render-profile"));
+                var store=new SettingsStore(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,"render-profile-"+Guid.NewGuid().ToString("N")));
                 var vm=new MainViewModel(store,true);
                 Console.WriteLine("UI: loaded profile and monitor choices");
                 while(vm.Wheels.Count>3)vm.RemoveWheel(vm.Wheels[^1]);
@@ -116,7 +116,7 @@ internal static class UiRendering
             }
             catch(Exception ex){error=ex;}
         });
-        thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();if(error!=null)throw error;
+        thread.SetApartmentState(ApartmentState.STA);thread.Start();thread.Join();if(error!=null)System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
     }
     private static void VerifyOverlay(MainViewModel vm,string directory)
     {

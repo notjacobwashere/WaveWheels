@@ -37,6 +37,9 @@ public sealed class MainViewModel : Observable
     public bool AutomaticProfilesEnabled {get=>Preferences.AutomaticProfilesEnabled;set {if(value==Preferences.AutomaticProfilesEnabled)return;Preferences.AutomaticProfilesEnabled=value;automation.Reset();Changed();AutomaticProfileStatus=value?"Waiting for a focused app…":"Automatic switching is off.";ScheduleSave();}}
     public int ScrollStepPercent {get=>Preferences.ScrollStepPercent;set {value=Math.Clamp(value,1,10);if(value==Preferences.ScrollStepPercent)return;Preferences.ScrollStepPercent=value;Changed();Changed(nameof(ScrollStepLabel));ScheduleSave();InputSettingsChanged?.Invoke();}}
     public string ScrollStepLabel=>ScrollStepPercent+"% per notch";
+    public int ShiftStepPercent {get=>Preferences.ShiftStepPercent;set {value=Math.Clamp(value,5,50);if(value==Preferences.ShiftStepPercent)return;Preferences.ShiftStepPercent=value;Changed();Changed(nameof(ShiftStepLabel));ScheduleSave();InputSettingsChanged?.Invoke();}}
+    public string ShiftStepLabel=>ShiftStepPercent+"% while holding Shift";
+    public bool ShowShiftMarkers {get=>Preferences.ShowShiftMarkers;set {if(value==Preferences.ShowShiftMarkers)return;Preferences.ShowShiftMarkers=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public bool ScrollAccelerationEnabled {get=>Preferences.ScrollAccelerationEnabled;set {if(value==Preferences.ScrollAccelerationEnabled)return;Preferences.ScrollAccelerationEnabled=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public int IdleMilliseconds {get=>Preferences.IdleMilliseconds;set {value=Math.Clamp(value,500,5000);if(value==Preferences.IdleMilliseconds)return;Preferences.IdleMilliseconds=value;Changed();Changed(nameof(IdleLabel));ScheduleSave();}}
     public string IdleLabel=>(IdleMilliseconds/1000d).ToString("0.0")+" seconds";
@@ -265,7 +268,7 @@ public sealed class MainViewModel : Observable
     {
         snapshot = data;
         var choices = data.Channels.Select(c => new Choice(c.Id, c.Name)).ToList();
-        choices.Insert(0, new("", "Choose an input channel…"));
+        choices.Insert(0, new("", "None"));
         foreach (var w in Wheels.Where(w => w.ChannelId.Length > 0)) if (!choices.Any(c => c.Id == w.ChannelId)) choices.Add(new(w.ChannelId, "Saved channel · currently unavailable"));
         ReplaceChoices(Channels, choices.ToArray());
         UpdateMixChoices(); SyncWheels();

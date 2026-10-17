@@ -24,6 +24,8 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr value);
     [DllImport("user32.dll")] internal static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] internal static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
+    internal static bool ShiftDown=>(GetAsyncKeyState(0x10)&0x8000)!=0;
     [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(IntPtr window,out uint processId);
     [DllImport("user32.dll")] internal static extern IntPtr MonitorFromPoint(Point point, uint flags);

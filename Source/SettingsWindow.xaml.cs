@@ -11,6 +11,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Documents;
+using System.Windows.Threading;
+using System.Windows.Controls.Primitives;
 
 namespace WaveWheels;
 
@@ -24,19 +26,38 @@ public partial class SettingsWindow : Window
     private AdornerLayer? dropLayer;
     private int insertion;
     private long lastAutoScroll;
+    private bool editorRefreshQueued;
     public SettingsWindow(MainViewModel model)
     {
         this.model = model;
         InitializeComponent();
         DataContext = model;
+        model.SelectionChanged+=QueueEditorBindings;
+        model.Channels.CollectionChanged+=(_,_)=>QueueEditorBindings();
+        model.MixChoices.CollectionChanged+=(_,_)=>QueueEditorBindings();
+        Loaded+=(_,_)=>QueueEditorBindings();
+        IsVisibleChanged+=(_,_)=> {if(IsVisible)QueueEditorBindings();};
+        QueueEditorBindings();
         CountBox.ItemsSource = Enumerable.Range(1,12);
         SelectedPreview.VolumeRequested += model.SetLevel;
         SelectedPreview.MuteRequested += model.ToggleMute;
-        void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
+        void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ShiftStepPercent=model.ShiftStepPercent;SelectedPreview.ShowShiftMarkers=model.ShowShiftMarkers;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
         PreviewInputSettings();model.InputSettingsChanged+=PreviewInputSettings;
         Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); } };
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
+    }
+    private void QueueEditorBindings()
+    {
+        if(editorRefreshQueued)return;editorRefreshQueued=true;
+        Dispatcher.BeginInvoke(DispatcherPriority.DataBind,new Action(()=>
+        {
+            editorRefreshQueued=false;
+            // Items may arrive after SelectedValue was first evaluated, or be replaced on discovery.
+            // Reapply the saved IDs after the choice list settles, without writing transient nulls back.
+            if(!ChannelBox.IsDropDownOpen)ChannelBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
+            if(!MixBox.IsDropDownOpen)MixBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
+        }));
     }
     internal static bool IsHeaderDragSource(DependencyObject? source,DependencyObject header)
     {
@@ -122,7 +143,7 @@ public partial class SettingsWindow : Window
     private void ColorKey(object sender,KeyEventArgs e) { if(e.Key==Key.Enter) {ApplyHex(sender,e);e.Handled=true;} }
     private void ChannelSelected(object sender,SelectionChangedEventArgs e) { if(ChannelBox.IsDropDownOpen)ApplyChannel(); }
     private void ChannelClosed(object? sender,EventArgs e) => ApplyChannel();
-    private void ApplyChannel() { if(ChannelBox.SelectedValue is string id && model.SelectedWheel!=null && id!=model.SelectedWheel.ChannelId)model.SelectedWheel.ChannelId=id; }
+    internal void ApplyChannel() { if(ChannelBox.SelectedValue is string id && model.SelectedWheel!=null && id!=model.SelectedWheel.ChannelId)model.SelectedWheel.ChannelId=id; }
     private void MixSelected(object sender,SelectionChangedEventArgs e) { if(MixBox.IsDropDownOpen)ApplyMix(); }
     private void MixClosed(object? sender,EventArgs e) => ApplyMix();
     private void ApplyMix() { if(MixBox.SelectedValue is string id && model.SelectedWheel!=null)model.SelectedWheel.MixId=id; }

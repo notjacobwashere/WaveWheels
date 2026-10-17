@@ -9,6 +9,8 @@ try {
     $tests = Join-Path $PSScriptRoot 'artifacts/tests/WaveWheels.Tests.dll'
     dotnet $tests --render 'artifacts/previews/studio.png'
     if ($LASTEXITCODE -ne 0) { throw 'WPF component tests failed.' }
+    dotnet $tests --maximum-effect-smoke 'artifacts/previews/maximum'
+    if ($LASTEXITCODE -ne 0) { throw 'Maximum effect and Shift snap smoke checks failed.' }
     $modernProfile = Join-Path $PSScriptRoot 'artifacts/profiles/modern'
     node 'Tests/Run-ProtocolTests.cjs' "--assembly=$tests" "--profile=$modernProfile"
     if ($LASTEXITCODE -ne 0) { throw 'Modern Wave Link tests failed.' }

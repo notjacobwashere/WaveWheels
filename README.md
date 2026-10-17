@@ -24,21 +24,21 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.6.1-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download **`WaveWheels-0.7.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. The runtime is bundled; no separate .NET download or administrator account is needed.
-3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels.
+3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels. Select **None** for an unbound wheel.
 
 Requires Windows 10/11 x64 and a running Wave Link installation with its local control service available. Setup installs for your user in `%LOCALAPPDATA%\Programs\WaveWheels`, adds Start menu shortcuts, and registers an uninstaller in Windows Settings → Apps. An optional desktop shortcut is available.
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
-For a portable alternative, extract `WaveWheels-0.6.1-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+For a portable alternative, extract `WaveWheels-0.7.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 
 ## Use your wheels
 
-Scroll at your configured monitor edge to reveal the overlay. The entire opening scroll burst leaves volume unchanged. Stop scrolling for at least **250 ms**, then hover an actual wheel and scroll again to change its volume. Scrolling on the activation strip never adjusts the last hovered wheel and is consumed so it does not scroll the application underneath. You can also drag the wheel up/down. Click its speaker button to mute or unmute the same channel/mix target; mute retains its level.
+Scroll at your configured monitor edge to reveal the overlay. The entire opening scroll burst leaves volume unchanged. Stop scrolling for at least **250 ms**, then hover an actual wheel and scroll again to change its volume. Scrolling on the activation strip never adjusts the last hovered wheel and is consumed so it does not scroll the application underneath. You can also drag the wheel up/down. Changed digits roll and fade for 150 ms while unchanged digits stay still. Reaching the ring endpoint at maximum produces a quick spark burst and a one-second glow; staying capped does not retrigger it. Click its speaker button to mute or unmute the same channel/mix target; mute retains its level.
 
 Open **Settings** to choose wheel size or disable slide-and-grow motion. Larger stacks fit the available display height. Drag the grip in the wheel list and drop on the highlighted insertion line, use the row arrows, or press **Alt+Up/Down** to reorder.
 
@@ -59,7 +59,7 @@ On **Profiles**, turn on automatic switching and add executable names such as `d
 
 Use **Export profile** or **Export all** to save a `.wavewheels.json` file. **Import profiles** adds independent copies and resolves duplicate names. Files preserve wheels, bindings, volume limits, and app rules, but exclude live levels and global settings. Check channel bindings when moving between PCs.
 
-In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
+In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. Fractional hardware input accumulates into complete configured steps, with fresh input state after a volume boundary. Hold **Shift** over a wheel to snap between larger increments, with a 180 ms cooldown. Its separate setting defaults to 20% and supports 5–50%. **Show Shift increment dots** is off by default; enable it for dots at the snap positions, without numeric labels. Animation effects respect the animation setting and Windows motion preference. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
 
 ## Startup and upgrades
 

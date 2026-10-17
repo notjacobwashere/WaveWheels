@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0
+
+- Added quick per-digit rolling transitions. Changed digits follow scroll direction together, while unchanged digits stay stationary.
+- Added a restrained maximum-volume effect: sparks finish in about 550 ms and glow fades over one second, triggered once when the animated ring visibly reaches its end stop.
+- Added Shift snapping with a 180 ms cooldown and a separate persisted increment setting, default 20% and adjustable from 5–50%.
+- Added an optional Shift-dot toggle, hidden by default. Enabled dots follow snap positions without percentage labels.
+- Normal scrolling accumulates fractional notches into configured steps and consumes clamped state at 0%, 100%, and custom volume limits.
+- Fixed initial and refreshed input-channel/mix selection in configuration. Unbound wheels now have an explicit None option.
+- Added focused animation, glyph, Shift, boundary, channel-editor, and persistence regressions. UI test startup is isolated from the real tray/mixer/input lifecycle.
+
 ## 0.6.1
 
 - The entire noninteractive configuration header now supports dragging, including empty space, title text, and the connection badge.

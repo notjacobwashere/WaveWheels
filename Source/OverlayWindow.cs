@@ -80,7 +80,7 @@ public sealed class OverlayWindow : Window
         stack.Children.Clear(); controls.Clear(); stack.Children.Add(new Border { Height = 12 });
         foreach (var wheel in model.Wheels)
         {
-            var c = new WheelControl { Wheel = wheel, ScrollStepPercent=model.ScrollStepPercent,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
             c.Selected += w => { model.SelectedWheel = w; lastActivity = Environment.TickCount64; };
             controls.Add(c); stack.Children.Add(c);
@@ -91,12 +91,13 @@ public sealed class OverlayWindow : Window
     }
     private void ApplyAppearance()
     {
+        foreach(var control in controls)control.EffectsEnabled=model.AnimateWheels;
         RefreshScreens();motion.SetEdge(model.ScreenEdge);
         var selected=screens.FirstOrDefault(s=>s.Screen.DeviceName==model.MonitorId);
         if(shown&&selected!=null) {activeScreen=selected.Screen;activeDpi=selected.Region.Dpi;}
         if (shown) Position();
     }
-    private void ApplyInputSettings() {foreach(var control in controls) {control.ScrollStepPercent=model.ScrollStepPercent;control.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;control.ResetScroll();}}
+    private void ApplyInputSettings() {foreach(var control in controls) {control.ScrollStepPercent=model.ScrollStepPercent;control.ShiftStepPercent=model.ShiftStepPercent;control.ShowShiftMarkers=model.ShowShiftMarkers;control.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;control.ResetScroll();}}
     private void RefreshScreens()
     {
         screens=Forms.Screen.AllScreens.Select(s=>new ScreenTarget(s,new EdgeRegion(s.Bounds.Left,s.Bounds.Top,s.Bounds.Right,s.Bounds.Bottom,ScaleFor(s.Bounds.Left+s.Bounds.Width/2,s.Bounds.Top+s.Bounds.Height/2)))).ToArray();

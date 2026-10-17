@@ -1,4 +1,4 @@
-# Validation · WaveWheels 0.6.1
+# Validation · WaveWheels 0.7.0
 
 Checked October 17, 2026 on Windows.
 
@@ -19,3 +19,5 @@ Component renders use fixture channels without controlling desktop input or writ
 0.6.0 adds production download tests with a controlled HTTP transport: exact official asset selection, SHA-256 and size validation, HTTPS metadata, missing assets/digests, HTTP failure, cancellation, partial-file cleanup, progress, and safe installer arguments. View-model tests exercise save-before-launch, retry, no exit on failed/canceled/invalid downloads or failed handoff, single exit after successful handoff, and isolation protection. WPF component checks cover the install/cancel buttons and browser fallback. GitHub's disposable Windows runner tests the in-app installer flag, automatic configuration reopening, and retained scroll tuning/volume limits in addition to existing install/uninstall checks. No local installation is changed by the automated component or simulator suites.
 
 0.6.1 checks the arranged WPF visual tree at six header positions, including empty space and the status badge, then invokes the production drag-dispatch path with a recording action. Caption button templates, text boxes, selectors, sliders, checkboxes, hyperlink content, navigation, and body regions cannot initiate dragging or maximize/restore. Header double-click toggles maximize/restore without invoking drag. These tests do not move desktop windows; physical dragging remains a manual check.
+
+0.7.0 checks the actual WPF animation clocks, endpoint-triggered maximum burst, no repeated capped writes/bursts, reduced motion, and per-digit layout across carries and digit-count changes. Pixel comparisons verify that Shift dots are hidden by default and only dot positions change when enabled, with no percentage labels. Snap targets, cooldown, dynamic increments, settings persistence, and normal-scroll boundary reversals are checked with default/10% steps, acceleration on/off, and custom caps. Channel editor tests verify initial and refreshed friendly selection, preview identity, and selectable None without focus changes. UI fixtures use fresh profile directories and a resource-only Application, preventing production tray/mixer/global-hook startup during binding dispatch. Desktop gestures and subjective animation feel remain manual checks.

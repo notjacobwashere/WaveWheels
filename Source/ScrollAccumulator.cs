@@ -18,11 +18,13 @@ internal sealed class ScrollAccumulator
         if(now-lastScroll>150||sign!=direction)acceleration=1;
         if(direction!=0&&sign!=direction)remainder=0;
         direction=sign;lastScroll=now;
-        remainder+=Math.Clamp(delta,-1000,1000)*step*acceleration;
+        // Accumulate notches, then apply the configured step. Fractional hardware input
+        // must not turn a 10% step into an arbitrary 8% change.
+        remainder+=Math.Clamp(delta,-1000,1000)*acceleration;
         acceleration=accelerate?Math.Min(5,acceleration*1.8):1;
         var result=(int)Math.Truncate(remainder+Math.Sign(remainder)*1e-7);
         remainder-=result;
-        return result;
+        return result*step;
     }
     public void Reset() {remainder=0;acceleration=1;lastScroll=0;direction=0;}
 }

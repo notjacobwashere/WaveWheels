@@ -9,15 +9,34 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 
 namespace WaveWheels;
 
 public sealed class WheelControl : FrameworkElement
 {
     public static readonly DependencyProperty WheelProperty = DependencyProperty.Register(nameof(Wheel), typeof(Wheel), typeof(WheelControl), new PropertyMetadata(null, OnWheelChanged));
-    public static readonly DependencyProperty DisplayLevelProperty = DependencyProperty.Register(nameof(DisplayLevel), typeof(double), typeof(WheelControl), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty DisplayLevelProperty = DependencyProperty.Register(nameof(DisplayLevel), typeof(double), typeof(WheelControl), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender,(d,e)=>((WheelControl)d).FinishMaximumArrival()));
     public Wheel? Wheel { get => (Wheel?)GetValue(WheelProperty); set => SetValue(WheelProperty, value); }
     public double DisplayLevel { get => (double)GetValue(DisplayLevelProperty); set => SetValue(DisplayLevelProperty, value); }
+    internal static readonly DependencyProperty MaximumEffectProgressProperty=DependencyProperty.Register("MaximumEffectProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty EffectsEnabledProperty=DependencyProperty.Register(nameof(EffectsEnabled),typeof(bool),typeof(WheelControl),new PropertyMetadata(true,(d,e)=> {if(!(bool)e.NewValue) {var control=(WheelControl)d;control.StopMaximumEffect();control.StopNumberTransition();}}));
+    public bool EffectsEnabled {get=>(bool)GetValue(EffectsEnabledProperty);set=>SetValue(EffectsEnabledProperty,value);}
+    private readonly MaximumVolumeTransition maximumTransition=new();
+    private AnimationClock? maximumClock;
+    private AnimationClock? levelClock;
+    private bool maximumPending;
+    internal double MaximumEffectProgress=>(double)GetValue(MaximumEffectProgressProperty);
+    internal int MaximumEffectStarts {get;private set;}
+    private static readonly DependencyProperty NumberProgressProperty=DependencyProperty.Register("NumberProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    internal const int NumberTransitionMilliseconds=150;
+    private AnimationClock? numberClock;
+    internal string NumberText {get;private set;}="—";
+    internal string OutgoingNumberText {get;private set;}="—";
+    internal int NumberDirection {get;private set;}=1;
+    internal int NumberTransitionStarts {get;private set;}
+    internal double NumberProgress=>(double)GetValue(NumberProgressProperty);
+    private double numberLevel;
     public event Action<Wheel>? MuteRequested;
     public event Action<Wheel, double>? VolumeRequested;
     public event Action<Wheel>? Selected;
@@ -28,16 +47,32 @@ public sealed class WheelControl : FrameworkElement
     private Point dragStart;
     private double dragLevel;
     private readonly ScrollAccumulator scroll=new();
+    private readonly ShiftVolumeSnap snap=new();
+    public int ShiftStepPercent {get=>snap.StepPercent;set {snap.StepPercent=value;InvalidateVisual();}}
+    private bool showShiftMarkers;
+    public bool ShowShiftMarkers {get=>showShiftMarkers;set {if(showShiftMarkers==value)return;showShiftMarkers=value;InvalidateVisual();}}
+    internal static Point PrecisionMarkerPoint(int percent)
+    {
+        var angle=(90+percent*2.7)*Math.PI/180;return new Point(60+Math.Cos(angle)*49,60+Math.Sin(angle)*49);
+    }
+    private readonly DispatcherTimer precisionTimer=new(){Interval=TimeSpan.FromMilliseconds(40)};
+    internal bool PrecisionMode {get;private set;}
+    internal void SetPrecisionMode(bool enabled)
+    {
+        if(PrecisionMode==enabled)return;
+        PrecisionMode=enabled;ResetScroll();InvalidateVisual();
+    }
     public int ScrollStepPercent {get;set;}=1;
     public bool ScrollAccelerationEnabled {get;set;}=true;
     private bool active;
     public WheelControl()
     {
         Width = 300; Height = 120; Focusable = true; Cursor = Cursors.Hand;
-        MouseEnter += (_, _) => { active = true; Selected?.Invoke(Wheel!); AnimateScale(1.04); InvalidateVisual(); };
-        MouseLeave += (_, _) => { active = false; AnimateScale(1); InvalidateVisual(); };
-        Unloaded += (_, _) => { if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
-        Loaded += (_, _) => { if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; AnimateLevel(); } };
+        precisionTimer.Tick+=(_,_)=>SetPrecisionMode(active&&Native.ShiftDown);
+        MouseEnter += (_, _) => { active = true;SetPrecisionMode(Native.ShiftDown);precisionTimer.Start();Selected?.Invoke(Wheel!); AnimateScale(1.04); InvalidateVisual(); };
+        MouseLeave += (_, _) => { active = false;precisionTimer.Stop();SetPrecisionMode(false);AnimateScale(1); InvalidateVisual(); };
+        Unloaded += (_, _) => { active=false;precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
+        Loaded += (_, _) => { if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; maximumTransition.Reset(Wheel.Available,Wheel.Level);ResetNumberDisplay();AnimateLevel(); } };
         MouseLeftButtonDown += Down;
         MouseMove += (_, e) => { if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
         MouseLeftButtonUp += (_, e) => { if (dragging) { dragging = false; ReleaseMouseCapture(); e.Handled = true; } };
@@ -50,20 +85,91 @@ public sealed class WheelControl : FrameworkElement
         var control = (WheelControl)d;
         if (e.OldValue is Wheel old) old.PropertyChanged -= control.ModelChanged;
         if (e.NewValue is Wheel next) next.PropertyChanged += control.ModelChanged;
+        control.StopMaximumEffect();control.maximumTransition.Reset(control.Wheel?.Available==true,control.Wheel?.Level??0);
+        control.ResetScroll();
+        control.ResetNumberDisplay();
         control.AnimateLevel(); control.InvalidateVisual();
     }
     private void ModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(Wheel.Level)) AnimateLevel();
+        if (e.PropertyName == nameof(Wheel.Level))
+        {
+            UpdateNumberDisplay();
+            if(Wheel?.Level<1)maximumPending=false;
+            if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,EffectsEnabled&&SystemParameters.ClientAreaAnimation))maximumPending=true;
+            AnimateLevel();
+        }
+        else if(e.PropertyName==nameof(Wheel.Available)) {ResetNumberDisplay();maximumTransition.Reset(Wheel?.Available==true,Wheel?.Level??0);if(Wheel?.Available!=true)StopMaximumEffect();}
         InvalidateVisual();
         if (Wheel != null) System.Windows.Automation.AutomationProperties.SetName(this, Wheel.Name + ", " + Wheel.VolumeLabel);
+    }
+    internal void StartMaximumEffect()
+    {
+        StopMaximumEffect();MaximumEffectStarts++;
+        maximumClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MaximumVolumeEffect.DurationMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
+        ApplyAnimationClock(MaximumEffectProgressProperty,maximumClock);
+    }
+    private void StopMaximumEffect() {maximumPending=false;maximumClock?.Controller?.Remove();maximumClock=null;BeginAnimation(MaximumEffectProgressProperty,null);SetValue(MaximumEffectProgressProperty,1d);}
+    internal void SeekMaximumEffect(TimeSpan time)=>maximumClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+    internal void SeekLevelAnimation(TimeSpan time)=>levelClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+    private void FinishMaximumArrival()
+    {
+        if(maximumPending&&MaximumVolumeEffect.RenderedArcLevel(DisplayLevel)==1&&Wheel?.Available==true&&Wheel.Level>=1&&EffectsEnabled&&SystemParameters.ClientAreaAnimation)
+        {maximumPending=false;StartMaximumEffect();}
+    }
+    internal static bool DisplaysMaximum(double level)=>level>=.995;
+    private string LiveNumberText()=>Wheel?.Available==true?(DisplaysMaximum(Wheel.Level)?"MAX":Math.Round(Wheel.Level*100).ToString("0")):"—";
+    private void ResetNumberDisplay()
+    {
+        StopNumberTransition();NumberText=OutgoingNumberText=LiveNumberText();numberLevel=Wheel?.Level??0;
+    }
+    private void StopNumberTransition() {numberClock?.Controller?.Remove();numberClock=null;BeginAnimation(NumberProgressProperty,null);SetValue(NumberProgressProperty,1d);}
+    private void UpdateNumberDisplay()
+    {
+        var target=LiveNumberText();var level=Wheel?.Level??0;
+        var direction=level>=numberLevel?1:-1;numberLevel=level;
+        if(target==NumberText)return;
+        var previous=NumberText;StopNumberTransition();OutgoingNumberText=previous;NumberText=target;NumberDirection=direction;
+        if(Wheel?.Available!=true||previous=="—"||!EffectsEnabled||!SystemParameters.ClientAreaAnimation)return;
+        // Replace the current transition rather than queueing numbers during rapid scrolling.
+        NumberTransitionStarts++;
+        numberClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(NumberTransitionMilliseconds)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop}.CreateClock(true);
+        ApplyAnimationClock(NumberProgressProperty,numberClock);
+    }
+    internal void SeekNumberTransition(TimeSpan time)=>numberClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+    private void DrawNumberLabel(DrawingContext dc,string text,double y,double opacity)
+    {
+        dc.PushOpacity(opacity);
+        if(NumberRollLayout.CanSplit(text,text))
+            foreach(var glyph in NumberRollLayout.Glyphs(text,text,1))DrawText(dc,glyph.Value.ToString(),22,new Point(glyph.X,y),Brushes.White,true,true);
+        else DrawText(dc,text,22,new Point(60,y),Brushes.White,true,true);
+        dc.Pop();
+    }
+    private void DrawNumber(DrawingContext dc)
+    {
+        var progress=NumberProgress;
+        if(progress>=1) {DrawNumberLabel(dc,NumberText,54,1);return;}
+        dc.PushClip(new RectangleGeometry(new Rect(22,32,76,43)));
+        if(NumberRollLayout.CanSplit(OutgoingNumberText,NumberText))
+            foreach(var glyph in NumberRollLayout.Glyphs(OutgoingNumberText,NumberText,progress,NumberDirection))
+            {
+                dc.PushOpacity(glyph.Opacity);DrawText(dc,glyph.Value.ToString(),22,new Point(glyph.X,54+glyph.OffsetY),Brushes.White,true,true);dc.Pop();
+            }
+        else
+        {
+            DrawNumberLabel(dc,OutgoingNumberText,54+NumberDirection*12*progress,1-progress);
+            DrawNumberLabel(dc,NumberText,54-NumberDirection*12*(1-progress),progress);
+        }
+        dc.Pop();
     }
     private void AnimateLevel()
     {
         var target = Wheel?.Level ?? 0;
-        if (!SystemParameters.ClientAreaAnimation) { BeginAnimation(DisplayLevelProperty, null); DisplayLevel = target; return; }
+        if (!SystemParameters.ClientAreaAnimation) {levelClock=null;BeginAnimation(DisplayLevelProperty, null); DisplayLevel = target; return; }
         var current = DisplayLevel;
-        BeginAnimation(DisplayLevelProperty, new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(400)) { EasingFunction = new PowerEase { Power = 5, EasingMode = EasingMode.EaseOut } });
+        levelClock=(AnimationClock)new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(400)) { EasingFunction = new PowerEase { Power = 5, EasingMode = EasingMode.EaseOut } }.CreateClock(true);
+        ApplyAnimationClock(DisplayLevelProperty,levelClock);
+        FinishMaximumArrival();
     }
     private void AnimateScale(double target)
     {
@@ -72,14 +178,21 @@ public sealed class WheelControl : FrameworkElement
         var animation = new DoubleAnimation(target, TimeSpan.FromMilliseconds(SystemParameters.ClientAreaAnimation ? 500 : 0)) { EasingFunction = new ExponentialEase { Exponent = 10, EasingMode = EasingMode.EaseOut } };
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, animation); scale.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
     }
-    public void Adjust(double delta)
+    public void Adjust(double delta)=>AdjustInput(delta,Native.ShiftDown,Environment.TickCount64);
+    internal void AdjustInput(double delta,bool shift,long now)
     {
         if (Wheel?.Available != true || CanAdjustVolume?.Invoke() == false) return;
-        var steps=scroll.Adjust(delta,ScrollStepPercent,ScrollAccelerationEnabled,Environment.TickCount64);
+        SetPrecisionMode(shift);
+        if(shift) {var target=snap.Adjust(delta,Wheel.Level,now);if(target.HasValue)VolumeRequested?.Invoke(Wheel,target.Value);return;}
+        if((Wheel.Level>=Wheel.MaximumVolumePercent/100d&&delta>0)||(Wheel.Level<=0&&delta<0)) {scroll.Reset();return;}
+        var steps=scroll.Adjust(delta,ScrollStepPercent,ScrollAccelerationEnabled,now);
         if (steps == 0) return;
-        VolumeRequested?.Invoke(Wheel, Wheel.Level + steps*.01);
+        var requested=Wheel.Level+steps*.01;
+        VolumeRequested?.Invoke(Wheel,requested);
+        // Discard acceleration and fractions consumed by a boundary (including a shared target's stricter cap).
+        if(Wheel.Level<=0||Wheel.Level>=Wheel.MaximumVolumePercent/100d||Math.Abs(Wheel.Level-requested)>1e-7)scroll.Reset();
     }
-    public void ResetScroll()=>scroll.Reset();
+    public void ResetScroll() {scroll.Reset();snap.Reset();}
     private void Down(object sender, MouseButtonEventArgs e)
     {
         if (Wheel == null) return;
@@ -97,14 +210,23 @@ public sealed class WheelControl : FrameworkElement
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, ActualWidth, ActualHeight));
         dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17, 20, 27)), null, new Point(60, 60), 56, 56);
         if (active) dc.DrawEllipse(null, new Pen(accent.CloneCurrentValue(), 1) { Brush = WithOpacity(accent, .18) }, new Point(60,60),57,57);
-        var arc = Arc(new Point(60, 60), 43, 270 * Math.Clamp(DisplayLevel, 0, 1));
+        var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius, 270 * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel));
+        var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress);
         if (w.Available)
         {
-            for (var blur = 10; blur >= 2; blur -= 2) dc.DrawGeometry(null, new Pen(WithOpacity(accent, .035), blur), arc);
+            for (var blur = 10; blur >= 2; blur -= 2) dc.DrawGeometry(null, new Pen(WithOpacity(accent, .035+glow*.1), blur+glow*2), arc);
+            if(glow>0)dc.DrawGeometry(null,new Pen(WithOpacity(accent,glow*.28),3.5),Arc(new Point(60,60),47,270));
             dc.DrawGeometry(null, new Pen(WithOpacity(accent, .85), 2.3), arc);
             dc.DrawGeometry(null, new Pen(w.Muted ? WithOpacity(Brushes.White, .35) : Brushes.White, 1.15), arc);
         }
-        DrawText(dc, w.Available ? (DisplayLevel >= .995 ? "MAX" : Math.Round(DisplayLevel * 100).ToString("0")) : "—", 22, new Point(60, 54), Brushes.White, true, true);
+        if(ShowShiftMarkers&&PrecisionMode&&w.Available)
+            foreach(var percent in ShiftVolumeSnap.MarkerLevels(ShiftStepPercent))
+            {
+                var point=PrecisionMarkerPoint(percent);
+                dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17,20,27)),null,point,3.8,3.8);
+                dc.DrawEllipse(WithOpacity(accent,percent*.01<=w.Level+1e-7?1:.5),null,point,2.2,2.2);
+            }
+        DrawNumber(dc);
         if (!Compact)
         {
             dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(17,20,27)), null, new Rect(124, 42, 168, 26),13,13);
@@ -115,6 +237,14 @@ public sealed class WheelControl : FrameworkElement
         // Segoe Fluent Icons is provided by Windows; no third-party artwork is distributed.
         var icon = new FormattedText(w.Muted ? "\uE74F" : "\uE767", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe Fluent Icons"), 13, w.Available ? Brushes.White : Brushes.Gray, VisualTreeHelper.GetDpi(this).PixelsPerDip);
         dc.DrawText(icon,new Point(60-icon.Width/2,88-icon.Height/2));
+        var sparks=MaximumVolumeEffect.SparkOpacity(MaximumEffectProgress);
+        if(w.Available&&sparks>0)
+            for(var i=0;i<MaximumVolumeEffect.SparkCount;i++)
+            {
+                var spark=MaximumVolumeEffect.Spark(i,MaximumEffectProgress);var head=new Point(spark.X,spark.Y);var tail=new Point(spark.TailX,spark.TailY);
+                dc.DrawLine(new Pen(WithOpacity(accent,sparks*.85),2),tail,head);
+                dc.DrawLine(new Pen(WithOpacity(Brushes.White,sparks*.9),.7),tail,head);
+            }
     }
     private static Brush WithOpacity(Brush source, double opacity) { var brush = source.CloneCurrentValue(); brush.Opacity = opacity; return brush; }
     private void DrawText(DrawingContext dc, string value, double size, Point point, Brush brush, bool bold, bool centered, double max = 200)

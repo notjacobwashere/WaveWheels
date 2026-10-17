@@ -20,6 +20,7 @@ internal static class Program
     {
         try
         {
+            if(args.Length==2&&args[0]=="--maximum-effect-smoke") {MaximumEffectTests.Run(Path.GetFullPath(args[1]));return 0;}
             if(args.Length==3&&args[0]=="--stage-release") {await UpdateTests.StageRelease(args[1],args[2]);return 0;}
             if(args.Length==2&&args[0]=="--render")
             {
