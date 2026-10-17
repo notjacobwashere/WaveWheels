@@ -33,6 +33,12 @@ jobs:
       - name: Package portable app
         shell: pwsh
         run: ./Package.ps1
+      - name: Build self-contained Windows installer
+        shell: pwsh
+        run: ./BuildInstaller.ps1
+      - name: Test install, upgrade, and uninstall
+        shell: pwsh
+        run: ./TestInstaller.ps1
       - name: Save portable package and checksum
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -40,6 +46,15 @@ jobs:
           path: |
             artifacts/WaveWheels-*-windows-x64.zip
             artifacts/WaveWheels-*-windows-x64.zip.sha256
+            artifacts/WaveWheels-*-Setup.exe
+            artifacts/WaveWheels-*-Setup.exe.sha256
+      - name: Save installer logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Installer-test-logs
+          path: artifacts/installer-*.log
+          if-no-files-found: ignore
       - name: Save component renders
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

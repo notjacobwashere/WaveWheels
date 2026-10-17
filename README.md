@@ -19,13 +19,15 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download `WaveWheels-0.3.1-windows-x64.zip` from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest) and extract it.
-2. Install the **x64 .NET 9 Windows Desktop Runtime** if it is missing. See [Microsoft's .NET 9 downloads](https://dotnet.microsoft.com/en-us/download/dotnet/9.0). Choose **Desktop Runtime**, rather than only the base .NET runtime.
-3. Keep the entire `App` folder together and run `App/WaveWheels.exe`.
-4. Click the WaveWheels tray icon near the Windows clock to open configuration. Check the tray overflow if it is hidden.
-5. Bind each wheel to an input channel and its desired mix scope.
+1. Download **`WaveWheels-0.3.1-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+2. Run Setup and install. The runtime is bundled; no separate .NET download or administrator account is needed.
+3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels.
 
-Requires Windows 10/11 x64, a running Wave Link installation with its local control service available, and the .NET 9 Windows Desktop Runtime. This portable build does not bundle the runtime or an installer.
+Requires Windows 10/11 x64 and a running Wave Link installation with its local control service available. Setup installs for your user in `%LOCALAPPDATA%\Programs\WaveWheels`, adds Start menu shortcuts, and registers an uninstaller in Windows Settings → Apps. An optional desktop shortcut is available.
+
+Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
+
+For a portable alternative, extract `WaveWheels-0.3.1-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 
@@ -43,7 +45,9 @@ Settings save automatically in `%LOCALAPPDATA%\WaveWheels\settings.json`. They a
 
 Enable **Start at Windows sign-in** on the **Startup** page to register the per-user Windows Run entry. Startup is off until enabled. Windows starts the app at user sign-in, not before login. Task Manager can enable or disable the entry.
 
-Quit the old tray instance before replacing application files. Existing settings are reused. If you move the application folder, turn startup off and back on from the new location to update its path. Disable startup before permanently removing the app.
+Run a newer Setup to upgrade an installed copy. Setup closes the installed app gracefully and preserves saved preferences. If startup was already enabled, it updates that registration to the installed location. Uninstall removes the app and its startup entry while keeping preferences for a future reinstall.
+
+When switching from an early portable build, quit that older tray instance first. For manual portable upgrades, quit before replacing files; if you move the folder, toggle startup off and on to update its path.
 
 ## Wave Link compatibility
 
@@ -70,13 +74,15 @@ Create the portable release archive with:
 ./Package.ps1
 ```
 
+To build Setup, install Inno Setup 6 and run `./BuildInstaller.ps1`. This downloads official .NET runtime packs from NuGet and bundles them in the installer. `TestInstaller.ps1` runs only on disposable GitHub Actions runners, where it verifies installation, an upgrade while the app is running, uninstall, shortcuts, startup registration, and retained settings.
+
 For manual testing with a separate settings profile:
 
 ```powershell
 ./App/WaveWheels.exe --settings --data-dir "C:\path\to\test-profile"
 ```
 
-`--settings` opens configuration explicitly. Startup registration is disabled for isolated profiles. GitHub Actions builds and tests on Windows for pushes and pull requests.
+`--settings` opens configuration explicitly. `--shutdown` requests a graceful exit from the existing instance for the same profile. Startup registration is disabled for isolated profiles. GitHub Actions builds and tests on Windows for pushes and pull requests.
 
 ## Credits
 

@@ -2,6 +2,7 @@
 
 ## 0.3.1 — first public release
 
+- Per-user Windows installer with bundled runtime, Start menu/configuration shortcuts, graceful upgrades, and an uninstaller that retains preferences.
 - Native Windows tray app with optional sign-in startup and a separate configuration studio.
 - 1–12 customizable wheels with persistent ordering, names, colors, channel/mix bindings, volume, and mute controls.
 - Wave Link 3 and legacy protocol discovery, live updates, and automatic reconnection.

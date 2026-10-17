@@ -20,7 +20,9 @@ public partial class App : Application
     private Forms.NotifyIcon? tray;
     private Mutex? instance;
     private EventWaitHandle? settingsSignal;
+    private EventWaitHandle? exitSignal;
     private RegisteredWaitHandle? signalWait;
+    private RegisteredWaitHandle? exitWait;
     private static string? logPath;
     public static bool Exiting { get; private set; }
     [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr icon);
@@ -31,6 +33,13 @@ public partial class App : Application
         var isolated=dataIndex>=0 && dataIndex+1<e.Args.Length;
         var data=isolated?Path.GetFullPath(e.Args[dataIndex+1]):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels");
         var identity=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(data.ToUpperInvariant())))[..16];
+        if(e.Args.Contains("--shutdown"))
+        {
+            // Setup requests a graceful exit so pending preferences are saved before upgrades.
+            try { using var signal=EventWaitHandle.OpenExisting(@"Local\WaveWheels-Exit-"+identity);signal.Set(); }
+            catch(WaitHandleCannotBeOpenedException) { }
+            Shutdown();return;
+        }
         instance=new Mutex(true,@"Local\WaveWheels-"+identity,out var isNew);
         settingsSignal=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\WaveWheels-Settings-"+identity);
         if(!isNew)
@@ -45,9 +54,11 @@ public partial class App : Application
         try {Directory.CreateDirectory(data);logPath=Path.Combine(data,"app.log");}catch{ }
         DispatcherUnhandledException+=(_,error)=> { WriteLog(error.Exception.ToString()); if(model!=null)model.Message="An operation failed. See app.log for details.";error.Handled=true; };
         model=new MainViewModel(new SettingsStore(data),isolated);
+        exitSignal=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\WaveWheels-Exit-"+identity);
         overlay=new OverlayWindow(model);
         CreateTray();
         signalWait=ThreadPool.RegisterWaitForSingleObject(settingsSignal,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration),null,Timeout.Infinite,false);
+        exitWait=ThreadPool.RegisterWaitForSingleObject(exitSignal,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()),null,Timeout.Infinite,false);
         model.Start();overlay.StartHook();
         if(e.Args.Contains("--settings"))OpenConfiguration();
         if(e.Args.Contains("--show-overlay"))overlay.ShowAtCursor();
@@ -114,8 +125,8 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
-        Exiting=true;signalWait?.Unregister(null);overlay?.Close();configuration?.Close();model?.Dispose();
+        Exiting=true;signalWait?.Unregister(null);exitWait?.Unregister(null);overlay?.Close();configuration?.Close();model?.Dispose();
         if(tray!=null){tray.Visible=false;tray.Icon?.Dispose();tray.Dispose();}
-        settingsSignal?.Dispose();instance?.Dispose();base.OnExit(e);
+        settingsSignal?.Dispose();exitSignal?.Dispose();instance?.Dispose();base.OnExit(e);
     }
 }
