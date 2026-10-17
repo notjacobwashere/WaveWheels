@@ -50,9 +50,19 @@ public sealed class MainViewModel : Observable
     private readonly DispatcherTimer updateTimer=new() { Interval=TimeSpan.FromHours(6) };
     private string updateStatus="Check GitHub for a newer version.",updateUrl=ReleaseUpdates.ReleasesUrl;
     private bool checkingUpdates;
+    private ReleaseUpdate? availableUpdate;
+    private bool installingUpdate;
+    private double updateProgress;
+    private CancellationTokenSource? installCancellation;
     public string AppVersion=>ReleaseUpdates.CurrentVersion;
     public string UpdateStatus { get=>updateStatus;private set=>Set(ref updateStatus,value); }
-    public bool CheckingUpdates { get=>checkingUpdates;private set=>Set(ref checkingUpdates,value); }
+    public bool CheckingUpdates { get=>checkingUpdates;private set {if(Set(ref checkingUpdates,value))UpdateActionsChanged();} }
+    public bool InstallingUpdate {get=>installingUpdate;private set {if(Set(ref installingUpdate,value))UpdateActionsChanged();}}
+    public double UpdateProgress {get=>updateProgress;private set=>Set(ref updateProgress,value);}
+    public bool CanCheckUpdates=>!CheckingUpdates&&!InstallingUpdate;
+    public bool CanInstallUpdate=>!isolated&&!CheckingUpdates&&!InstallingUpdate&&availableUpdate?.Installer!=null;
+    public event Action? UpdateInstallationStarted;
+    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
     public event Action<string>? UpdateAvailable;
     private string notifiedVersion="";
@@ -196,11 +206,42 @@ public sealed class MainViewModel : Observable
     }
     public async Task CheckForUpdatesAsync()
     {
-        if(CheckingUpdates)return;CheckingUpdates=true;UpdateStatus="Checking GitHub…";
-        try { var update=await ReleaseUpdates.CheckAsync(updateLifetime.Token);updateUrl=update?.Url??ReleaseUpdates.ReleasesUrl;UpdateStatus=update==null?$"You're up to date · {AppVersion}":$"Version {update.Version} is available";if(update!=null&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
+        if(!CanCheckUpdates)return;CheckingUpdates=true;UpdateStatus="Checking GitHub…";
+        try { var update=await ReleaseUpdates.CheckAsync(updateLifetime.Token);ApplyRelease(update);if(update!=null&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
         catch(Exception ex) when(ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException or System.Collections.Generic.KeyNotFoundException) {UpdateStatus="Couldn't check GitHub. Try again later.";}
         finally {CheckingUpdates=false;}
     }
+    internal void ApplyRelease(ReleaseUpdate? update)
+    {
+        availableUpdate=update;updateUrl=update?.Url??ReleaseUpdates.ReleasesUrl;
+        UpdateStatus=update==null?$"You're up to date · {AppVersion}":$"Version {update.Version} is available"+(update.Installer==null?" · use the release page to download":"");
+        UpdateActionsChanged();
+    }
+    public Task InstallUpdateAsync()=>InstallUpdateCoreAsync((update,progress,token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token),UpdateInstaller.Launch);
+    internal async Task InstallUpdateCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
+    {
+        if(!CanInstallUpdate||availableUpdate==null)return;
+        InstallingUpdate=true;UpdateProgress=0;UpdateStatus="Downloading the Windows installer…";
+        using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(updateLifetime.Token);installCancellation=cancellation;
+        var downloading=true;
+        try
+        {
+            var progress=new Progress<DownloadProgress>(value=> {if(downloading&&!cancellation.IsCancellationRequested&&InstallingUpdate) {UpdateProgress=value.Percent;UpdateStatus=$"Downloading update · {value.Percent:0}%";}});
+            var installer=await download(availableUpdate,progress,cancellation.Token);
+            downloading=false;UpdateProgress=100;
+            cancellation.Token.ThrowIfCancellationRequested();
+            Save();if(SaveStatus!="All changes saved")throw new IOException("Your settings could not be saved. Setup was not started.");
+            UpdateStatus="Installer verified. Opening Setup…";
+            launch(installer);
+            // Exit only after Windows accepts the verified installer. Failed/canceled downloads leave us running.
+            UpdateInstallationStarted?.Invoke();
+        }
+        catch(OperationCanceledException) {UpdateStatus="Update canceled. Your current version is still running.";}
+        catch(Exception ex) when(ex is HttpRequestException or InvalidDataException or IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.Cryptography.CryptographicException or FormatException or ArgumentException)
+        {UpdateStatus="Update failed: "+ex.Message+" You can retry or open the release page.";}
+        finally {downloading=false;installCancellation=null;InstallingUpdate=false;}
+    }
+    public void CancelUpdate()=>installCancellation?.Cancel();
     public void OpenReleasePage() {try {Process.Start(new ProcessStartInfo(updateUrl) {UseShellExecute=true});}catch(Exception ex){Message="Could not open the browser: "+ex.Message;} }
     private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

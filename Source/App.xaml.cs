@@ -47,13 +47,14 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.5.0 version again. Your saved wheels will be kept.", "WaveWheels 0.5.0 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.6.0 version again. Your saved wheels will be kept.", "WaveWheels 0.6.0 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")) settingsSignal.Set();
             Shutdown();return;
         }
         try {Directory.CreateDirectory(data);logPath=Path.Combine(data,"app.log");}catch{ }
         DispatcherUnhandledException+=(_,error)=> { WriteLog(error.Exception.ToString()); if(model!=null)model.Message="An operation failed. See app.log for details.";error.Handled=true; };
         model=new MainViewModel(new SettingsStore(data),isolated);
+        model.UpdateInstallationStarted+=()=>Shutdown();
         exitSignal=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\WaveWheels-Exit-"+identity);
         overlay=new OverlayWindow(model);
         CreateTray();
@@ -69,7 +70,7 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 0.5.0",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 0.6.0",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
         var profilesMenu=new Forms.ToolStripMenuItem("Profiles");
         void RefreshProfiles()
@@ -92,7 +93,7 @@ public partial class App : Application
         menu.Items.Add(enabled);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 0.5.0 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 0.6.0 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()
@@ -105,7 +106,7 @@ public partial class App : Application
                 try
                 {
                     var version = process.MainModule?.FileVersionInfo;
-                    if(version != null && (version.FileMajorPart != 0 || version.FileMinorPart != 5 || version.FileBuildPart != 0))
+                    if(version != null && (version.FileMajorPart != 0 || version.FileMinorPart != 6 || version.FileBuildPart != 0))
                         return $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}";
                 }
                 catch { }

@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.5.0"
+  #define AppVersion "0.6.0"
 #endif
 
 [Setup]
@@ -44,7 +44,8 @@ Name: "{group}\Configure WaveWheels"; Filename: "{app}\WaveWheels.exe"; Paramete
 Name: "{autodesktop}\WaveWheels"; Filename: "{app}\WaveWheels.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Description: "Open WaveWheels configuration"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Flags: nowait; Check: IsAppUpdate
+Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Description: "Open WaveWheels configuration"; Flags: nowait postinstall skipifsilent; Check: IsManualInstall
 
 [Messages]
 FinishedLabel=WaveWheels is installed. Use the system tray icon near the Windows clock to configure your wheels. Your settings are kept when upgrading or uninstalling.
@@ -52,6 +53,16 @@ FinishedLabel=WaveWheels is installed. Use the system tray icon near the Windows
 [Code]
 const
   RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
+
+function IsAppUpdate(): Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATEFROMAPP|0}') <> '0';
+end;
+
+function IsManualInstall(): Boolean;
+begin
+  Result := not IsAppUpdate();
+end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var

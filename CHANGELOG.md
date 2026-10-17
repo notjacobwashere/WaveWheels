@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Added Download and install on the Updates page, with progress, cancellation, retry, and the existing release-page fallback.
+- Accepts only the official versioned Windows installer from this repository, with a bounded download and SHA-256 verification before launch.
+- Saves pending settings before handing off to Setup. Download, verification, or launch failures keep the current app running.
+- In-app upgrades reopen configuration automatically and retain the installation location, settings, and startup preference. Older versions need a one-time Setup upgrade to gain the button.
+- Added updater download/lifecycle regressions and clean-runner upgrade/reopen checks.
+
 ## 0.5.0
 
 - Added opt-in automatic profiles based on the focused application's executable, with manual override and fallback behavior.

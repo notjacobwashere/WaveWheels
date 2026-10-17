@@ -14,7 +14,7 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 - Tunes scroll steps, acceleration, and hide delay; supports per-wheel volume limits.
 - Imports and exports profiles without replacing existing layouts.
 - Supports left, right, top, or bottom edges, a chosen monitor, position along the edge, and wheel spacing.
-- Notifies you when a newer stable GitHub release is available.
+- Finds newer stable releases and downloads, verifies, and installs them on request.
 - Keeps the opening scroll gesture from changing volume. Pause briefly, then scroll over a wheel to adjust it.
 - Controls Wave Link input channels live, with independent whole-channel or per-mix volume and mute targets.
 - Supports 1–12 wheels with custom names, colors, order, and channel bindings.
@@ -24,7 +24,7 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.5.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download **`WaveWheels-0.6.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. The runtime is bundled; no separate .NET download or administrator account is needed.
 3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels.
 
@@ -32,7 +32,7 @@ Requires Windows 10/11 x64 and a running Wave Link installation with its local c
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
-For a portable alternative, extract `WaveWheels-0.5.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+For a portable alternative, extract `WaveWheels-0.6.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 
@@ -52,7 +52,7 @@ Use **Profiles** to create, duplicate, rename, or remove layouts. Each profile k
 
 Use **Placement** to choose any of the four edges, all displays or a specific display, the position along that edge, and spacing between wheels. The activation strip is a reveal area, not a fader; move onto a wheel to adjust it.
 
-Use **Updates** to check manually or turn automatic notifications off. Automatic checks contact the public GitHub Releases API at launch and every six hours. No saved wheel settings are sent. A newer stable release produces a tray notification and an in-app release link. Downloads and installation require your action; the app never runs an installer automatically.
+Use **Updates** to check manually or turn automatic notifications off. Automatic checks contact the public GitHub Releases API at launch and every six hours. No saved wheel settings are sent. A newer stable release produces a tray notification. Choose **Download and install** to download the official Windows Setup with progress and cancellation. WaveWheels checks its exact release asset, expected size, and SHA-256 digest from GitHub before starting Setup, then saves settings and exits. Setup upgrades the existing installation and reopens configuration. Failed or canceled downloads leave the running app unchanged; you can retry. Canceling Setup leaves the current version installed. **Open release page** remains available, including when a release has no verifiable installer. Isolated test profiles cannot install updates. Downloads are cached under `%LOCALAPPDATA%\WaveWheels\updates`.
 ## Automatic profiles and sharing
 
 On **Profiles**, turn on automatic switching and add executable names such as `discord.exe` or `game.exe` to each profile. Separate names with commas, semicolons, or new lines, or use **Browse app**. A matching app must stay focused briefly before switching. The first matching profile wins. An unmatched app restores your manually selected profile; a manual selection stays in effect until focus changes. Switching layouts does not change mixer volumes. Foreground executable names are checked locally; no window titles or activity history are collected or transmitted.
@@ -65,7 +65,7 @@ In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration
 
 Enable **Start at Windows sign-in** on the **Startup** page to register the per-user Windows Run entry. Startup is off until enabled. Windows starts the app at user sign-in, not before login. Task Manager can enable or disable the entry.
 
-Run a newer Setup to upgrade an installed copy. Setup closes the installed app gracefully and preserves saved preferences. If startup was already enabled, it updates that registration to the installed location. Uninstall removes the app and its startup entry while keeping preferences for a future reinstall.
+Use the in-app installation button or run a newer Setup to upgrade an installed copy. Releases before 0.6.0 need a one-time Setup upgrade to gain the in-app install button. Setup closes the installed app gracefully and preserves saved preferences. If startup was already enabled, it updates that registration to the installed location. Uninstall removes the app and its startup entry while keeping preferences for a future reinstall.
 
 When switching from an early portable build, quit that older tray instance first. For manual portable upgrades, quit before replacing files; if you move the folder, toggle startup off and on to update its path.
 

@@ -39,6 +39,7 @@ internal static class UiRendering
                 foreach(var wheel in vm.Wheels)wheel.MaximumVolumePercent=100;
                 vm.Message="Preview with example channels · configuration rendered without desktop input";
                 var window=new SettingsWindow(vm);
+                UpdateTests.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"update-lifecycle-"+Guid.NewGuid().ToString("N")));
                 Console.WriteLine("UI: constructed studio");
                 var root=(FrameworkElement)window.Content;
                 window.Content=null;root.DataContext=vm;root.Resources=window.Resources;
@@ -70,6 +71,11 @@ internal static class UiRendering
                     ((Button)window.FindName(section+"Nav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
                     if(((FrameworkElement)window.FindName(section+"Page")).Visibility!=Visibility.Visible)throw new Exception(section+" navigation failed.");
                     if(section=="Profiles"&&!Descendants((ComboBox)window.FindName("ProfilePicker")).OfType<TextBlock>().Any(t=>t.Text==vm.ActiveProfile!.Name))throw new Exception("The profile picker must show its friendly name.");
+                    if(section=="Updates")
+                    {
+                        if(((Button)window.FindName("InstallUpdateButton")).IsEnabled||((Button)window.FindName("CancelUpdateButton")).IsEnabled)throw new Exception("Update buttons must be disabled before discovery and outside downloads.");
+                        if(!Descendants((FrameworkElement)window.FindName("UpdatesPage")).OfType<Button>().Any(b=>b.Content?.ToString()=="Open release page"))throw new Exception("The release-page fallback must remain available.");
+                    }
                     Save(root,Path.Combine(Path.GetDirectoryName(path)!,section.ToLowerInvariant()+".png"),1160,860);
                 }
                 settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();

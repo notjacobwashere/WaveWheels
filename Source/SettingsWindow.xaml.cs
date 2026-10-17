@@ -80,6 +80,8 @@ public partial class SettingsWindow : Window
         try {model.ImportProfiles(dialog.FileName);}catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException or InvalidOperationException) {model.Message="Import failed: "+ex.Message;}
     }
     private async void CheckUpdates(object sender,RoutedEventArgs e)=>await model.CheckForUpdatesAsync();
+    private async void InstallUpdate(object sender,RoutedEventArgs e)=>await model.InstallUpdateAsync();
+    private void CancelUpdate(object sender,RoutedEventArgs e)=>model.CancelUpdate();
     private void OpenRelease(object sender,RoutedEventArgs e)=>model.OpenReleasePage();
     private void Add(object sender,RoutedEventArgs e) => model.AddWheel();
     private void Remove(object sender,RoutedEventArgs e) => model.RemoveWheel();

@@ -20,11 +20,13 @@ internal static class Program
     {
         try
         {
+            if(args.Length==3&&args[0]=="--stage-release") {await UpdateTests.StageRelease(args[1],args[2]);return 0;}
             if(args.Length==2&&args[0]=="--render")
             {
                 UiRendering.Run(Path.GetFullPath(args[1]));Console.WriteLine("PASS: window render, real collection reordering, selection retention, size/motion persistence and animation clocks.");return 0;
             }
             NewFeatures.Pure();
+            await UpdateTests.Downloads();
             var router=new OverlayInputRouter();
             var opening=router.Route(2,2,0);
             Assert(opening==new ScrollRoute(true,-1),"The first event must reveal without targeting any wheel.");
