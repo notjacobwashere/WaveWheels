@@ -11,7 +11,7 @@ internal sealed record ReleaseUpdate(string Version, string Url,InstallerAsset? 
 internal static class ReleaseUpdates
 {
     public const string ReleasesUrl="https://github.com/notjacobwashere/WaveWheels/releases/latest";
-    public static string CurrentVersion => typeof(App).Assembly.GetName().Version?.ToString(3)??"0.7.0";
+    public static string CurrentVersion => typeof(App).Assembly.GetName().Version?.ToString(3)??"0.7.1";
     public static ReleaseUpdate? Parse(string json,Version current)
     {
         using var doc=JsonDocument.Parse(json);var root=doc.RootElement;

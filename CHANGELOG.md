@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+- Added a skippable two-page first-install intro in Setup, explaining edge activation, the opening-scroll pause, volume/mute controls, tray behavior, initial bindings, and main configuration settings.
+- Existing installations, saved settings, in-app upgrades, and silent installs bypass the intro. Onboarding never changes saved preferences.
+- Added disposable Windows runner checks for the real intro pages, Next/Skip behavior, cancellation before installation, and upgrade bypass.
+
 ## 0.7.0
 
 - Added quick per-digit rolling transitions. Changed digits follow scroll direction together, while unchanged digits stay stationary.

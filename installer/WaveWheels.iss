@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.7.0"
+  #define AppVersion "0.7.1"
 #endif
 
 [Setup]
@@ -53,6 +53,12 @@ FinishedLabel=WaveWheels is installed. Use the system tray icon near the Windows
 [Code]
 const
   RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
+  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{62CDFDE0-5349-4AB2-B7DE-95359B68E73F}_is1';
+
+var
+  IntroControlsPage, IntroSettingsPage: TOutputMsgWizardPage;
+  SkipIntroButton: TNewButton;
+  IntroEligible, IntroSkipped: Boolean;
 
 function IsAppUpdate(): Boolean;
 begin
@@ -62,6 +68,72 @@ end;
 function IsManualInstall(): Boolean;
 begin
   Result := not IsAppUpdate();
+end;
+
+function HasExistingWaveWheels(): Boolean;
+begin
+  Result := RegKeyExists(HKCU64, UninstallKey) or RegKeyExists(HKCU32, UninstallKey) or
+    FileExists(ExpandConstant('{localappdata}\WaveWheels\settings.json'));
+end;
+
+procedure SkipIntroClick(Sender: TObject);
+begin
+  IntroSkipped := True;
+  Log('WaveWheels intro: skipped by user');
+  WizardForm.NextButton.OnClick(WizardForm.NextButton);
+end;
+
+procedure InitializeWizard();
+begin
+  // Read existing installation/settings state only. Onboarding never writes user preferences.
+  IntroEligible := not IsAppUpdate() and not HasExistingWaveWheels();
+  if IntroEligible then Log('WaveWheels intro: first install')
+    else Log('WaveWheels intro: existing install or settings');
+  if WizardSilent() then Log('WaveWheels intro: silent skip');
+
+  IntroControlsPage := CreateOutputMsgPage(wpWelcome, 'Meet WaveWheels',
+    'Your mix, one scroll away.',
+    'WaveWheels runs quietly in the system tray and controls Elgato Wave Link input channels.' + #13#10#13#10 +
+    'REVEAL AND ADJUST' + #13#10 +
+    'Scroll at the left screen edge to bring out your wheels. The opening scroll does not change volume. Pause briefly, move over a wheel, then scroll again to adjust it.' + #13#10#13#10 +
+    'Drag a wheel up or down to adjust it, or click its speaker button to mute. Scrolling at the very edge only opens the wheels.' + #13#10#13#10 +
+    'Configuration opens after Setup. Closing it keeps WaveWheels running; use the tray icon near the clock to open it again.');
+
+  IntroSettingsPage := CreateOutputMsgPage(IntroControlsPage.ID, 'Make it yours',
+    'A quick first setup, then tune it your way.',
+    '1. Open Wave Link. In configuration, bind each wheel to an input channel and mix. Choose None to leave a wheel unbound.' + #13#10 +
+    '2. Choose Preview wheels and try scrolling over a wheel.' + #13#10#13#10 +
+    'Profiles - save layouts and optionally switch for focused apps.' + #13#10 +
+    'Scroll - tune normal steps, acceleration, and hide delay.' + #13#10 +
+    'Shift - snap in larger increments (20% default); optional dots.' + #13#10 +
+    'Style - choose wheel count, order, names, colors, and size.' + #13#10 +
+    'Limits - cap wheel volume; external mixer controls can exceed it.' + #13#10 +
+    'Placement - choose screen edge, display, position, and spacing.' + #13#10 +
+    'Updates - check, download, and install from the app.' + #13#10#13#10 +
+    'Changes save automatically. Sign-in startup is optional.');
+
+  SkipIntroButton := TNewButton.Create(WizardForm);
+  SkipIntroButton.Parent := WizardForm;
+  SkipIntroButton.Caption := 'Skip intro';
+  SkipIntroButton.Left := ScaleX(16);
+  SkipIntroButton.Top := WizardForm.NextButton.Top;
+  SkipIntroButton.Width := ScaleX(90);
+  SkipIntroButton.Height := WizardForm.NextButton.Height;
+  SkipIntroButton.Visible := False;
+  SkipIntroButton.OnClick := @SkipIntroClick;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := ((PageID = IntroControlsPage.ID) or (PageID = IntroSettingsPage.ID)) and
+    (not IntroEligible or IntroSkipped or WizardSilent());
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  SkipIntroButton.Visible := (CurPageID = IntroControlsPage.ID) or (CurPageID = IntroSettingsPage.ID);
+  if CurPageID = IntroControlsPage.ID then Log('WaveWheels intro: controls page shown');
+  if CurPageID = IntroSettingsPage.ID then Log('WaveWheels intro: settings page shown');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
