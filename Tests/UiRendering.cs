@@ -35,6 +35,8 @@ internal static class UiRendering
                     new Channel("voice","Voice chat",.55,false,true,new[]{new ChannelMix("personal",.55,false)})
                 },new[]{new Mix("personal","Headphones")}));
                 vm.SelectedWheel=vm.Wheels[0];vm.WheelSizePercent=100;vm.AnimateWheels=true;vm.ScreenEdge="Left";vm.MonitorId="";vm.PositionPercent=50;vm.WheelSpacing=0;vm.EdgeEnabled=true;vm.CheckUpdatesAutomatically=true;
+                vm.ScrollStepPercent=1;vm.ScrollAccelerationEnabled=true;vm.IdleMilliseconds=1000;vm.AutomaticProfilesEnabled=false;
+                foreach(var wheel in vm.Wheels)wheel.MaximumVolumePercent=100;
                 vm.Message="Preview with example channels · configuration rendered without desktop input";
                 var window=new SettingsWindow(vm);
                 Console.WriteLine("UI: constructed studio");
@@ -72,6 +74,12 @@ internal static class UiRendering
                 }
                 settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
                 Save(root,Path.Combine(Path.GetDirectoryName(path)!,Path.GetFileNameWithoutExtension(path)+"-settings.png"),1160,860);
+                var settingsPage=(ScrollViewer)window.FindName("SettingsPage");settingsPage.ScrollToEnd();root.UpdateLayout();
+                Save(root,Path.Combine(Path.GetDirectoryName(path)!,"scroll-controls.png"),1160,860);
+                ((Slider)window.FindName("ScrollStepSlider")).SetCurrentValue(Slider.ValueProperty,3d);
+                ((Slider)window.FindName("HideDelaySlider")).SetCurrentValue(Slider.ValueProperty,2500d);
+                if(vm.ScrollStepPercent!=3||vm.IdleMilliseconds!=2500||((WheelControl)window.FindName("SelectedPreview")).ScrollStepPercent!=3)throw new Exception("Tuning controls did not update both the view model and preview input.");
+                vm.ScrollStepPercent=1;vm.IdleMilliseconds=1000;settingsPage.ScrollToTop();
                 var sizeSlider=(Slider)window.FindName("WheelSizeSlider");
                 sizeSlider.SetCurrentValue(Slider.ValueProperty,145d);
                 if(vm.WheelSizePercent!=145)throw new Exception("The Settings size slider did not change the actual view model.");
@@ -96,6 +104,7 @@ internal static class UiRendering
                 var profileSaved=store.Load();
                 if(profileSaved.ActiveProfileId!=copy.Id||profileSaved.Profiles.Count<2||profileSaved.Wheels[0].Name!="Gaming only"||profileSaved.ScreenEdge!="Right"||profileSaved.PositionPercent!=25||profileSaved.WheelSpacing!=12||profileSaved.CheckUpdatesAutomatically)throw new Exception("Profiles, placement, or update preference did not survive reload.");
                 vm.RemoveProfile();if(vm.ActiveProfile!=baseline)throw new Exception("Removing a profile did not preserve the remaining layout.");
+                NewFeatures.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"new-features-profile-"+Guid.NewGuid().ToString("N")));
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}

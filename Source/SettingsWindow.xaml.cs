@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.IO;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -30,6 +32,8 @@ public partial class SettingsWindow : Window
         CountBox.ItemsSource = Enumerable.Range(1,12);
         SelectedPreview.VolumeRequested += model.SetLevel;
         SelectedPreview.MuteRequested += model.ToggleMute;
+        void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
+        PreviewInputSettings();model.InputSettingsChanged+=PreviewInputSettings;
         Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); } };
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
@@ -52,6 +56,29 @@ public partial class SettingsWindow : Window
     private void NewProfile(object sender,RoutedEventArgs e)=>model.AddProfile(false);
     private void DuplicateProfile(object sender,RoutedEventArgs e)=>model.AddProfile(true);
     private void RemoveProfile(object sender,RoutedEventArgs e)=>model.RemoveProfile();
+    private void AddProfileApp(object sender,RoutedEventArgs e)
+    {
+        var dialog=new OpenFileDialog {Title="Choose the app for this profile",Filter="Windows applications (*.exe)|*.exe",CheckFileExists=true};
+        if(dialog.ShowDialog(this)!=true||model.ActiveProfile==null)return;
+        var app=Path.GetFileName(dialog.FileName);
+        if(!ProfileAutomation.Matches(model.ActiveProfile.Applications,app))model.ActiveProfile.Applications+=(model.ActiveProfile.Applications.Trim().Length==0?"":", ")+app;
+    }
+    private void ExportProfile(object sender,RoutedEventArgs e)=>Export(false);
+    private void ExportAllProfiles(object sender,RoutedEventArgs e)=>Export(true);
+    private void Export(bool all)
+    {
+        var name=all?"WaveWheels-profiles":model.ActiveProfile?.Name??"Profile";
+        foreach(var character in Path.GetInvalidFileNameChars())name=name.Replace(character,'_');
+        var dialog=new SaveFileDialog {Title="Export WaveWheels profiles",Filter="WaveWheels profiles (*.wavewheels.json)|*.wavewheels.json",DefaultExt=".wavewheels.json",FileName=name+".wavewheels.json"};
+        if(dialog.ShowDialog(this)!=true)return;
+        try {model.ExportProfiles(dialog.FileName,all);}catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException) {model.Message="Export failed: "+ex.Message;}
+    }
+    private void ImportProfiles(object sender,RoutedEventArgs e)
+    {
+        var dialog=new OpenFileDialog {Title="Import WaveWheels profiles",Filter="WaveWheels profiles (*.wavewheels.json;*.json)|*.wavewheels.json;*.json",CheckFileExists=true};
+        if(dialog.ShowDialog(this)!=true)return;
+        try {model.ImportProfiles(dialog.FileName);}catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException or InvalidOperationException) {model.Message="Import failed: "+ex.Message;}
+    }
     private async void CheckUpdates(object sender,RoutedEventArgs e)=>await model.CheckForUpdatesAsync();
     private void OpenRelease(object sender,RoutedEventArgs e)=>model.OpenReleasePage();
     private void Add(object sender,RoutedEventArgs e) => model.AddWheel();

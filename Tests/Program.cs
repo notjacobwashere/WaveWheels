@@ -24,6 +24,7 @@ internal static class Program
             {
                 UiRendering.Run(Path.GetFullPath(args[1]));Console.WriteLine("PASS: window render, real collection reordering, selection retention, size/motion persistence and animation clocks.");return 0;
             }
+            NewFeatures.Pure();
             var router=new OverlayInputRouter();
             var opening=router.Route(2,2,0);
             Assert(opening==new ScrollRoute(true,-1),"The first event must reveal without targeting any wheel.");

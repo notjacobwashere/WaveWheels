@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Added opt-in automatic profiles based on the focused application's executable, with manual override and fallback behavior.
+- Added scroll step, acceleration, and overlay hide-delay controls in Settings.
+- Added per-wheel maximum volume limits, including consistent limits for duplicate channel/mix targets.
+- Added current-profile and all-profile export, plus validated additive import with independent identities and unique names.
+- Added regression checks for foreground rules, scroll accumulation, volume limits, import validation, settings persistence, and compiled UI controls.
+
 ## 0.4.0
 
 - Edge activation consumes scroll events, including the physical outermost pixels outside the desktop work area. Cached monitor geometry keeps Windows calls off the low-level hook thread.

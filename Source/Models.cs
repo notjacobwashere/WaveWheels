@@ -30,6 +30,9 @@ public sealed class Wheel : Observable
     public string Color { get => color; set { if (Set(ref color, value ?? "")) Changed(nameof(Accent)); } }
     public string ChannelId { get => channelId; set => Set(ref channelId, value ?? ""); }
     public string MixId { get => mixId; set => Set(ref mixId, value ?? ""); }
+    private int maximumVolumePercent=100;
+    public int MaximumVolumePercent { get=>maximumVolumePercent;set {if(Set(ref maximumVolumePercent,Math.Clamp(value,0,100)))Changed(nameof(MaximumVolumeLabel));} }
+    [JsonIgnore] public string MaximumVolumeLabel=>MaximumVolumePercent+"% maximum";
     private double level;
     private bool muted, available;
     private string detail = "Choose a Wave Link channel";
@@ -54,6 +57,10 @@ public sealed class Preferences
     public bool EdgeEnabled { get; set; } = true;
     public int EdgeWidth { get; set; } = 6;
     public int IdleMilliseconds { get; set; } = 1000;
+    public int ScrollStepPercent { get; set; } = 1;
+    public bool ScrollAccelerationEnabled { get; set; } = true;
+    public bool AutomaticProfilesEnabled { get; set; }
+    public string ManualProfileId { get; set; } = "";
     public int PortOverride { get; set; }
     public int WheelSizePercent { get; set; } = 100;
     public bool AnimateWheels { get; set; } = true;
@@ -77,6 +84,8 @@ public sealed class WheelProfile : Observable
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     private string name="Default";
     public string Name { get=>name; set=>Set(ref name,string.IsNullOrWhiteSpace(value)?"Untitled":value); }
+    private string applications="";
+    public string Applications { get=>applications;set=>Set(ref applications,value??""); }
     public List<Wheel> Wheels { get; set; } = new();
     public override string ToString()=>Name;
 }
@@ -116,6 +125,8 @@ public sealed class SettingsStore
             p.MonitorId??="";p.PositionPercent=Math.Clamp(p.PositionPercent,0,100);p.WheelSpacing=Math.Clamp(p.WheelSpacing,0,36);
             p.EdgeWidth = Math.Clamp(p.EdgeWidth, 2, 32);
             p.IdleMilliseconds = Math.Clamp(p.IdleMilliseconds, 500, 5000);
+            p.ScrollStepPercent=Math.Clamp(p.ScrollStepPercent,1,10);
+            if(!p.Profiles.Any(x=>x.Id==p.ManualProfileId))p.ManualProfileId=active.Id;
             p.WheelSizePercent = Math.Clamp(p.WheelSizePercent, 50, 180);
             p.PortOverride = p.PortOverride is >= 1024 and <= 65535 ? p.PortOverride : 0;
             return p;

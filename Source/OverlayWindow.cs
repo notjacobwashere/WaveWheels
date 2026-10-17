@@ -56,6 +56,7 @@ public sealed class OverlayWindow : Window
         model.LayoutChanged += Rebuild;
         model.StateChanged += UpdateHits;
         model.AppearanceChanged += ApplyAppearance;
+        model.InputSettingsChanged += ApplyInputSettings;
         model.PreviewRequested += ShowAtCursor;
         hook.WheelInput = OnGlobalWheel;
         hook.Failed = error => Dispatcher.BeginInvoke(() => { model.Message = "Edge scrolling is unavailable: " + error; App.WriteLog("Hook: " + error); });
@@ -75,10 +76,11 @@ public sealed class OverlayWindow : Window
     public void StartHook() => hook.Start();
     private void Rebuild()
     {
+        generation++; // Drop queued input that targeted the previous layout/profile.
         stack.Children.Clear(); controls.Clear(); stack.Children.Add(new Border { Height = 12 });
         foreach (var wheel in model.Wheels)
         {
-            var c = new WheelControl { Wheel = wheel, Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, ScrollStepPercent=model.ScrollStepPercent,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(10,0,18,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
             c.Selected += w => { model.SelectedWheel = w; lastActivity = Environment.TickCount64; };
             controls.Add(c); stack.Children.Add(c);
@@ -94,6 +96,7 @@ public sealed class OverlayWindow : Window
         if(shown&&selected!=null) {activeScreen=selected.Screen;activeDpi=selected.Region.Dpi;}
         if (shown) Position();
     }
+    private void ApplyInputSettings() {foreach(var control in controls) {control.ScrollStepPercent=model.ScrollStepPercent;control.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;control.ResetScroll();}}
     private void RefreshScreens()
     {
         screens=Forms.Screen.AllScreens.Select(s=>new ScreenTarget(s,new EdgeRegion(s.Bounds.Left,s.Bounds.Top,s.Bounds.Right,s.Bounds.Bottom,ScaleFor(s.Bounds.Left+s.Bounds.Width/2,s.Bounds.Top+s.Bounds.Height/2)))).ToArray();

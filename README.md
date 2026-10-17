@@ -10,7 +10,9 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 - Runs quietly in the Windows system tray; configuration opens when you choose it.
 - Reveals transparent volume wheels with a smooth slide-and-grow animation.
-- Saves independent profiles, with quick switching from the tray menu.
+- Saves independent profiles, with quick tray switching and optional switching for the focused app.
+- Tunes scroll steps, acceleration, and hide delay; supports per-wheel volume limits.
+- Imports and exports profiles without replacing existing layouts.
 - Supports left, right, top, or bottom edges, a chosen monitor, position along the edge, and wheel spacing.
 - Notifies you when a newer stable GitHub release is available.
 - Keeps the opening scroll gesture from changing volume. Pause briefly, then scroll over a wheel to adjust it.
@@ -22,7 +24,7 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.4.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download **`WaveWheels-0.5.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. The runtime is bundled; no separate .NET download or administrator account is needed.
 3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels.
 
@@ -30,7 +32,7 @@ Requires Windows 10/11 x64 and a running Wave Link installation with its local c
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
-For a portable alternative, extract `WaveWheels-0.4.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+For a portable alternative, extract `WaveWheels-0.5.0-windows-x64.zip`, keep the `App` folder together, and run `App/WaveWheels.exe`. Only the smaller portable build requires the separately installed [x64 .NET 9 Windows Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
 The configuration window stays closed on normal launch and at Windows sign-in. Closing configuration leaves the tray app running. Use **Quit WaveWheels** in the tray menu to exit.
 
@@ -51,6 +53,14 @@ Use **Profiles** to create, duplicate, rename, or remove layouts. Each profile k
 Use **Placement** to choose any of the four edges, all displays or a specific display, the position along that edge, and spacing between wheels. The activation strip is a reveal area, not a fader; move onto a wheel to adjust it.
 
 Use **Updates** to check manually or turn automatic notifications off. Automatic checks contact the public GitHub Releases API at launch and every six hours. No saved wheel settings are sent. A newer stable release produces a tray notification and an in-app release link. Downloads and installation require your action; the app never runs an installer automatically.
+## Automatic profiles and sharing
+
+On **Profiles**, turn on automatic switching and add executable names such as `discord.exe` or `game.exe` to each profile. Separate names with commas, semicolons, or new lines, or use **Browse app**. A matching app must stay focused briefly before switching. The first matching profile wins. An unmatched app restores your manually selected profile; a manual selection stays in effect until focus changes. Switching layouts does not change mixer volumes. Foreground executable names are checked locally; no window titles or activity history are collected or transmitted.
+
+Use **Export profile** or **Export all** to save a `.wavewheels.json` file. **Import profiles** adds independent copies and resolves duplicate names. Files preserve wheels, bindings, volume limits, and app rules, but exclude live levels and global settings. Check channel bindings when moving between PCs.
+
+In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
+
 ## Startup and upgrades
 
 Enable **Start at Windows sign-in** on the **Startup** page to register the per-user Windows Run entry. Startup is off until enabled. Windows starts the app at user sign-in, not before login. Task Manager can enable or disable the entry.

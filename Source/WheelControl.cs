@@ -26,8 +26,10 @@ public sealed class WheelControl : FrameworkElement
     public bool Compact { get => (bool)GetValue(CompactProperty); set => SetValue(CompactProperty, value); }
     private bool dragging;
     private Point dragStart;
-    private double dragLevel, acceleration = 1, scrollRemainder;
-    private long lastScroll;
+    private double dragLevel;
+    private readonly ScrollAccumulator scroll=new();
+    public int ScrollStepPercent {get;set;}=1;
+    public bool ScrollAccelerationEnabled {get;set;}=true;
     private bool active;
     public WheelControl()
     {
@@ -73,17 +75,11 @@ public sealed class WheelControl : FrameworkElement
     public void Adjust(double delta)
     {
         if (Wheel?.Available != true || CanAdjustVolume?.Invoke() == false) return;
-        var now = Environment.TickCount64;
-        if (now - lastScroll > 150) acceleration = 1;
-        lastScroll = now;
-        scrollRemainder += delta * .01 * acceleration;
-        acceleration = Math.Min(5, acceleration * 1.8);
-        var steps = (int)Math.Truncate((scrollRemainder + Math.Sign(scrollRemainder)*1e-9) / .01);
+        var steps=scroll.Adjust(delta,ScrollStepPercent,ScrollAccelerationEnabled,Environment.TickCount64);
         if (steps == 0) return;
-        scrollRemainder -= steps*.01;
         VolumeRequested?.Invoke(Wheel, Wheel.Level + steps*.01);
     }
-    public void ResetScroll() { acceleration = 1; scrollRemainder = 0; lastScroll = 0; }
+    public void ResetScroll()=>scroll.Reset();
     private void Down(object sender, MouseButtonEventArgs e)
     {
         if (Wheel == null) return;

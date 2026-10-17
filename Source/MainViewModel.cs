@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Http;
+using System.IO;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -28,6 +30,17 @@ public sealed class MainViewModel : Observable
     public string[] Edges { get; } = new[]{"Left","Right","Top","Bottom"};
     private WheelProfile? activeProfile;
     private bool switchingProfile;
+    private readonly ProfileAutomation automation=new();
+    private readonly DispatcherTimer foregroundTimer=new(){Interval=TimeSpan.FromMilliseconds(500)};
+    private string automaticProfileStatus="Automatic switching is off.";
+    public string AutomaticProfileStatus {get=>automaticProfileStatus;private set=>Set(ref automaticProfileStatus,value);}
+    public bool AutomaticProfilesEnabled {get=>Preferences.AutomaticProfilesEnabled;set {if(value==Preferences.AutomaticProfilesEnabled)return;Preferences.AutomaticProfilesEnabled=value;automation.Reset();Changed();AutomaticProfileStatus=value?"Waiting for a focused app…":"Automatic switching is off.";ScheduleSave();}}
+    public int ScrollStepPercent {get=>Preferences.ScrollStepPercent;set {value=Math.Clamp(value,1,10);if(value==Preferences.ScrollStepPercent)return;Preferences.ScrollStepPercent=value;Changed();Changed(nameof(ScrollStepLabel));ScheduleSave();InputSettingsChanged?.Invoke();}}
+    public string ScrollStepLabel=>ScrollStepPercent+"% per notch";
+    public bool ScrollAccelerationEnabled {get=>Preferences.ScrollAccelerationEnabled;set {if(value==Preferences.ScrollAccelerationEnabled)return;Preferences.ScrollAccelerationEnabled=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
+    public int IdleMilliseconds {get=>Preferences.IdleMilliseconds;set {value=Math.Clamp(value,500,5000);if(value==Preferences.IdleMilliseconds)return;Preferences.IdleMilliseconds=value;Changed();Changed(nameof(IdleLabel));ScheduleSave();}}
+    public string IdleLabel=>(IdleMilliseconds/1000d).ToString("0.0")+" seconds";
+    public event Action? InputSettingsChanged;
     public WheelProfile? ActiveProfile { get=>activeProfile; set { if(value!=null&&value!=activeProfile&&Profiles.Contains(value))SwitchProfile(value); } }
     public string ScreenEdge { get=>Preferences.ScreenEdge;set { if(!Edges.Contains(value)||value==Preferences.ScreenEdge)return;Preferences.ScreenEdge=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
     public string MonitorId { get=>Preferences.MonitorId;set { value??="";if(value==Preferences.MonitorId)return;Preferences.MonitorId=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
@@ -100,6 +113,8 @@ public sealed class MainViewModel : Observable
         if(Preferences.Profiles.Count==0)Preferences.Profiles.Add(new WheelProfile { Wheels=Preferences.Wheels });
         Profiles=new(Preferences.Profiles);
         activeProfile=Profiles.FirstOrDefault(p=>p.Id==Preferences.ActiveProfileId)??Profiles[0];
+        if(!Profiles.Any(p=>p.Id==Preferences.ManualProfileId))Preferences.ManualProfileId=activeProfile.Id;
+        AutomaticProfileStatus=AutomaticProfilesEnabled?"Waiting for a focused app…":"Automatic switching is off.";
         foreach(var profile in Profiles)profile.PropertyChanged+=ProfileChanged;
         dispatcher = Application.Current.Dispatcher;
         portText = Preferences.PortOverride > 0 ? Preferences.PortOverride.ToString() : "";
@@ -116,8 +131,9 @@ public sealed class MainViewModel : Observable
         Update(snapshot);
         RefreshMonitors();
         updateTimer.Tick+=async(_,_)=> { if(CheckUpdatesAutomatically)await CheckForUpdatesAsync(); };
+        foregroundTimer.Tick+=(_,_)=> {if(AutomaticProfilesEnabled)ApplyForegroundProcess(ProfileAutomation.ForegroundProcess(),Environment.TickCount64);};
     }
-    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
     public void RefreshMonitors()
     {
         var choices=System.Windows.Forms.Screen.AllScreens.Select((s,i)=>new Choice(s.DeviceName,$"Display {i+1}{(s.Primary?" · primary":"")} · {s.Bounds.Width}×{s.Bounds.Height}")).ToList();
@@ -125,9 +141,20 @@ public sealed class MainViewModel : Observable
         if(MonitorId.Length>0&&!choices.Any(x=>x.Id==MonitorId))choices.Add(new(MonitorId,"Saved display · disconnected"));
         ReplaceChoices(Monitors,choices.ToArray());
     }
-    private void ProfileChanged(object? sender,PropertyChangedEventArgs e)=>ScheduleSave();
-    private void SwitchProfile(WheelProfile profile)
+    private void ProfileChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName==nameof(WheelProfile.Applications))automation.Reset();ScheduleSave();}
+    internal void ApplyForegroundProcess(string? process,long now)
     {
+        if(!AutomaticProfilesEnabled)return;
+        var target=automation.Evaluate(process,Profiles,Preferences.ManualProfileId,now);
+        if(target==null)return;
+        var profile=Profiles.FirstOrDefault(p=>p.Id==target);
+        if(profile==null)return;
+        if(profile!=activeProfile)SwitchProfile(profile,true);
+        AutomaticProfileStatus=ProfileAutomation.Matches(profile.Applications,process??"")?$"Using {profile.Name} for {process}":$"Using your manual layout · {profile.Name}";
+    }
+    private void SwitchProfile(WheelProfile profile,bool automatic=false)
+    {
+        if(!automatic) {Preferences.ManualProfileId=profile.Id;automation.ManualSelection();AutomaticProfileStatus="Manual layout · "+profile.Name;}
         if(activeProfile!=null)activeProfile.Wheels=Wheels.ToList();
         switchingProfile=true;
         foreach(var w in Wheels)w.PropertyChanged-=WheelChanged;
@@ -139,13 +166,33 @@ public sealed class MainViewModel : Observable
     public void AddProfile(bool duplicate)
     {
         if(Profiles.Count>=20) {Message="You can keep up to 20 profiles.";return;}
-        var profile=new WheelProfile { Name=duplicate?(ActiveProfile?.Name??"Profile")+" copy":"Profile "+(Profiles.Count+1),Wheels=duplicate?Wheels.Select(w=>new Wheel {Name=w.Name,Color=w.Color,ChannelId=w.ChannelId,MixId=w.MixId}).ToList():new(){new Wheel {Name="New wheel"}} };
+        var profile=new WheelProfile { Name=duplicate?(ActiveProfile?.Name??"Profile")+" copy":"Profile "+(Profiles.Count+1),Wheels=duplicate?Wheels.Select(ProfileTransfer.CloneWheel).ToList():new(){new Wheel {Name="New wheel"}} };
         profile.PropertyChanged+=ProfileChanged;Profiles.Add(profile);ActiveProfile=profile;
     }
     public void RemoveProfile()
     {
         if(Profiles.Count<2||activeProfile==null) {Message="Keep at least one profile.";return;}
         var old=activeProfile;ActiveProfile=Profiles.First(p=>p!=old);old.PropertyChanged-=ProfileChanged;Profiles.Remove(old);ScheduleSave();
+    }
+    public void ExportProfiles(string path,bool all)
+    {
+        if(activeProfile!=null)activeProfile.Wheels=Wheels.ToList();
+        File.WriteAllText(path,ProfileTransfer.Serialize(all?Profiles:Profiles.Where(p=>p==activeProfile)));
+        Message=all?"Exported all profiles.":"Exported "+activeProfile?.Name+".";
+    }
+    public void ImportProfiles(string path)
+    {
+        if(new FileInfo(path).Length>2*1024*1024)throw new InvalidDataException("Profile files must be smaller than 2 MB.");
+        var imported=ProfileTransfer.Parse(File.ReadAllText(path));
+        if(Profiles.Count+imported.Count>20)throw new InvalidDataException("Import would exceed 20 profiles. No profiles were imported.");
+        var names=new HashSet<string>(Profiles.Select(p=>p.Name),StringComparer.OrdinalIgnoreCase);
+        foreach(var profile in imported)
+        {
+            var original=profile.Name;var number=2;
+            while(!names.Add(profile.Name))profile.Name=original[..Math.Min(original.Length,34)]+$" ({number++})";
+            profile.PropertyChanged+=ProfileChanged;Profiles.Add(profile);
+        }
+        ActiveProfile=imported[0];ScheduleSave();Message=$"Imported {imported.Count} profile(s). Check the channel bindings on this PC.";
     }
     public async Task CheckForUpdatesAsync()
     {
@@ -164,7 +211,8 @@ public sealed class MainViewModel : Observable
     }
     private void WheelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId))) return;
+        if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId) or nameof(Wheel.MaximumVolumePercent))) return;
+        if(e.PropertyName==nameof(Wheel.MaximumVolumePercent)) {ScheduleSave();StateChanged?.Invoke();return;}
         if (e.PropertyName == nameof(Wheel.ChannelId) && sender is Wheel wheel)
         {
             var channel = snapshot.Channels.FirstOrDefault(c => c.Id == wheel.ChannelId);
@@ -237,14 +285,15 @@ public sealed class MainViewModel : Observable
     private void UpdatePositions() { for (var i = 0; i < Wheels.Count; i++) Wheels[i].Position = i; }
     public void SetLevel(Wheel wheel, double level)
     {
-        if (!wheel.Available) return;
-        level = Math.Round(Math.Clamp(level, 0, 1), 2);
+        if (!Wheels.Contains(wheel)||!wheel.Available||!double.IsFinite(level)) return;
+        var cap=Wheels.Where(w=>w.ChannelId==wheel.ChannelId&&w.MixId==wheel.MixId).Select(w=>w.MaximumVolumePercent).DefaultIfEmpty(wheel.MaximumVolumePercent).Min()/100d;
+        level = Math.Round(Math.Clamp(level, 0, cap), 2);
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) other.Level = level;
         Client.QueueLevel(new(wheel.ChannelId, wheel.MixId), level);
     }
     public void ToggleMute(Wheel wheel)
     {
-        if (!wheel.Available) return;
+        if (!Wheels.Contains(wheel)||!wheel.Available) return;
         var value = !wheel.Muted;
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) { other.Muted = value; other.Changed(nameof(Wheel.VolumeLabel)); }
         Client.QueueMute(new(wheel.ChannelId, wheel.MixId), value);
@@ -263,5 +312,5 @@ public sealed class MainViewModel : Observable
         try { Preferences.Wheels = Wheels.ToList();if(activeProfile!=null) {activeProfile.Wheels=Preferences.Wheels;Preferences.ActiveProfileId=activeProfile.Id;}Preferences.Profiles=Profiles.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
         catch (Exception ex) { SaveStatus = "Could not save changes"; Message = ex.Message; App.WriteLog("Settings: " + ex.Message); }
     }
-    public void Dispose() { updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
+    public void Dispose() { foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
 }
