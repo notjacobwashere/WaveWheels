@@ -2,7 +2,7 @@
 
 ## 0.9.0-beta.1
 
-- Refined maximum-volume feedback into staggered directional streaks that emit over one second, then disappear cleanly.
+- Refined maximum-volume feedback into randomized streaks along the filled arc, moving along the local clockwise tangent, with brighter glow lingering for 1.8 seconds.
 - Added a saved Stable/Beta update channel. Beta includes published GitHub prereleases and prerelease version tags; drafts are excluded.
 - Compare beta identifiers numerically, notify only about newer versions, and allow stable releases to supersede their betas.
 - Added a beta archive with explicit installation of older builds, release-page fallbacks, and the existing installer checksum verification and cancellation flow.
