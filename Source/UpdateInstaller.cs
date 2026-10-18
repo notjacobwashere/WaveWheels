@@ -20,7 +20,8 @@ internal static class UpdateInstaller
     {
         var asset=update.Installer??throw new InvalidOperationException("This release has no verified Windows installer. Open the release page instead.");
         // Validate again at the execution boundary, even when called independently of release discovery.
-        var expectedName=$"WaveWheels-{new Version(update.Version).ToString()}-Setup.exe";
+        if(ReleaseVersion.Parse(update.Version)==null)throw new InvalidDataException("Invalid release version.");
+        var expectedName=$"WaveWheels-{update.Version}-Setup.exe";
         var prefix="https://github.com/notjacobwashere/WaveWheels/releases/download/";
         if(asset.Name!=expectedName||!Uri.TryCreate(asset.Url,UriKind.Absolute,out var uri)||!asset.Url.StartsWith(prefix,StringComparison.Ordinal)||uri.AbsolutePath.Split('/').Length!=7||!uri.AbsolutePath.EndsWith("/"+expectedName,StringComparison.Ordinal)||uri.Query.Length!=0||uri.Fragment.Length!=0||asset.Size<=0||asset.Size>MaximumBytes||!System.Text.RegularExpressions.Regex.IsMatch(asset.Sha256,"^[a-fA-F0-9]{64}$"))
             throw new InvalidDataException("The release installer metadata is invalid.");

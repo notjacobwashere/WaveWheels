@@ -69,6 +69,23 @@ public sealed class MainViewModel : Observable
     private double updateProgress;
     private CancellationTokenSource? installCancellation;
     public string AppVersion=>ReleaseUpdates.CurrentVersion;
+    public string[] UpdateChannels {get;}={"Stable","Beta"};
+    public string UpdateChannel
+    {
+        get=>Preferences.UpdateChannel;
+        set {if(!CanCheckUpdates||!UpdateChannels.Contains(value)||value==Preferences.UpdateChannel)return;Preferences.UpdateChannel=value;Changed();Changed(nameof(BetaChannelEnabled));ScheduleSave();ApplyRelease(null);UpdateStatus="Channel changed. Checking GitHub…";_=CheckForUpdatesAsync();}
+    }
+    public bool BetaChannelEnabled=>UpdateChannel=="Beta";
+    public ObservableCollection<ReleaseUpdate> BetaBuilds {get;}=new();
+    private ReleaseUpdate? selectedBetaBuild;
+    public ReleaseUpdate? SelectedBetaBuild {get=>selectedBetaBuild;set {if(Set(ref selectedBetaBuild,value))UpdateActionsChanged();}}
+    public bool CanInstallBeta=>!isolated&&CanCheckUpdates&&BetaChannelEnabled&&SelectedBetaBuild?.Installer!=null;
+    public async Task InstallBetaAsync()
+    {
+        if(!CanInstallBeta||SelectedBetaBuild==null)return;
+        ApplyRelease(SelectedBetaBuild);await InstallUpdateAsync();
+    }
+    public void OpenBetaReleasePage() {try {if(SelectedBetaBuild!=null)Process.Start(new ProcessStartInfo(SelectedBetaBuild.Url){UseShellExecute=true});}catch(Exception ex){Message="Could not open the browser: "+ex.Message;}}
     public string UpdateStatus { get=>updateStatus;private set=>Set(ref updateStatus,value); }
     public bool CheckingUpdates { get=>checkingUpdates;private set {if(Set(ref checkingUpdates,value))UpdateActionsChanged();} }
     public bool InstallingUpdate {get=>installingUpdate;private set {if(Set(ref installingUpdate,value))UpdateActionsChanged();}}
@@ -76,7 +93,7 @@ public sealed class MainViewModel : Observable
     public bool CanCheckUpdates=>!CheckingUpdates&&!InstallingUpdate;
     public bool CanInstallUpdate=>!isolated&&!CheckingUpdates&&!InstallingUpdate&&availableUpdate?.Installer!=null;
     public event Action? UpdateInstallationStarted;
-    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));}
+    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
     public event Action<string>? UpdateAvailable;
     private string notifiedVersion="";
@@ -259,7 +276,7 @@ public sealed class MainViewModel : Observable
     public async Task CheckForUpdatesAsync()
     {
         if(!CanCheckUpdates)return;CheckingUpdates=true;UpdateStatus="Checking GitHub…";
-        try { var update=await ReleaseUpdates.CheckAsync(updateLifetime.Token);ApplyRelease(update);if(update!=null&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
+        try { var catalog=await ReleaseUpdates.CheckAsync(BetaChannelEnabled,updateLifetime.Token);ApplyCatalog(catalog);var update=catalog.Latest;if(update!=null&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
         catch(Exception ex) when(ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException or System.Collections.Generic.KeyNotFoundException) {UpdateStatus="Couldn't check GitHub. Try again later.";}
         finally {CheckingUpdates=false;}
     }
@@ -268,6 +285,10 @@ public sealed class MainViewModel : Observable
         availableUpdate=update;updateUrl=update?.Url??ReleaseUpdates.ReleasesUrl;
         UpdateStatus=update==null?$"You're up to date · {AppVersion}":$"Version {update.Version} is available"+(update.Installer==null?" · use the release page to download":"");
         UpdateActionsChanged();
+    }
+    internal void ApplyCatalog(ReleaseCatalog catalog)
+    {
+        SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();ApplyRelease(catalog.Latest);
     }
     public Task InstallUpdateAsync()=>InstallUpdateCoreAsync((update,progress,token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token),UpdateInstaller.Launch);
     internal async Task InstallUpdateCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)

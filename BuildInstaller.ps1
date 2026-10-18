@@ -11,7 +11,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Self-contained app publish failed.' }
     [xml]$project = Get-Content -LiteralPath 'Source/WaveWheels.csproj' -Raw
     $version = [string]$project.Project.PropertyGroup.Version
-    & $iscc "/DAppVersion=$version" 'installer/WaveWheels.iss'
+    $numericVersion = (Get-Item -LiteralPath 'artifacts/installer-app/WaveWheels.exe').VersionInfo.FileVersion
+    & $iscc "/DAppVersion=$version" "/DAppNumericVersion=$numericVersion" 'installer/WaveWheels.iss'
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
     $setup = Join-Path $PSScriptRoot "artifacts/WaveWheels-$version-Setup.exe"
     $digest = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()

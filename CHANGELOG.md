@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.8.1 — monitor-persistence prerelease
+## 0.9.0-beta.1
+
+- Refined maximum-volume feedback into staggered directional streaks that emit over one second, then disappear cleanly.
+- Added a saved Stable/Beta update channel. Beta includes published GitHub prereleases and prerelease version tags; drafts are excluded.
+- Compare beta identifiers numerically, notify only about newer versions, and allow stable releases to supersede their betas.
+- Added a beta archive with explicit installation of older builds, release-page fallbacks, and the existing installer checksum verification and cancellation flow.
+- Discover up to 500 recent GitHub releases. Beta builds should use a version such as `0.9.0-beta.1` in the project, matching release tag and Setup asset filename, so the installed build retains its beta identity.
+
+## 0.8.1
 
 - Persist Windows monitor hardware-interface identities instead of unstable DISPLAYn numbering, with legacy selection migration.
 - Keep disconnected or ambiguous saved displays, retry migration on reconnect, and retain All displays behavior.

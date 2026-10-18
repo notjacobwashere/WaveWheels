@@ -73,6 +73,7 @@ public sealed class Preferences
     public int PositionPercent { get; set; } = 50;
     public int WheelSpacing { get; set; }
     public bool CheckUpdatesAutomatically { get; set; } = true;
+    public string UpdateChannel { get; set; } = "Stable";
     public string LastNotifiedUpdate { get; set; } = "";
     public string ActiveProfileId { get; set; } = "";
     public List<WheelProfile> Profiles { get; set; } = new();
@@ -107,6 +108,7 @@ public sealed class SettingsStore
         {
             var p = File.Exists(FilePath) ? JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath), options) ?? new() : new Preferences();
             p.Wheels ??= new();
+            p.UpdateChannel=p.UpdateChannel=="Beta"?"Beta":"Stable";
             p.Wheels = p.Wheels.Where(w => w != null).Take(12).ToList();
             if (p.Wheels.Count == 0) p.Wheels.Add(new Wheel());
             var ids = new HashSet<string>();

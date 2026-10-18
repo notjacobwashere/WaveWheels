@@ -210,12 +210,11 @@ public sealed class WheelControl : FrameworkElement
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, ActualWidth, ActualHeight));
         dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17, 20, 27)), null, new Point(60, 60), 56, 56);
         if (active) dc.DrawEllipse(null, new Pen(accent.CloneCurrentValue(), 1) { Brush = WithOpacity(accent, .18) }, new Point(60,60),57,57);
-        var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius, 270 * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel));
+        var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius, MaximumVolumeEffect.ArcSweepDegrees * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel));
         var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress);
         if (w.Available)
         {
             for (var blur = 10; blur >= 2; blur -= 2) dc.DrawGeometry(null, new Pen(WithOpacity(accent, .035+glow*.1), blur+glow*2), arc);
-            if(glow>0)dc.DrawGeometry(null,new Pen(WithOpacity(accent,glow*.28),3.5),Arc(new Point(60,60),47,270));
             dc.DrawGeometry(null, new Pen(WithOpacity(accent, .85), 2.3), arc);
             dc.DrawGeometry(null, new Pen(w.Muted ? WithOpacity(Brushes.White, .35) : Brushes.White, 1.15), arc);
         }
@@ -226,6 +225,7 @@ public sealed class WheelControl : FrameworkElement
                 dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17,20,27)),null,point,3.8,3.8);
                 dc.DrawEllipse(WithOpacity(accent,percent*.01<=w.Level+1e-7?1:.5),null,point,2.2,2.2);
             }
+        DrawMaximumSparks(dc,accent);
         DrawNumber(dc);
         if (!Compact)
         {
@@ -237,13 +237,19 @@ public sealed class WheelControl : FrameworkElement
         // Segoe Fluent Icons is provided by Windows; no third-party artwork is distributed.
         var icon = new FormattedText(w.Muted ? "\uE74F" : "\uE767", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe Fluent Icons"), 13, w.Available ? Brushes.White : Brushes.Gray, VisualTreeHelper.GetDpi(this).PixelsPerDip);
         dc.DrawText(icon,new Point(60-icon.Width/2,88-icon.Height/2));
+    }
+    private void DrawMaximumSparks(DrawingContext dc,Brush accent)
+    {
         var sparks=MaximumVolumeEffect.SparkOpacity(MaximumEffectProgress);
-        if(w.Available&&sparks>0)
+        if(Wheel?.Available==true&&sparks>0)
             for(var i=0;i<MaximumVolumeEffect.SparkCount;i++)
             {
                 var spark=MaximumVolumeEffect.Spark(i,MaximumEffectProgress);var head=new Point(spark.X,spark.Y);var tail=new Point(spark.TailX,spark.TailY);
-                dc.DrawLine(new Pen(WithOpacity(accent,sparks*.85),2),tail,head);
-                dc.DrawLine(new Pen(WithOpacity(Brushes.White,sparks*.9),.7),tail,head);
+                var opacity=sparks*spark.Opacity;if(opacity<=0)continue;
+                var tip=tail+(head-tail)*.65;
+                dc.DrawLine(new Pen(WithOpacity(accent,opacity*.25),2.2){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tail,head);
+                dc.DrawLine(new Pen(WithOpacity(accent,opacity*.9),1.1){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tail,head);
+                dc.DrawLine(new Pen(WithOpacity(Brushes.White,opacity*.95),.55){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tip,head);
             }
     }
     private static Brush WithOpacity(Brush source, double opacity) { var brush = source.CloneCurrentValue(); brush.Opacity = opacity; return brush; }
@@ -255,7 +261,7 @@ public sealed class WheelControl : FrameworkElement
     private static Geometry Arc(Point center, double radius, double degrees)
     {
         if (degrees <= .001) return Geometry.Empty;
-        var end = (90 + degrees) * Math.PI / 180;
+        var end = (MaximumVolumeEffect.ArcStartDegrees + degrees) * Math.PI / 180;
         var geometry = new StreamGeometry();
         using (var c = geometry.Open()) { c.BeginFigure(new Point(center.X,center.Y+radius),false,false); c.ArcTo(new Point(center.X+Math.Cos(end)*radius,center.Y+Math.Sin(end)*radius),new Size(radius,radius),0,degrees>180,SweepDirection.Clockwise,true,false); }
         geometry.Freeze(); return geometry;

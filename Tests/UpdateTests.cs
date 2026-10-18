@@ -41,11 +41,25 @@ internal static class UpdateTests
         Assert(ReleaseUpdates.Parse(json.Replace("https://github.com/","https://evil.invalid/"),new Version(0,6,0))?.Installer==null,"Off-repository installers must be rejected.");
         Assert(ReleaseUpdates.Parse(json.Replace("sha256:","sha1:"),new Version(0,6,0))?.Installer==null,"Missing trusted SHA-256 must leave the release-page fallback.");
         Assert(ReleaseUpdates.Parse("{\"tag_name\":\"v1.0\"}",new Version(0,6,0))!=null,"Two-part version tags must still support notification links.");
+        string Release(string tag,bool pre=false,bool draft=false)=>JsonSerializer.Serialize(new {tag_name=tag,prerelease=pre,draft,assets=Array.Empty<object>()});
+        var history="["+string.Join(",",Release("v0.9.0-beta.2",true),Release("v0.9.0-beta.10",true),Release("v0.8.2"),Release("v1.0.0",true,true),Release("v0.8.0",true),Release("v0.9.0-rc.1"),Release("nightly"))+"]";
+        Assert(ReleaseUpdates.ParseCatalog(history,"0.8.1",false).Latest?.Version=="0.8.2","Stable must exclude flagged and suffix prereleases and drafts.");
+        var catalog=ReleaseUpdates.ParseCatalog(history,"0.8.1",true);
+        Assert(catalog.Latest?.Version=="0.9.0-rc.1"&&catalog.Betas.Count==4,"Beta channel must include prereleases and retain old versions in its archive.");
+        Assert(catalog.Betas[1].Version=="0.9.0-beta.10"&&catalog.Betas[2].Version=="0.9.0-beta.2","Beta identifiers must sort numerically rather than lexically.");
+        Assert(ReleaseUpdates.ParseCatalog(history,"0.9.0",true).Latest==null,"Older betas must never be offered as automatic upgrades.");
+        Assert(ReleaseUpdates.ParseCatalog("["+Release("v0.9.0")+"]","0.9.0-beta.10",true).Latest?.Version=="0.9.0","Stable must supersede its own prereleases on the beta channel.");
+        Assert(ReleaseUpdates.ParseCatalog("["+Release("v0.9.1",true)+"]","0.9.0",true).Latest?.IsBeta==true,"Numeric version tags marked prerelease must count as betas.");
+        var betaJson=json.Replace("0.7.0","0.9.0-beta.10").Replace("\"prerelease\":false","\"prerelease\":true");
+        var betaUpdate=ReleaseUpdates.ParseCatalog("["+betaJson+"]","0.8.1",true).Latest!;
+        Assert(betaUpdate.Installer!=null,"Suffix beta tags must retain verified installers.");
         var directory=Path.Combine(AppContext.BaseDirectory,"update-download-tests-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
         var progress=new ProgressSink();
         using var handler=new Handler();using var client=new HttpClient(handler);
         handler.Reply=(request,_)=>Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){RequestMessage=request,Content=new ByteArrayContent(bytes)});
         var file=await UpdateInstaller.DownloadAsync(update,directory,progress,CancellationToken.None,client);
+        var betaFile=await UpdateInstaller.DownloadAsync(betaUpdate,directory,progress,CancellationToken.None,client);
+        File.Delete(betaFile);Directory.Delete(Path.GetDirectoryName(betaFile)!);
         Assert(File.ReadAllBytes(file).SequenceEqual(bytes)&&progress.Last?.Percent==100,"The verified download and determinate progress must match the release.");
         Assert(!Directory.EnumerateFiles(directory,"*.partial",SearchOption.AllDirectories).Any(),"Successful downloads must finalize the partial file.");
         var attempts=Directory.GetDirectories(directory).Length;
@@ -81,6 +95,10 @@ internal static class UpdateTests
         vm.InstallUpdateCoreAsync((_,_,_)=>Task.FromResult("fixture"),_=> {Assert(store.Load().Wheels[0].Name=="Saved before handoff","Pending settings must save before launching Setup.");Assert(exits==0,"Exit must follow successful handoff.");launches++;}).GetAwaiter().GetResult();
         Assert(launches==1&&exits==1,"Successful handoff must request exactly one graceful exit.");
         vm.ApplyRelease(update with{Installer=null});Assert(!vm.CanInstallUpdate,"A release without a verified installer must only offer browser fallback.");
+        vm.Preferences.UpdateChannel="Beta";
+        vm.ApplyCatalog(new(null,new[]{update with{IsBeta=true}}));
+        Assert(vm.CanInstallBeta&&!vm.CanInstallUpdate,"Older archived betas must have an explicit install action independent of automatic upgrades.");
+        vm.Save();Assert(store.Load().UpdateChannel=="Beta","The selected update channel must survive reload.");
         vm.Dispose();var isolated=new MainViewModel(new SettingsStore(Path.Combine(directory,"isolated")),true);isolated.ApplyRelease(update);Assert(!isolated.CanInstallUpdate,"Isolated profiles must never modify the installed app.");isolated.Dispose();
         Console.WriteLine("PASS: updater lifecycle, save-before-launch, no exit on errors/cancel, retry, and isolated-profile protection.");
     }

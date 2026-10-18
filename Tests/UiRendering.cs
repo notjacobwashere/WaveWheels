@@ -76,6 +76,16 @@ internal static class UiRendering
                     {
                         if(((Button)window.FindName("InstallUpdateButton")).IsEnabled||((Button)window.FindName("CancelUpdateButton")).IsEnabled)throw new Exception("Update buttons must be disabled before discovery and outside downloads.");
                         if(!Descendants((FrameworkElement)window.FindName("UpdatesPage")).OfType<Button>().Any(b=>b.Content?.ToString()=="Open release page"))throw new Exception("The release-page fallback must remain available.");
+                        var betaStore=new SettingsStore(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,"beta-render-"+Guid.NewGuid().ToString("N")));
+                        betaStore.Save(new Preferences {UpdateChannel="Beta"});
+                        var betaVm=new MainViewModel(betaStore,true);
+                        betaVm.ApplyCatalog(new(null,new[]{UpdateTests.Fixture(new byte[]{1,2,3}) with {IsBeta=true},new ReleaseUpdate("0.6.0-beta.2","https://github.com/notjacobwashere/WaveWheels/releases/tag/v0.6.0-beta.2",null,true)}));
+                        root.DataContext=betaVm;root.UpdateLayout();
+                        if(((ComboBox)window.FindName("UpdateChannelPicker")).SelectedItem?.ToString()!="Beta"||((ListBox)window.FindName("BetaBuildList")).Items.Count!=2||((Button)window.FindName("InstallBetaButton")).IsEnabled)throw new Exception("Beta channel/archive bindings or isolated install protection failed.");
+                        Save(root,Path.Combine(Path.GetDirectoryName(path)!,"updates-beta.png"),1160,860);
+                        ((ScrollViewer)window.FindName("UpdatesPage")).ScrollToEnd();root.UpdateLayout();
+                        Save(root,Path.Combine(Path.GetDirectoryName(path)!,"updates-beta-archive.png"),1160,860);
+                        betaVm.Dispose();root.DataContext=vm;((ScrollViewer)window.FindName("UpdatesPage")).ScrollToTop();root.UpdateLayout();
                     }
                     Save(root,Path.Combine(Path.GetDirectoryName(path)!,section.ToLowerInvariant()+".png"),1160,860);
                 }

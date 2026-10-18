@@ -1,11 +1,15 @@
 #ifndef AppVersion
-  #define AppVersion "0.8.1"
+  #define AppVersion "0.9.0-beta.1"
+#endif
+#ifndef AppNumericVersion
+  #define AppNumericVersion "0.9.0.0"
 #endif
 
 [Setup]
 AppId={{62CDFDE0-5349-4AB2-B7DE-95359B68E73F}
 AppName=WaveWheels
 AppVersion={#AppVersion}
+VersionInfoVersion={#AppNumericVersion}
 AppPublisher=notjacobwashere
 AppPublisherURL=https://github.com/notjacobwashere/WaveWheels
 AppSupportURL=https://github.com/notjacobwashere/WaveWheels/issues

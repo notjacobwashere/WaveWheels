@@ -23,7 +23,27 @@ internal static class MaximumEffectTests
                 state.Reset(true,.6);Assert(!state.Observe(true,.65,true),"A lower per-wheel cap must not count as 100%.");
                 state.Reset(true,.99);Assert(!state.Observe(true,1,false),"Reduced motion must suppress the effect.");
                 Assert(MaximumVolumeEffect.Glow(0)==0&&MaximumVolumeEffect.Glow(.1)>.7&&MaximumVolumeEffect.Glow(.6)<.2&&MaximumVolumeEffect.Glow(1)==0&&MaximumVolumeEffect.SparkOpacity(1)==0,"The one-second envelope must rise briefly and return to normal.");
-                Assert(MaximumVolumeEffect.SparkOpacity(.55)==0&&MaximumVolumeEffect.Glow(.55)>0,"Sparks must finish quickly while the readable glow fades for a full second.");
+                foreach(var progress in new[]{.08,.25,.5,.7,.85,.95})
+                {
+                    var alive=Enumerable.Range(0,MaximumVolumeEffect.SparkCount).Select(i=>MaximumVolumeEffect.Spark(i,progress)).Where(s=>s.Opacity>0).ToArray();
+                    Assert(alive.Length>0&&MaximumVolumeEffect.SparkOpacity(progress)>0,"Staggered sparks must keep emitting throughout the one-second effect.");
+                    foreach(var streak in alive)Assert(streak.X>streak.TailX&&(new Point(streak.X,streak.Y)-new Point(streak.TailX,streak.TailY)).Length>=5.99&&streak.Lifetime>=.5&&streak.Lifetime<=1,"Sparks must be long outward strokes lasting 0.5–1 second, not dots or a circular arrangement.");
+                }
+                var launches=Enumerable.Range(0,MaximumVolumeEffect.SparkCount).Select(i=>MaximumVolumeEffect.Spark(i,.5)).ToArray();
+                Assert(launches.Select(s=>s.BirthTime).Distinct().Count()==MaximumVolumeEffect.SparkCount&&launches.Last().BirthTime>.4&&launches.All(s=>s.BirthTime+s.Lifetime<=1.000001),"Independent launches must be staggered without extending the burst beyond one second.");
+                foreach(var degrees in new[]{0d,90,180,270})
+                {
+                    var angle=degrees*Math.PI/180;var radial=new Vector(Math.Cos(angle),Math.Sin(angle));var origin=new Point(60+radial.X*43,60+radial.Y*43);
+                    foreach(var i in Enumerable.Range(0,MaximumVolumeEffect.SparkCount))
+                    {
+                        var birth=MaximumVolumeEffect.Spark(i,0,degrees).BirthTime;var launch=MaximumVolumeEffect.Spark(i,birth,degrees);
+                        Assert((new Point(launch.TailX,launch.TailY)-origin).Length<1e-7,"Every streak must begin at the slider end stop without a tail behind the emitter.");
+                        var s=MaximumVolumeEffect.Spark(i,.65,degrees);if(s.Opacity<=0)continue;
+                        var travel=new Point(s.X,s.Y)-origin;var outward=Vector.Multiply(travel,radial);
+                        Assert(outward>0&&Math.Abs(Vector.CrossProduct(travel,radial))<outward*.21,"Emission must follow the endpoint radial direction with only a narrow spread, including a downward-facing bottom endpoint.");
+                    }
+                }
+                Assert(Enumerable.Range(0,MaximumVolumeEffect.SparkCount).All(i=>MaximumVolumeEffect.Spark(i,1).Opacity==0&&MaximumVolumeEffect.Spark(i,1.1).Opacity==0),"All streaks must stop cleanly at one second without looping.");
                 var app=new ComponentApplication();app.InitializeComponent();
                 var snap=new ShiftVolumeSnap();
                 Assert(snap.Adjust(10,.33,0)==.4&&snap.Adjust(10,.4,179)==null&&snap.Adjust(10,.4,180)==.6,"Shift scroll must choose one adjacent 20% step and enforce the cooldown even for large deltas.");
@@ -54,12 +74,12 @@ internal static class MaximumEffectTests
                 control.Wheel=wheel;control.EffectsEnabled=true;control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=1;
                 control.Measure(new Size(300,120));control.Arrange(new Rect(0,0,300,120));control.StartMaximumEffect();
                 Directory.CreateDirectory(directory);
-                foreach(var ms in new[]{0,80,200,500,800,1000})
+                foreach(var ms in new[]{0,80,200,500,800,950,1000})
                 {
                     control.SeekMaximumEffect(TimeSpan.FromMilliseconds(ms));
                     control.InvalidateVisual();control.UpdateLayout();
                     Assert(Math.Abs(control.MaximumEffectProgress-ms/1000d)<.001,"The real WPF animation clock must span exactly one second.");
-                    for(var i=0;i<MaximumVolumeEffect.SparkCount;i++) {var s=MaximumVolumeEffect.Spark(i,ms/1000d);Assert(s.X>=0&&s.X<=120&&s.Y>=0&&s.Y<=120,"Sparks must stay inside wheel bounds.");}
+                    for(var i=0;i<MaximumVolumeEffect.SparkCount;i++) {var s=MaximumVolumeEffect.Spark(i,ms/1000d);Assert(s.X>=0&&s.X<=300&&s.Y>=0&&s.Y<=120,"Sparks must stay inside the existing wheel-control bounds.");}
                     var frame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);frame.Render(control);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(Path.Combine(directory,$"maximum-{ms:0000}.png"));encoder.Save(file);
                 }
                 Assert(control.MaximumEffectProgress==1,"The completed clock must leave no residual glow or particles.");
@@ -118,6 +138,7 @@ internal static class MaximumEffectTests
                 number.EffectsEnabled=true;number.Wheel=new Wheel{Available=true,Level=.6};number.Wheel.Level=.61;number.SeekNumberTransition(TimeSpan.FromMilliseconds(50));number.InvalidateVisual();number.UpdateLayout();
                 var digitFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);digitFrame.Render(number);var digitEncoder=new PngBitmapEncoder();digitEncoder.Frames.Add(BitmapFrame.Create(digitFrame));using(var digitFile=File.Create(Path.Combine(directory,"rolling-digit.png")))digitEncoder.Save(digitFile);
                 Console.WriteLine("PASS: max pulse/clocks, Shift markers/cooldown, boundary reversals with default and 10% steps/acceleration/caps, and fractional-notch quantization.");
+                Console.WriteLine("PASS: repeated one-second directional spark streak emission, bounded paths, fixed-length tails, and clean stop.");
                 Console.WriteLine("PASS: 150 ms directional number roll/fade, unchanged-value suppression, immediate retargeting, reduced motion, and rebind reset.");
                 Console.WriteLine("PASS: stationary unchanged digits across all frames, per-column transitions/carries, and stable units on digit-count changes.");
                 ChannelEditorSmoke.Run(Path.Combine(directory,"channel-editor-profile-"+Guid.NewGuid().ToString("N")));

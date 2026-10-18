@@ -14,16 +14,19 @@ internal sealed class MaximumVolumeTransition
     }
 }
 
+internal readonly record struct SparkStreak(double X,double Y,double TailX,double TailY,double Opacity,double BirthTime,double Lifetime);
+
 internal static class MaximumVolumeEffect
 {
-    public const int DurationMilliseconds=1000,SparkCount=12;
-    public const double SparkDuration=.55;
+    public const int DurationMilliseconds=1000,SparkCount=22;
+    public const double ArcStartDegrees=90,ArcSweepDegrees=270,EndStopDegrees=ArcStartDegrees+ArcSweepDegrees;
+    private const double EmissionEnd=.45;
     public const double RingRadius=43;
     public static double RenderedArcLevel(double level)
     {
         level=Math.Clamp(level,0,1);
         // Snap the subpixel tail to the physical end stop; drawing and the burst share this cue.
-        return (1-level)*RingRadius*1.5*Math.PI<=.35?1:level;
+        return (1-level)*RingRadius*ArcSweepDegrees*Math.PI/180<=.35?1:level;
     }
     public static double Glow(double progress)
     {
@@ -32,16 +35,27 @@ internal static class MaximumVolumeEffect
     }
     public static double SparkOpacity(double progress)
     {
-        var burst=Math.Clamp(progress/SparkDuration,0,1);
-        return Math.Min(1,burst/.02)*Math.Pow(1-burst,2);
+        return progress<=0||progress>=1?0:Math.Min(1,(1-progress)/.08);
     }
-    public static (double X,double Y,double TailX,double TailY) Spark(int index,double progress)
+    public static SparkStreak Spark(int index,double progress,double endpointDegrees=EndStopDegrees)
     {
-        progress=Math.Clamp(progress/SparkDuration,0,1);
-        var angle=index*Math.PI*2/SparkCount+.12*Math.Sin(index*7);
-        var travel=1-Math.Pow(1-progress,3);
-        var radius=44+(10+index%4)*travel;
-        var tail=(2+index%3)*(1-progress);
-        return (60+Math.Cos(angle)*radius,60+Math.Sin(angle)*radius,60+Math.Cos(angle)*(radius-tail),60+Math.Sin(angle)*(radius-tail));
+        var birth=Math.Clamp((index+.22*Math.Sin(index*13))*EmissionEnd/(SparkCount-1),0,EmissionEnd);
+        if(index==SparkCount-1)birth=EmissionEnd;
+        var seed=(index*37%101)/100d;
+        // Every streak lives at least 550 ms; later launches naturally finish at the one-second cutoff.
+        var lifetime=Math.Min(.55+seed*.45,1-birth);
+        var age=progress-birth;
+        var alive=progress>=0&&progress<1&&age>=0&&age<lifetime;
+        age=Math.Clamp(age,0,lifetime);
+        var radial=endpointDegrees*Math.PI/180;
+        var direction=radial+(seed-.5)*.4;
+        var originX=60+Math.Cos(radial)*RingRadius;var originY=60+Math.Sin(radial)*RingRadius;
+        var distance=(30+seed*28)*age*(1-.2*age/lifetime);
+        var dx=Math.Cos(direction);var dy=Math.Sin(direction);
+        var length=8+seed*5;
+        var x=originX+dx*(distance+length);var y=originY+dy*(distance+length);
+        var opacity=alive?Math.Min(1,age/.02)*Math.Pow(1-age/lifetime,.65):0;
+        // Fixed-length line tails never collapse into circular particles. Each launch is independent.
+        return new(x,y,originX+dx*distance,originY+dy*distance,opacity,birth,lifetime);
     }
 }
