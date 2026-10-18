@@ -35,6 +35,7 @@ public partial class SettingsWindow : Window
         model.SelectionChanged+=QueueEditorBindings;
         model.Channels.CollectionChanged+=(_,_)=>QueueEditorBindings();
         model.MixChoices.CollectionChanged+=(_,_)=>QueueEditorBindings();
+        model.Monitors.CollectionChanged+=(_,_)=>QueueEditorBindings();
         Loaded+=(_,_)=>QueueEditorBindings();
         IsVisibleChanged+=(_,_)=> {if(IsVisible)QueueEditorBindings();};
         QueueEditorBindings();
@@ -57,6 +58,7 @@ public partial class SettingsWindow : Window
             // Reapply the saved IDs after the choice list settles, without writing transient nulls back.
             if(!ChannelBox.IsDropDownOpen)ChannelBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
             if(!MixBox.IsDropDownOpen)MixBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
+            if(!MonitorBox.IsDropDownOpen)MonitorBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
         }));
     }
     internal static bool IsHeaderDragSource(DependencyObject? source,DependencyObject header)
@@ -153,6 +155,9 @@ public partial class SettingsWindow : Window
     internal void ApplyChannel() { if(ChannelBox.SelectedValue is string id && model.SelectedWheel!=null && id!=model.SelectedWheel.ChannelId)model.SelectedWheel.ChannelId=id; }
     private void MixSelected(object sender,SelectionChangedEventArgs e) { if(MixBox.IsDropDownOpen)ApplyMix(); }
     private void MixClosed(object? sender,EventArgs e) => ApplyMix();
+    private void MonitorSelected(object sender,SelectionChangedEventArgs e) {if(MonitorBox.IsDropDownOpen)ApplyMonitor();}
+    private void MonitorClosed(object? sender,EventArgs e) {ApplyMonitor();QueueEditorBindings();}
+    internal void ApplyMonitor() {if(MonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;}
     private void ApplyMix() { if(MixBox.SelectedValue is string id && model.SelectedWheel!=null)model.SelectedWheel.MixId=id; }
     private void DragStart(object sender,MouseButtonEventArgs e)
     {

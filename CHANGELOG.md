@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1 — monitor-persistence prerelease
+
+- Persist Windows monitor hardware-interface identities instead of unstable DISPLAYn numbering, with legacy selection migration.
+- Keep disconnected or ambiguous saved displays, retry migration on reconnect, and retain All displays behavior.
+- Cache identity matching outside the scroll hook and keep placement choices synchronized during enumeration changes.
+- Added monitor migration, renumbering, reconnect, native capture, and placement-control regression tests. Physical reboot/unplug testing remains manual.
+
 ## 0.8.0
 
 - Added a saved app blacklist in Settings, with executable-name add/browse/remove controls and a global toggle. Empty or disabled lists have no effect.

@@ -27,6 +27,7 @@ internal static class Program
                 UiRendering.Run(Path.GetFullPath(args[1]));Console.WriteLine("PASS: window render, real collection reordering, selection retention, size/motion persistence and animation clocks.");return 0;
             }
             NewFeatures.Pure();
+            MonitorPersistenceTests.Pure();
             await UpdateTests.Downloads();
             var router=new OverlayInputRouter();
             var opening=router.Route(2,2,0);

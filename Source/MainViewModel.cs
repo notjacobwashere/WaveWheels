@@ -57,7 +57,7 @@ public sealed class MainViewModel : Observable
     public event Action? InputSettingsChanged;
     public WheelProfile? ActiveProfile { get=>activeProfile; set { if(value!=null&&value!=activeProfile&&Profiles.Contains(value))SwitchProfile(value); } }
     public string ScreenEdge { get=>Preferences.ScreenEdge;set { if(!Edges.Contains(value)||value==Preferences.ScreenEdge)return;Preferences.ScreenEdge=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
-    public string MonitorId { get=>Preferences.MonitorId;set { value??="";if(value==Preferences.MonitorId)return;Preferences.MonitorId=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
+    public string MonitorId { get=>Preferences.MonitorId;set {if(value==null||value==Preferences.MonitorId)return;Preferences.MonitorId=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
     public int PositionPercent { get=>Preferences.PositionPercent;set { value=Math.Clamp(value,0,100);if(value==Preferences.PositionPercent)return;Preferences.PositionPercent=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
     public int WheelSpacing { get=>Preferences.WheelSpacing;set { value=Math.Clamp(value,0,36);if(value==Preferences.WheelSpacing)return;Preferences.WheelSpacing=value;Changed();ScheduleSave();LayoutChanged?.Invoke(); } }
     private readonly CancellationTokenSource updateLifetime=new();
@@ -187,10 +187,20 @@ public sealed class MainViewModel : Observable
     public void RemoveBlacklistedApplication() {if(SelectedBlacklistedApplication is string name)BlacklistedApplications.Remove(name);}
     public void RefreshMonitors()
     {
-        var choices=System.Windows.Forms.Screen.AllScreens.Select((s,i)=>new Choice(s.DeviceName,$"Display {i+1}{(s.Primary?" · primary":"")} · {s.Bounds.Width}×{s.Bounds.Height}")).ToList();
+        ApplyMonitorChoices(System.Windows.Forms.Screen.AllScreens.Select(MonitorDescriptor.Capture).ToArray());
+    }
+    internal void ApplyMonitorChoices(IReadOnlyList<MonitorDescriptor> monitors)
+    {
+        var selected=MonitorSelection.Resolve(MonitorId,monitors);
+        var choices=monitors.Select(m=>new Choice(m.Id,m.Label)).DistinctBy(c=>c.Id,StringComparer.OrdinalIgnoreCase).ToList();
         choices.Insert(0,new("","All displays"));
-        if(MonitorId.Length>0&&!choices.Any(x=>x.Id==MonitorId))choices.Add(new(MonitorId,"Saved display · disconnected"));
+        if(selected.Length>0&&!choices.Any(x=>string.Equals(x.Id,selected,StringComparison.OrdinalIgnoreCase)))choices.Add(new(selected,"Saved display · disconnected"));
         ReplaceChoices(Monitors,choices.ToArray());
+        if(selected!=MonitorId)
+        {
+            // Identity migration does not change geometry; refresh callers already update placement/hit data.
+            Preferences.MonitorId=selected;Changed(nameof(MonitorId));ScheduleSave();
+        }
     }
     private void ProfileChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName==nameof(WheelProfile.Applications))automation.Reset();ScheduleSave();}
     internal void ApplyForegroundProcess(string? process,long now)

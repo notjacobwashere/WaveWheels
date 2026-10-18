@@ -7,6 +7,16 @@ namespace WaveWheels;
 
 internal static class Native
 {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct DisplayDevice
+    {
+        public int Size;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string DeviceName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceString;
+        public int StateFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceId;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceKey;
+    }
     [StructLayout(LayoutKind.Sequential)] internal struct Point { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] internal struct MouseData { public Point Point; public uint MouseDataValue, Flags, Time; public UIntPtr ExtraInfo; }
     [StructLayout(LayoutKind.Sequential)] internal struct Message { public IntPtr HWnd; public uint Id; public UIntPtr WParam; public IntPtr LParam; public uint Time; public Point Point; public uint Private; }
@@ -29,8 +39,30 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(IntPtr window,out uint processId);
     [DllImport("user32.dll")] internal static extern IntPtr MonitorFromPoint(Point point, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool EnumDisplayDevices(string? device, uint index, ref DisplayDevice display, uint flags);
     [DllImport("shcore.dll")] internal static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint x, out uint y);
     [DllImport("dwmapi.dll")] internal static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    internal static (string Id,string PreviousId) DisplayIdentities(string deviceName)
+    {
+        string Read(uint flags)
+        {
+            var first="";
+            for(uint index=0;;index++)
+            {
+                var display=new DisplayDevice {Size=Marshal.SizeOf<DisplayDevice>()};
+                if(!EnumDisplayDevices(deviceName,index,ref display,flags))break;
+                var id=(display.DeviceId??"").Trim();
+                if(id.Length==0)continue;
+                if((display.StateFlags&1)!=0)return id;
+                if(first.Length==0)first=id;
+            }
+            return first;
+        }
+        // EDD_GET_DEVICE_INTERFACE_NAME links each GDI display to its monitor hardware interface.
+        var id=Read(1);var previous=Read(0);
+        return (id.Length>0?id:previous.Length>0?previous:deviceName,previous);
+    }
 }
 
 public sealed class EdgeHook : IDisposable

@@ -31,7 +31,7 @@ public sealed class OverlayWindow : Window
     private Forms.Screen? activeScreen;
     private double activeDpi = 1;
     private sealed record HitRow(int Index, int Left, int Top, int Right, int Bottom, bool Available);
-    private sealed record ScreenTarget(Forms.Screen Screen,EdgeRegion Region);
+    private sealed record ScreenTarget(Forms.Screen Screen,EdgeRegion Region,MonitorDescriptor Monitor);
     private sealed record HitState(bool Visible, bool Enabled, int EdgeWidth, int Generation, HitRow[] Rows,string Edge,string MonitorId,ScreenTarget[] Screens);
     internal OverlayMotion Motion => motion;
     internal OverlayInputRouter Input => input;
@@ -94,21 +94,22 @@ public sealed class OverlayWindow : Window
     {
         foreach(var control in controls)control.EffectsEnabled=model.AnimateWheels;
         RefreshScreens();motion.SetEdge(model.ScreenEdge);
-        var selected=screens.FirstOrDefault(s=>s.Screen.DeviceName==model.MonitorId);
+        var selected=model.MonitorId.Length>0?screens.FirstOrDefault(s=>MonitorSelection.Matches(model.MonitorId,s.Monitor)):null;
         if(shown&&selected!=null) {activeScreen=selected.Screen;activeDpi=selected.Region.Dpi;}
         if (shown) Position();
     }
     private void ApplyInputSettings() {foreach(var control in controls) {control.ScrollStepPercent=model.ScrollStepPercent;control.ShiftStepPercent=model.ShiftStepPercent;control.ShowShiftMarkers=model.ShowShiftMarkers;control.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;control.ResetScroll();}}
     private void RefreshScreens()
     {
-        screens=Forms.Screen.AllScreens.Select(s=>new ScreenTarget(s,new EdgeRegion(s.Bounds.Left,s.Bounds.Top,s.Bounds.Right,s.Bounds.Bottom,ScaleFor(s.Bounds.Left+s.Bounds.Width/2,s.Bounds.Top+s.Bounds.Height/2)))).ToArray();
+        screens=Forms.Screen.AllScreens.Select((s,i)=>new ScreenTarget(s,new EdgeRegion(s.Bounds.Left,s.Bounds.Top,s.Bounds.Right,s.Bounds.Bottom,ScaleFor(s.Bounds.Left+s.Bounds.Width/2,s.Bounds.Top+s.Bounds.Height/2)),MonitorDescriptor.Capture(s,i))).ToArray();
+        model.ApplyMonitorChoices(screens.Select(s=>s.Monitor).ToArray());
         screenRefresh=Environment.TickCount64;UpdateHits();
     }
     internal bool OnGlobalWheel(int x, int y, int delta)
     {
         var state = hitState;
         if (!state.Enabled) return false;
-        var target=state.Screens.FirstOrDefault(s=>s.Region.IsTrigger(x,y,state.Edge,state.EdgeWidth)&&(state.MonitorId.Length==0||state.MonitorId==s.Screen.DeviceName));
+        var target=state.Screens.FirstOrDefault(s=>s.Region.IsTrigger(x,y,state.Edge,state.EdgeWidth)&&MonitorSelection.Matches(state.MonitorId,s.Monitor));
         // The activation strip takes priority even when animated/expanded row bounds overlap it.
         var row = target==null&&state.Visible ? state.Rows.FirstOrDefault(r => x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom) : null;
         if(target==null&&row==null)
@@ -138,7 +139,7 @@ public sealed class OverlayWindow : Window
     {
         if(!model.RefreshInteractionPolicy())return;
         Native.GetCursorPos(out var point); input.Preview();
-        RefreshScreens();var target=screens.FirstOrDefault(s=>model.MonitorId.Length>0?s.Screen.DeviceName==model.MonitorId:s.Region.Contains(point.X,point.Y))??screens.FirstOrDefault();
+        RefreshScreens();var target=screens.FirstOrDefault(s=>model.MonitorId.Length>0?MonitorSelection.Matches(model.MonitorId,s.Monitor):s.Region.Contains(point.X,point.Y))??screens.FirstOrDefault();
         if(target!=null)Reveal(target.Screen,target.Region.Dpi);
     }
     private void Position()

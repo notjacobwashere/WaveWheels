@@ -112,6 +112,7 @@ internal static class UiRendering
                 if(profileSaved.ActiveProfileId!=copy.Id||profileSaved.Profiles.Count<2||profileSaved.Wheels[0].Name!="Gaming only"||profileSaved.ScreenEdge!="Right"||profileSaved.PositionPercent!=25||profileSaved.WheelSpacing!=12||profileSaved.CheckUpdatesAutomatically)throw new Exception("Profiles, placement, or update preference did not survive reload.");
                 vm.RemoveProfile();if(vm.ActiveProfile!=baseline)throw new Exception("Removing a profile did not preserve the remaining layout.");
                 NewFeatures.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"new-features-profile-"+Guid.NewGuid().ToString("N")));
+                MonitorPersistenceTests.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"monitor-profile-"+Guid.NewGuid().ToString("N")));
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}
