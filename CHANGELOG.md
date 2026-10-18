@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1-beta.1
+
+- Added text-sized wheel labels joined flush with the top of the wheel, with matching muted backgrounds.
+- Raised mute buttons, removed their outlines, added hover glow, and applied dark reddish muted colors to buttons and wheel surfaces.
+- Removed Live/Muted status text below wheel labels.
+- Stabilized hover scaling during transient pointer exits and rapid volume changes.
+- Stop new spark emission immediately below maximum and fade existing effects over 160 ms.
+
 ## 0.9.0
 
 - Promoted the beta update channels, stable rollback, and revised wheel effects to stable.

@@ -27,6 +27,11 @@ public sealed class WheelControl : FrameworkElement
     private AnimationClock? levelClock;
     internal double MaximumEffectProgress=>(double)GetValue(MaximumEffectProgressProperty);
     internal int MaximumEffectStarts {get;private set;}
+    private static readonly DependencyProperty MaximumEffectOpacityProperty=DependencyProperty.Register("MaximumEffectOpacity",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    private AnimationClock? maximumFadeClock;
+    internal double MaximumEffectOpacity=>(double)GetValue(MaximumEffectOpacityProperty);
+    internal double MaximumEmissionCutoff {get;private set;}=1;
+    internal void SeekMaximumFade(TimeSpan time)=>maximumFadeClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     private static readonly DependencyProperty NumberProgressProperty=DependencyProperty.Register("NumberProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     internal const int NumberTransitionMilliseconds=150;
     private AnimationClock? numberClock;
@@ -64,16 +69,37 @@ public sealed class WheelControl : FrameworkElement
     public int ScrollStepPercent {get;set;}=1;
     public bool ScrollAccelerationEnabled {get;set;}=true;
     private bool active;
+    private readonly DispatcherTimer hoverExitTimer=new(){Interval=TimeSpan.FromMilliseconds(100)};
+    internal bool HoverActive=>active;
+    internal int HoverTransitions {get;private set;}
+    internal void EnterHover()
+    {
+        hoverExitTimer.Stop();if(active)return;active=true;HoverTransitions++;
+        SetPrecisionMode(Native.ShiftDown);precisionTimer.Start();Selected?.Invoke(Wheel!);AnimateScale(1.04);InvalidateVisual();
+    }
+    internal void LeaveHover()=>hoverExitTimer.Start();
+    internal void CompleteHoverExit()
+    {
+        hoverExitTimer.Stop();if(IsMouseOver||IsMouseCaptured||!active)return;
+        active=false;HoverTransitions++;SetMuteHovered(false);precisionTimer.Stop();SetPrecisionMode(false);AnimateScale(1);InvalidateVisual();
+    }
+    internal static readonly Point MuteCenter=new(60,82);
+    private bool muteHovered;
+    internal void SetMuteHovered(bool value) {if(muteHovered==value)return;muteHovered=value;InvalidateVisual();}
+    internal static bool HitsMute(Point point)=>(point-MuteCenter).Length<16;
+    internal Rect LabelBounds {get;private set;}
+    internal static Color SurfaceColor(bool muted)=>muted?Color.FromRgb(48,22,29):Color.FromRgb(17,20,27);
     public WheelControl()
     {
         Width = 300; Height = 120; Focusable = true; Cursor = Cursors.Hand;
         precisionTimer.Tick+=(_,_)=>SetPrecisionMode(active&&Native.ShiftDown);
-        MouseEnter += (_, _) => { active = true;SetPrecisionMode(Native.ShiftDown);precisionTimer.Start();Selected?.Invoke(Wheel!); AnimateScale(1.04); InvalidateVisual(); };
-        MouseLeave += (_, _) => { active = false;precisionTimer.Stop();SetPrecisionMode(false);AnimateScale(1); InvalidateVisual(); };
-        Unloaded += (_, _) => { active=false;precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
+        MouseEnter += (_, _) => EnterHover();
+        MouseLeave += (_, _) => LeaveHover();
+        hoverExitTimer.Tick+=(_,_)=>CompleteHoverExit();
+        Unloaded += (_, _) => { active=false;hoverExitTimer.Stop();precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
         Loaded += (_, _) => { if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; maximumTransition.Reset(Wheel.Available,Wheel.Level);ResetNumberDisplay();AnimateLevel(); } };
         MouseLeftButtonDown += Down;
-        MouseMove += (_, e) => { if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
+        MouseMove += (_, e) => {SetMuteHovered(HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
         MouseLeftButtonUp += (_, e) => { if (dragging) { dragging = false; ReleaseMouseCapture(); e.Handled = true; } };
         LostMouseCapture += (_, _) => dragging = false;
         MouseWheel += (_, e) => { if (Wheel?.Available == true) { Adjust(e.Delta / 120d); e.Handled = true; } };
@@ -95,6 +121,7 @@ public sealed class WheelControl : FrameworkElement
         {
             UpdateNumberDisplay();
             if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,EffectsEnabled&&SystemParameters.ClientAreaAnimation))StartMaximumEffect();
+            else if(Wheel?.Level<1&&maximumClock!=null&&MaximumEffectProgress<1)FadeMaximumEffect();
             AnimateLevel();
         }
         else if(e.PropertyName==nameof(Wheel.Available)) {ResetNumberDisplay();maximumTransition.Reset(Wheel?.Available==true,Wheel?.Level??0);if(Wheel?.Available!=true)StopMaximumEffect();}
@@ -107,7 +134,14 @@ public sealed class WheelControl : FrameworkElement
         maximumClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MaximumVolumeEffect.DurationMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
         ApplyAnimationClock(MaximumEffectProgressProperty,maximumClock);
     }
-    private void StopMaximumEffect() {maximumClock?.Controller?.Remove();maximumClock=null;BeginAnimation(MaximumEffectProgressProperty,null);SetValue(MaximumEffectProgressProperty,1d);}
+    private void StopMaximumEffect() {MaximumEmissionCutoff=1;maximumFadeClock?.Controller?.Remove();maximumFadeClock=null;BeginAnimation(MaximumEffectOpacityProperty,null);SetValue(MaximumEffectOpacityProperty,1d);maximumClock?.Controller?.Remove();maximumClock=null;BeginAnimation(MaximumEffectProgressProperty,null);SetValue(MaximumEffectProgressProperty,1d);}
+    private void FadeMaximumEffect()
+    {
+        if(maximumFadeClock!=null)return;
+        MaximumEmissionCutoff=MaximumEffectProgress;
+        var clock=(AnimationClock)new DoubleAnimation(MaximumEffectOpacity,0,TimeSpan.FromMilliseconds(160)){FillBehavior=FillBehavior.HoldEnd}.CreateClock(true);
+        maximumFadeClock=clock;clock.Completed+=(_,_)=> {if(ReferenceEquals(maximumFadeClock,clock))StopMaximumEffect();};ApplyAnimationClock(MaximumEffectOpacityProperty,clock);
+    }
     internal void SeekMaximumEffect(TimeSpan time)=>maximumClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     internal void SeekLevelAnimation(TimeSpan time)=>levelClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     internal static bool DisplaysMaximum(double level)=>level>=.995;
@@ -167,7 +201,7 @@ public sealed class WheelControl : FrameworkElement
     {
         var scale = RenderTransform as ScaleTransform;
         if (scale == null) { RenderTransformOrigin = new Point(0, .5); RenderTransform = scale = new ScaleTransform(1, 1); }
-        var animation = new DoubleAnimation(target, TimeSpan.FromMilliseconds(SystemParameters.ClientAreaAnimation ? 500 : 0)) { EasingFunction = new ExponentialEase { Exponent = 10, EasingMode = EasingMode.EaseOut } };
+        var animation = new DoubleAnimation(scale.ScaleX,target, TimeSpan.FromMilliseconds(SystemParameters.ClientAreaAnimation ? 500 : 0)) { EasingFunction = new ExponentialEase { Exponent = 10, EasingMode = EasingMode.EaseOut } };
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, animation); scale.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
     }
     public void Adjust(double delta)=>AdjustInput(delta,Native.ShiftDown,Environment.TickCount64);
@@ -189,7 +223,7 @@ public sealed class WheelControl : FrameworkElement
     {
         if (Wheel == null) return;
         var p = e.GetPosition(this);
-        if ((p - new Point(60, 88)).Length < 17) MuteRequested?.Invoke(Wheel);
+        if (HitsMute(p)) MuteRequested?.Invoke(Wheel);
         else if (Wheel.Available && CanAdjustVolume?.Invoke() != false) { dragStart = p; dragLevel = Wheel.Level; dragging = true; CaptureMouse(); }
         Selected?.Invoke(Wheel); e.Handled = true;
     }
@@ -200,10 +234,23 @@ public sealed class WheelControl : FrameworkElement
         if (w == null) return;
         var accent = w.Accent;
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, ActualWidth, ActualHeight));
-        dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17, 20, 27)), null, new Point(60, 60), 56, 56);
+        var surface=new SolidColorBrush(SurfaceColor(w.Muted));
+        FormattedText? label=null;
+        var silhouette=new GeometryGroup {FillRule=FillRule.Nonzero};
+        silhouette.Children.Add(new EllipseGeometry(new Point(60,60),56,56));
+        if(!Compact)
+        {
+            label=new FormattedText(string.IsNullOrWhiteSpace(w.Name)?"UNTITLED":w.Name.ToUpperInvariant(),CultureInfo.CurrentUICulture,FlowDirection.LeftToRight,new Typeface(new FontFamily("Segoe UI"),FontStyles.Normal,FontWeights.SemiBold,FontStretches.Normal),12,Brushes.White,VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            label.MaxTextWidth=188;label.MaxLineCount=1;label.Trimming=TextTrimming.CharacterEllipsis;
+            LabelBounds=new Rect(60,4,Math.Min(232,Math.Max(64,label.Width+44)),26);
+            silhouette.Children.Add(new RectangleGeometry(LabelBounds,13,13));
+            silhouette.Children.Add(new RectangleGeometry(new Rect(60,4,13,26)));
+        }
+        else LabelBounds=Rect.Empty;
+        dc.DrawGeometry(surface,null,silhouette);
         if (active) dc.DrawEllipse(null, new Pen(accent.CloneCurrentValue(), 1) { Brush = WithOpacity(accent, .18) }, new Point(60,60),57,57);
         var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius, MaximumVolumeEffect.ArcSweepDegrees * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel));
-        var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress);
+        var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress)*MaximumEffectOpacity;
         if (w.Available)
         {
             for(var width=56;width>=2;width-=2)
@@ -215,30 +262,36 @@ public sealed class WheelControl : FrameworkElement
             foreach(var percent in ShiftVolumeSnap.MarkerLevels(ShiftStepPercent))
             {
                 var point=PrecisionMarkerPoint(percent);
-                dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17,20,27)),null,point,3.8,3.8);
+                dc.DrawEllipse(surface,null,point,3.8,3.8);
                 dc.DrawEllipse(WithOpacity(accent,percent*.01<=w.Level+1e-7?1:.5),null,point,2.2,2.2);
             }
         DrawMaximumSparks(dc,accent);
         DrawNumber(dc);
         if (!Compact)
         {
-            dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(17,20,27)), null, new Rect(124, 42, 168, 26),13,13);
-            DrawText(dc, string.IsNullOrWhiteSpace(w.Name) ? "UNTITLED" : w.Name.ToUpperInvariant(), 12, new Point(208,55), Brushes.White, true, true, 145);
-            DrawText(dc, w.Available ? (w.Muted ? "MUTED" : "LIVE") : "UNAVAILABLE", 9, new Point(208,80), WithOpacity(accent,.9), true, true);
+            dc.DrawRoundedRectangle(surface,null,LabelBounds,13,13);
+            dc.DrawRectangle(surface,null,new Rect(60,4,13,26));
+            dc.DrawText(label!,new Point(92,4+(26-label!.Height)/2));
         }
-        dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(17,20,27)), new Pen(WithOpacity(accent,w.Muted ? .9 : .2),1),new Point(60,88),14,14);
+        if(muteHovered)
+        {
+            var color=w.Muted?Color.FromRgb(232,78,104):((SolidColorBrush)accent).Color;
+            var bloom=new RadialGradientBrush();bloom.GradientStops.Add(new GradientStop(Color.FromArgb(130,color.R,color.G,color.B),0));bloom.GradientStops.Add(new GradientStop(Color.FromArgb(65,color.R,color.G,color.B),.45));bloom.GradientStops.Add(new GradientStop(Color.FromArgb(0,color.R,color.G,color.B),1));
+            dc.DrawEllipse(bloom,null,MuteCenter,25,25);
+        }
+        dc.DrawEllipse(new SolidColorBrush(w.Muted?Color.FromRgb(78,27,38):SurfaceColor(false)),null,MuteCenter,13,13);
         // Segoe Fluent Icons is provided by Windows; no third-party artwork is distributed.
         var icon = new FormattedText(w.Muted ? "\uE74F" : "\uE767", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe Fluent Icons"), 13, w.Available ? Brushes.White : Brushes.Gray, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-        dc.DrawText(icon,new Point(60-icon.Width/2,88-icon.Height/2));
+        dc.DrawText(icon,new Point(MuteCenter.X-icon.Width/2,MuteCenter.Y-icon.Height/2));
     }
     private void DrawMaximumSparks(DrawingContext dc,Brush accent)
     {
-        var sparks=MaximumVolumeEffect.SparkOpacity(MaximumEffectProgress);
+        var sparks=MaximumVolumeEffect.SparkOpacity(MaximumEffectProgress)*MaximumEffectOpacity;
         if(Wheel?.Available==true&&sparks>0)
             for(var i=0;i<MaximumVolumeEffect.SparkCount;i++)
             {
                 var spark=MaximumVolumeEffect.Spark(i,MaximumEffectProgress,MaximumEffectStarts);var head=new Point(spark.X,spark.Y);var tail=new Point(spark.TailX,spark.TailY);
-                var opacity=sparks*spark.Opacity;if(opacity<=0)continue;
+                var opacity=sparks*spark.Opacity;if(opacity<=0||spark.BirthTime>MaximumEmissionCutoff)continue;
                 for(var width=6;width>=2;width-=2)
                     dc.DrawLine(new Pen(WithOpacity(accent,opacity*.16*Math.Exp(-width*width/14d)),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
                 dc.DrawLine(new Pen(WithOpacity(accent,opacity),.7){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);

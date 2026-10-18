@@ -80,6 +80,34 @@ internal static class MaximumEffectTests
                     var frame=new RenderTargetBitmap(396,216,96,96,PixelFormats.Pbgra32);frame.Render(padded);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(Path.Combine(directory,$"maximum-{ms:0000}.png"));encoder.Save(file);
                 }
                 Assert(control.MaximumEffectProgress==1,"The completed clock must leave no residual glow or particles.");
+                control.Wheel=new Wheel{Name="A",Color="#DA5DAD",Available=true,Level=.42};control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=.42;
+                double shortWidth=0;
+                foreach(var scenario in new[]{"short","reference","long","muted","hover"})
+                {
+                    control.Wheel.Name=scenario=="short"?"A":scenario=="long"?"THIS IS A VERY LONG WHEEL LABEL 32":"EVERYTHING ELSE";
+                    control.Wheel.Muted=scenario=="muted";control.SetMuteHovered(scenario=="hover");control.InvalidateVisual();control.UpdateLayout();
+                    var labelFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);labelFrame.Render(control);
+                    var bounds=control.LabelBounds;
+                    var topJoin=new byte[4];labelFrame.CopyPixels(new Int32Rect(67,4,1,1),topJoin,4,0);
+                    Assert(topJoin[3]>240,"The label top must stay flush with the wheel top without a rounded-corner notch.");
+                    Assert(bounds.X==60&&bounds.Y==4&&bounds.Right<=292&&bounds.Height==26,"Label placement must join the upper-right edge and fit the control.");
+                    if(scenario=="short")shortWidth=bounds.Width;else Assert(bounds.Width>shortWidth,"Label backgrounds must grow with their measured text.");
+                    var background=new byte[4];labelFrame.CopyPixels(new Int32Rect(32,60,1,1),background,4,0);
+                    var expected=WheelControl.SurfaceColor(control.Wheel.Muted);
+                    Assert(background[2]==expected.R&&background[1]==expected.G&&background[0]==expected.B,"Muted wheels must render their reddish base surface.");
+                    var labelEncoder=new PngBitmapEncoder();labelEncoder.Frames.Add(BitmapFrame.Create(labelFrame));using var labelFile=File.Create(Path.Combine(directory,$"label-{scenario}.png"));labelEncoder.Save(labelFile);
+                }
+                Assert(WheelControl.MuteCenter.Y<88&&WheelControl.HitsMute(WheelControl.MuteCenter)&&!WheelControl.HitsMute(new Point(60,103)),"Raised mute artwork and its click target must agree.");
+                control.EnterHover();var hoverTransitions=control.HoverTransitions;
+                for(var rapid=0;rapid<30;rapid++) {control.LeaveHover();control.EnterHover();control.Wheel.Level=rapid%2==0?.41:.43;}
+                Assert(control.HoverActive&&control.HoverTransitions==hoverTransitions,"Transient mouse-leave/re-enter and rapid volume updates must not restart hover scaling.");
+                control.CompleteHoverExit();Assert(!control.HoverActive&&control.HoverTransitions==hoverTransitions+1,"A sustained pointer exit must still shrink the wheel once.");
+                control.SetMuteHovered(false);control.Wheel=wheel;
+                wheel.Level=1;control.StartMaximumEffect();control.SeekMaximumEffect(TimeSpan.FromMilliseconds(200));wheel.Level=.99;
+                control.SeekMaximumFade(TimeSpan.FromMilliseconds(80));Assert(control.MaximumEffectOpacity>.4&&control.MaximumEffectOpacity<.6,"Dropping below maximum must fade the active burst over 160 ms.");
+                Assert(Math.Abs(control.MaximumEmissionCutoff-200d/1800)<.001,"New spark births must be cut off immediately when volume drops.");
+                wheel.Level=.98;control.SeekMaximumFade(TimeSpan.FromMilliseconds(120));Assert(control.MaximumEffectOpacity<.3,"Further volume updates must not restart or prolong the fade.");
+                wheel.Level=1;Assert(control.MaximumEffectOpacity==1&&control.MaximumEmissionCutoff==1,"A fresh maximum crossing must restore full opacity and emission for its new burst.");
                 control.StartMaximumEffect();control.Wheel=new Wheel{Available=true,Level=.5};Assert(control.MaximumEffectProgress==1,"Profile/rebinding changes must clear old effects.");
                 control.Wheel=wheel;wheel.Level=.33;control.AdjustInput(120,true,2000);Assert(wheel.Level==.4&&control.PrecisionMode,"Shift input must still snap the real control.");
                 control.AdjustInput(120,true,2100);Assert(wheel.Level==.4,"Rapid repeated Shift input must not skip through steps.");
