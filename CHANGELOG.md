@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-beta.3
+
+- Increased maximum-volume bursts to 180 smaller, faster sparks.
+- Rounded both bar stroke layers so the outline wraps around the endpoints.
+- Trigger glow and sparks immediately when actual volume reaches 100%, independently of the bar animation.
+
 ## 0.9.0-beta.2
 
 - Added an explicit return to the latest stable release from a newer beta, retaining settings and switching future checks to Stable.

@@ -38,7 +38,7 @@ internal sealed record ReleaseVersion(Version Core,string Suffix):IComparable<Re
 internal static class ReleaseUpdates
 {
     public const string ReleasesUrl="https://github.com/notjacobwashere/WaveWheels/releases/latest";
-    public static string CurrentVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]??typeof(App).Assembly.GetName().Version?.ToString(3)??"0.9.0-beta.2";
+    public static string CurrentVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]??typeof(App).Assembly.GetName().Version?.ToString(3)??"0.9.0-beta.3";
     public static ReleaseUpdate? Parse(string json,Version current)
     {
         using var doc=JsonDocument.Parse(json);var release=Read(doc.RootElement);

@@ -35,10 +35,10 @@ internal static class MaximumEffectTests
                         var birth=MaximumVolumeEffect.Spark(i,0,burst).BirthTime;var launch=MaximumVolumeEffect.Spark(i,birth,burst);
                         Assert((new Point(launch.TailX,launch.TailY)-origin).Length<1e-7,"Every streak must begin on its own randomized point on the bar.");
                         var fast=MaximumVolumeEffect.Spark(i,birth+.05,burst);
-                        Assert((new Point(fast.TailX,fast.TailY)-origin).Length>=10.3,"Sparks must move at least 10 DIPs in 90 ms rather than hovering over the bar.");
+                        Assert((new Point(fast.TailX,fast.TailY)-origin).Length>=21.5,"Sparks must move at least 21 DIPs in 90 ms rather than hovering over the bar.");
                         var travel=new Point(launch.X,launch.Y)-new Point(launch.TailX,launch.TailY);var forward=Vector.Multiply(travel,tangent);
-                        Assert(forward>5.9&&Math.Abs(Vector.CrossProduct(travel,tangent))<forward*.08,"Each spark must follow the clockwise tangent at its own origin.");
-                        Assert(launch.BirthTime+launch.Lifetime<=1.000001&&launch.Lifetime*MaximumVolumeEffect.DurationMilliseconds>=280,"Fast particles must still finish within the effect clock.");
+                        Assert(forward>2.9&&Math.Abs(Vector.CrossProduct(travel,tangent))<forward*.08,"Each spark must follow the clockwise tangent at its own origin.");
+                        Assert(launch.BirthTime+launch.Lifetime<=1.000001&&launch.Lifetime*MaximumVolumeEffect.DurationMilliseconds>=160,"Fast particles must still finish within the effect clock.");
                     }
                 }
                 Assert(MaximumVolumeEffect.SpawnDegrees(0,0)!=MaximumVolumeEffect.SpawnDegrees(0,1),"Repeated bursts must vary their spawn pattern.");
@@ -57,17 +57,14 @@ internal static class MaximumEffectTests
                 }
                 var wheel=new Wheel{Name="Music",Color="#36BBD3",Available=true,Level=.99};var control=new WheelControl{Wheel=wheel};var requests=0;
                 control.VolumeRequested+=(w,value)=> {requests++;w.Level=Math.Clamp(value,0,1);};
-                control.AdjustInput(1,false,0);Assert(control.MaximumEffectStarts==0,"The burst must wait for the center count-up.");
-                control.SeekLevelAnimation(TimeSpan.FromMilliseconds(200));Assert(control.MaximumEffectStarts==0,"The burst must not start during the count-up.");
-                control.SeekLevelAnimation(TimeSpan.FromMilliseconds(300));var starts=control.MaximumEffectStarts;
-                Assert(starts==(SystemParameters.ClientAreaAnimation?1:0)&&MaximumVolumeEffect.RenderedArcLevel(control.DisplayLevel)==1,"The burst must start on the same cue that draws the ring at its endpoint, respecting reduced motion.");
-                Assert(WheelControl.DisplaysMaximum(.995)&&MaximumVolumeEffect.RenderedArcLevel(.995)<1,"The text label must not independently trigger the endpoint burst.");
-                if(SystemParameters.ClientAreaAnimation)Assert(control.DisplayLevel<1,"The subpixel endpoint snap must avoid waiting for the animation clock's invisible tail.");
-                control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==starts,"The final count-up frame must not retrigger the burst.");
+                control.AdjustInput(1,false,0);var starts=control.MaximumEffectStarts;
+                Assert(starts==(SystemParameters.ClientAreaAnimation?1:0),"The effect must start immediately when actual volume reaches maximum, respecting reduced motion.");
+                if(SystemParameters.ClientAreaAnimation)Assert(control.DisplayLevel<1,"The effect must begin before the bar animation reaches its target.");
+                control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==starts,"Bar animation completion must not retrigger the effect.");
                 for(var i=0;i<20;i++)control.AdjustInput(1,false,10+i);
                 Assert(requests==1&&control.MaximumEffectStarts==starts,"Capped input must not queue redundant writes or restart the animation.");
                 wheel.Level=.9;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==starts+(SystemParameters.ClientAreaAnimation?1:0),"A new genuine crossing must trigger again after its count-up.");
-                var prior=control.MaximumEffectStarts;wheel.Level=.8;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;wheel.Level=.7;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==prior,"Dropping below maximum before the count-up finishes must cancel the pending burst.");
+                var prior=control.MaximumEffectStarts;wheel.Level=.8;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;wheel.Level=.7;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==prior+(SystemParameters.ClientAreaAnimation?1:0),"Every genuine maximum crossing must trigger immediately, even before the next level change.");
                 control.EffectsEnabled=false;wheel.Level=.9;wheel.Level=1;Assert(control.MaximumEffectProgress==1,"Disabling animation must clear the effect immediately.");
                 var count=control.MaximumEffectStarts;control.Wheel=new Wheel{Available=true,Level=1};Assert(control.MaximumEffectStarts==count,"Binding a wheel already at maximum must not burst.");
                 control.Wheel=wheel;control.EffectsEnabled=true;control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=1;

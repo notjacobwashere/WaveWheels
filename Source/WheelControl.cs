@@ -16,7 +16,7 @@ namespace WaveWheels;
 public sealed class WheelControl : FrameworkElement
 {
     public static readonly DependencyProperty WheelProperty = DependencyProperty.Register(nameof(Wheel), typeof(Wheel), typeof(WheelControl), new PropertyMetadata(null, OnWheelChanged));
-    public static readonly DependencyProperty DisplayLevelProperty = DependencyProperty.Register(nameof(DisplayLevel), typeof(double), typeof(WheelControl), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender,(d,e)=>((WheelControl)d).FinishMaximumArrival()));
+    public static readonly DependencyProperty DisplayLevelProperty = DependencyProperty.Register(nameof(DisplayLevel), typeof(double), typeof(WheelControl), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
     public Wheel? Wheel { get => (Wheel?)GetValue(WheelProperty); set => SetValue(WheelProperty, value); }
     public double DisplayLevel { get => (double)GetValue(DisplayLevelProperty); set => SetValue(DisplayLevelProperty, value); }
     internal static readonly DependencyProperty MaximumEffectProgressProperty=DependencyProperty.Register("MaximumEffectProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
@@ -25,7 +25,6 @@ public sealed class WheelControl : FrameworkElement
     private readonly MaximumVolumeTransition maximumTransition=new();
     private AnimationClock? maximumClock;
     private AnimationClock? levelClock;
-    private bool maximumPending;
     internal double MaximumEffectProgress=>(double)GetValue(MaximumEffectProgressProperty);
     internal int MaximumEffectStarts {get;private set;}
     private static readonly DependencyProperty NumberProgressProperty=DependencyProperty.Register("NumberProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
@@ -95,8 +94,7 @@ public sealed class WheelControl : FrameworkElement
         if (e.PropertyName == nameof(Wheel.Level))
         {
             UpdateNumberDisplay();
-            if(Wheel?.Level<1)maximumPending=false;
-            if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,EffectsEnabled&&SystemParameters.ClientAreaAnimation))maximumPending=true;
+            if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,EffectsEnabled&&SystemParameters.ClientAreaAnimation))StartMaximumEffect();
             AnimateLevel();
         }
         else if(e.PropertyName==nameof(Wheel.Available)) {ResetNumberDisplay();maximumTransition.Reset(Wheel?.Available==true,Wheel?.Level??0);if(Wheel?.Available!=true)StopMaximumEffect();}
@@ -109,14 +107,9 @@ public sealed class WheelControl : FrameworkElement
         maximumClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MaximumVolumeEffect.DurationMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
         ApplyAnimationClock(MaximumEffectProgressProperty,maximumClock);
     }
-    private void StopMaximumEffect() {maximumPending=false;maximumClock?.Controller?.Remove();maximumClock=null;BeginAnimation(MaximumEffectProgressProperty,null);SetValue(MaximumEffectProgressProperty,1d);}
+    private void StopMaximumEffect() {maximumClock?.Controller?.Remove();maximumClock=null;BeginAnimation(MaximumEffectProgressProperty,null);SetValue(MaximumEffectProgressProperty,1d);}
     internal void SeekMaximumEffect(TimeSpan time)=>maximumClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     internal void SeekLevelAnimation(TimeSpan time)=>levelClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
-    private void FinishMaximumArrival()
-    {
-        if(maximumPending&&MaximumVolumeEffect.RenderedArcLevel(DisplayLevel)==1&&Wheel?.Available==true&&Wheel.Level>=1&&EffectsEnabled&&SystemParameters.ClientAreaAnimation)
-        {maximumPending=false;StartMaximumEffect();}
-    }
     internal static bool DisplaysMaximum(double level)=>level>=.995;
     private string LiveNumberText()=>Wheel?.Available==true?(DisplaysMaximum(Wheel.Level)?"MAX":Math.Round(Wheel.Level*100).ToString("0")):"—";
     private void ResetNumberDisplay()
@@ -169,7 +162,6 @@ public sealed class WheelControl : FrameworkElement
         var current = DisplayLevel;
         levelClock=(AnimationClock)new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(400)) { EasingFunction = new PowerEase { Power = 5, EasingMode = EasingMode.EaseOut } }.CreateClock(true);
         ApplyAnimationClock(DisplayLevelProperty,levelClock);
-        FinishMaximumArrival();
     }
     private void AnimateScale(double target)
     {
@@ -216,8 +208,8 @@ public sealed class WheelControl : FrameworkElement
         {
             for(var width=56;width>=2;width-=2)
                 dc.DrawGeometry(null,new Pen(WithOpacity(accent,(.006+glow*.10)*Math.Exp(-width*width/600d)),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},arc);
-            dc.DrawGeometry(null, new Pen(WithOpacity(accent, .85+glow*.15), 2.3+glow*1.2), arc);
-            dc.DrawGeometry(null, new Pen(w.Muted ? WithOpacity(Brushes.White, .35) : Brushes.White, 1.15), arc);
+            dc.DrawGeometry(null, new Pen(WithOpacity(accent, .85+glow*.15), 2.3+glow*1.2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round}, arc);
+            dc.DrawGeometry(null, new Pen(w.Muted ? WithOpacity(Brushes.White, .35) : Brushes.White, 1.15){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round}, arc);
         }
         if(ShowShiftMarkers&&PrecisionMode&&w.Available)
             foreach(var percent in ShiftVolumeSnap.MarkerLevels(ShiftStepPercent))
@@ -247,9 +239,9 @@ public sealed class WheelControl : FrameworkElement
             {
                 var spark=MaximumVolumeEffect.Spark(i,MaximumEffectProgress,MaximumEffectStarts);var head=new Point(spark.X,spark.Y);var tail=new Point(spark.TailX,spark.TailY);
                 var opacity=sparks*spark.Opacity;if(opacity<=0)continue;
-                for(var width=14;width>=2;width-=2)
-                    dc.DrawLine(new Pen(WithOpacity(accent,opacity*.12*Math.Exp(-width*width/50d)),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
-                dc.DrawLine(new Pen(WithOpacity(accent,opacity),1.2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
+                for(var width=6;width>=2;width-=2)
+                    dc.DrawLine(new Pen(WithOpacity(accent,opacity*.16*Math.Exp(-width*width/14d)),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
+                dc.DrawLine(new Pen(WithOpacity(accent,opacity),.7){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
             }
     }
     private static Brush WithOpacity(Brush source, double opacity) { var brush = source.CloneCurrentValue(); brush.Opacity = opacity; return brush; }
