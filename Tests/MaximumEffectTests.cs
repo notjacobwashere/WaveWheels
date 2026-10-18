@@ -107,7 +107,10 @@ internal static class MaximumEffectTests
                 control.SeekMaximumFade(TimeSpan.FromMilliseconds(80));Assert(control.MaximumEffectOpacity>.4&&control.MaximumEffectOpacity<.6,"Dropping below maximum must fade the active burst over 160 ms.");
                 Assert(Math.Abs(control.MaximumEmissionCutoff-200d/1800)<.001,"New spark births must be cut off immediately when volume drops.");
                 wheel.Level=.98;control.SeekMaximumFade(TimeSpan.FromMilliseconds(120));Assert(control.MaximumEffectOpacity<.3,"Further volume updates must not restart or prolong the fade.");
-                wheel.Level=1;Assert(control.MaximumEffectOpacity==1&&control.MaximumEmissionCutoff==1,"A fresh maximum crossing must restore full opacity and emission for its new burst.");
+                var beforeFreshBurst=control.MaximumEffectStarts;wheel.Level=1;
+                Assert(control.MaximumEffectStarts==beforeFreshBurst+(SystemParameters.ClientAreaAnimation?1:0),"Fresh maximum crossings must respect Windows reduced-motion settings.");
+                if(!SystemParameters.ClientAreaAnimation)control.StartMaximumEffect();
+                Assert(control.MaximumEffectOpacity==1&&control.MaximumEmissionCutoff==1,"Starting a new burst must restore full opacity and emission.");
                 control.StartMaximumEffect();control.Wheel=new Wheel{Available=true,Level=.5};Assert(control.MaximumEffectProgress==1,"Profile/rebinding changes must clear old effects.");
                 control.Wheel=wheel;wheel.Level=.33;control.AdjustInput(120,true,2000);Assert(wheel.Level==.4&&control.PrecisionMode,"Shift input must still snap the real control.");
                 control.AdjustInput(120,true,2100);Assert(wheel.Level==.4,"Rapid repeated Shift input must not skip through steps.");
