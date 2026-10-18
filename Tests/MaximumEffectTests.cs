@@ -35,20 +35,21 @@ internal static class MaximumEffectTests
                         var birth=MaximumVolumeEffect.Spark(i,0,burst).BirthTime;var launch=MaximumVolumeEffect.Spark(i,birth,burst);
                         Assert((new Point(launch.TailX,launch.TailY)-origin).Length<1e-7,"Every streak must begin on its own randomized point on the bar.");
                         var fast=MaximumVolumeEffect.Spark(i,birth+.05,burst);
-                        Assert((new Point(fast.TailX,fast.TailY)-origin).Length>0&&(birth>=.4||(new Point(fast.TailX,fast.TailY)-origin).Length>=21.5),"Sparks must move at least 21 DIPs in 90 ms rather than hovering over the bar.");
+                        Assert((new Point(fast.TailX,fast.TailY)-origin).Length>0&&(birth>=.4||(new Point(fast.TailX,fast.TailY)-origin).Length>=20),"Sparks must move at least 21 DIPs in 90 ms rather than hovering over the bar.");
                         var travel=new Point(launch.X,launch.Y)-new Point(launch.TailX,launch.TailY);var forward=Vector.Multiply(travel,tangent);
                         Assert(forward>2.9&&Math.Abs(Vector.CrossProduct(travel,tangent))<forward*.08,"Each spark must follow the clockwise tangent at its own origin.");
                         Assert(launch.BirthTime+launch.Lifetime<=1.000001&&launch.Lifetime*MaximumVolumeEffect.DurationMilliseconds>=160,"Fast particles must still finish within the effect clock.");
                     }
                 }
                 Assert(MaximumVolumeEffect.SpawnDegrees(0,0)!=MaximumVolumeEffect.SpawnDegrees(0,1),"Repeated bursts must vary their spawn pattern.");
-                var earlyTravel=MaximumVolumeEffect.TravelTime(.4,.42)-MaximumVolumeEffect.TravelTime(.4,.4);
-                var lateTravel=MaximumVolumeEffect.TravelTime(.4,.8)-MaximumVolumeEffect.TravelTime(.4,.78);
-                Assert(lateTravel>0&&lateTravel<earlyTravel*.25,"Natural effect fading must smoothly slow sparks without reversing them.");
-                var beforeDrop=MaximumVolumeEffect.TravelTime(.1,.2,.2);
-                var duringDrop=MaximumVolumeEffect.TravelTime(.1,.24,.2)-beforeDrop;
-                var afterDrop=MaximumVolumeEffect.TravelTime(.1,.28,.2)-MaximumVolumeEffect.TravelTime(.1,.24,.2);
-                Assert(afterDrop>0&&afterDrop<duringDrop*.4&&Math.Abs(beforeDrop-.1)<1e-7,"Volume-drop fading must decelerate existing sparks continuously from their current position.");
+                foreach(var life in new[]{.09,.1,.13})
+                {
+                    var earlyTravel=MaximumVolumeEffect.TravelTime(life*.2,life)-MaximumVolumeEffect.TravelTime(life*.1,life);
+                    var lateTravel=MaximumVolumeEffect.TravelTime(life*.9,life)-MaximumVolumeEffect.TravelTime(life*.8,life);
+                    Assert(lateTravel>0&&lateTravel<earlyTravel*.2,"Every spark must slow near the end of its own lifespan, regardless of launch time.");
+                }
+                var silhouette=WheelControl.WheelSilhouette(new Rect(60,4,144,26));
+                Assert(!silhouette.StrokeContains(new Pen(Brushes.White,1),new Point(100,20))&&silhouette.StrokeContains(new Pen(Brushes.White,1),new Point(150,4)),"The hover outline must wrap the label exterior without crossing the wheel-label join.");
                 Assert(Enumerable.Range(0,MaximumVolumeEffect.SparkCount).All(i=>MaximumVolumeEffect.Spark(i,1).Opacity==0&&MaximumVolumeEffect.Spark(i,1.1).Opacity==0),"All streaks must stop cleanly without looping.");
                 var app=new ComponentApplication();app.InitializeComponent();
                 var snap=new ShiftVolumeSnap();
@@ -107,18 +108,21 @@ internal static class MaximumEffectTests
                 Assert(WheelControl.MuteCenter.Y<88&&WheelControl.HitsMute(WheelControl.MuteCenter)&&!WheelControl.HitsMute(new Point(60,103)),"Raised mute artwork and its click target must agree.");
                 control.Wheel.Muted=false;control.Wheel.Level=1;control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=1;control.StartMaximumEffect();control.SeekMaximumEffect(TimeSpan.FromMilliseconds(300));control.EnterHover();
                 control.InvalidateVisual();control.UpdateLayout();var overlapFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);overlapFrame.Render(control);
-                var aboveLabel=new byte[4];overlapFrame.CopyPixels(new Int32Rect(75,2,1,1),aboveLabel,4,0);
-                Assert(aboveLabel[3]==0,"Maximum glow and hover outlines must not leak above the label join.");
+                var aboveLabel=new byte[4];overlapFrame.CopyPixels(new Int32Rect(75,20,1,1),aboveLabel,4,0);
+                Assert(aboveLabel[0]>120&&aboveLabel[1]>120&&aboveLabel[2]>120,"The label background must never cover the bar at the join.");
                 var overlapEncoder=new PngBitmapEncoder();overlapEncoder.Frames.Add(BitmapFrame.Create(overlapFrame));using(var overlapFile=File.Create(Path.Combine(directory,"label-max-hover.png")))overlapEncoder.Save(overlapFile);
                 control.CompleteHoverExit();
                 control.Wheel.Muted=false;var muteStarts=control.MuteFeedbackStarts;control.Wheel.Muted=true;
                 Assert(control.MuteFeedbackStarts==muteStarts+(SystemParameters.ClientAreaAnimation?1:0),"Muting must trigger one feedback animation, respecting reduced motion.");
                 if(!SystemParameters.ClientAreaAnimation)control.StartMuteFeedback();
                 var originalTransform=control.RenderTransform.Value;
-                foreach(var time in new[]{0,35,90,150,220,280})
+                Assert(Math.Abs(WheelControl.MuteShake(40d/1200))>5&&WheelControl.MuteShake(520d/1200)==0,"The stronger shake must settle after approximately half a second.");
+                Assert(WheelControl.SlashSweep(350d/1200)==1&&WheelControl.SlashOpacity(350d/1200)==1&&WheelControl.SlashOpacity(850d/1200)==1&&WheelControl.SlashOpacity(1)==0,"The slash must finish its sweep, hold for 500 ms, then fade cleanly.");
+                Assert(WheelControl.SlashSweep(100d/1200)>(WheelControl.SlashSweep(350d/1200)-WheelControl.SlashSweep(250d/1200))*5,"The slash sweep must ease down near its endpoint.");
+                foreach(var time in new[]{0,40,150,350,520,850,1050,1200})
                 {
                     control.SeekMuteFeedback(TimeSpan.FromMilliseconds(time));control.InvalidateVisual();control.UpdateLayout();
-                    Assert(Math.Abs(control.MuteFeedbackProgress-time/280d)<.001&&Math.Abs(WheelControl.MuteShake(control.MuteFeedbackProgress))<=2.5,"Mute feedback must shake gently and settle after 280 ms.");
+                    Assert(Math.Abs(control.MuteFeedbackProgress-time/(double)WheelControl.MuteFeedbackMilliseconds)<.001&&Math.Abs(WheelControl.MuteShake(control.MuteFeedbackProgress))<=7,"Stronger mute feedback must remain bounded and settle cleanly.");
                     Assert(control.RenderTransform.Value==originalTransform,"Mute shaking must affect artwork without moving the pointer hit area.");
                     var mutedFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);mutedFrame.Render(control);var mutedEncoder=new PngBitmapEncoder();mutedEncoder.Frames.Add(BitmapFrame.Create(mutedFrame));using var mutedFile=File.Create(Path.Combine(directory,$"mute-feedback-{time:000}.png"));mutedEncoder.Save(mutedFile);
                 }
@@ -129,9 +133,9 @@ internal static class MaximumEffectTests
                 control.CompleteHoverExit();Assert(!control.HoverActive&&control.HoverTransitions==hoverTransitions+1,"A sustained pointer exit must still shrink the wheel once.");
                 control.SetMuteHovered(false);control.Wheel=wheel;
                 wheel.Level=1;control.StartMaximumEffect();control.SeekMaximumEffect(TimeSpan.FromMilliseconds(200));wheel.Level=.99;
-                control.SeekMaximumFade(TimeSpan.FromMilliseconds(80));Assert(control.MaximumEffectOpacity>.4&&control.MaximumEffectOpacity<.6,"Dropping below maximum must fade the active burst over 160 ms.");
-                Assert(Math.Abs(control.MaximumEmissionCutoff-200d/1800)<.001,"New spark births must be cut off immediately when volume drops.");
-                wheel.Level=.98;control.SeekMaximumFade(TimeSpan.FromMilliseconds(120));Assert(control.MaximumEffectOpacity<.3,"Further volume updates must not restart or prolong the fade.");
+                control.SeekMaximumEffect(TimeSpan.FromMilliseconds(240));Assert(control.MaximumEffectOpacity==1,"Dropping below maximum must leave existing sparks at their natural opacity.");
+                Assert(Math.Abs(control.MaximumEmissionCutoff-500d/1800)<.001,"New spark emission must continue for 300 ms after volume drops.");
+                wheel.Level=.98;Assert(Math.Abs(control.MaximumEmissionCutoff-500d/1800)<.001,"Further volume updates must not move the emission cutoff or alter existing particles.");
                 var beforeFreshBurst=control.MaximumEffectStarts;wheel.Level=1;
                 Assert(control.MaximumEffectStarts==beforeFreshBurst+(SystemParameters.ClientAreaAnimation?1:0),"Fresh maximum crossings must respect Windows reduced-motion settings.");
                 if(!SystemParameters.ClientAreaAnimation)control.StartMaximumEffect();

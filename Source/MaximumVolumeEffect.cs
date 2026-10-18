@@ -44,23 +44,14 @@ internal static class MaximumVolumeEffect
         return value-Math.Floor(value);
     }
     internal static double SpawnDegrees(int index,int burstSeed=0)=>ArcStartDegrees+ArcSweepDegrees*Random(index,burstSeed,1);
-    internal static double TravelTime(double birth,double progress,double fadeStart=1)
+    internal static double TravelTime(double age,double lifetime)
     {
-        var end=Math.Max(birth,progress);
-        Span<double> stops=stackalloc double[]{birth,end,Math.Clamp(.45,birth,end),Math.Clamp(fadeStart,birth,end)};
-        stops.Sort();double result=0;
-        const double naturalRate=3/.55,forcedRate=3/(160d/DurationMilliseconds);
-        for(var i=1;i<stops.Length;i++)
-        {
-            var start=stops[i-1];var length=stops[i]-start;if(length<=0)continue;
-            var middle=start+length/2;
-            var rate=(middle>.45?naturalRate:0)+(middle>fadeStart?forcedRate:0);
-            var speed=Math.Exp(-naturalRate*Math.Max(0,start-.45)-forcedRate*Math.Max(0,start-fadeStart));
-            result+=speed*(rate==0?length:(1-Math.Exp(-rate*length))/rate);
-        }
-        return result;
+        age=Math.Clamp(age,0,lifetime);var half=lifetime*.5;
+        if(age<=half)return age;
+        var rate=3/half;
+        return half+(1-Math.Exp(-rate*(age-half)))/rate;
     }
-    public static SparkStreak Spark(int index,double progress,int burstSeed=0,double fadeStart=1)
+    public static SparkStreak Spark(int index,double progress,int burstSeed=0,double arcLevel=1)
     {
         var birth=Math.Clamp((index+.22*Math.Sin(index*13))*EmissionEnd/(SparkCount-1),0,EmissionEnd);
         if(index==SparkCount-1)birth=EmissionEnd;
@@ -70,11 +61,11 @@ internal static class MaximumVolumeEffect
         var age=progress-birth;
         var alive=progress>=0&&progress<1&&age>=0&&age<lifetime;
         age=Math.Clamp(age,0,lifetime);
-        var radial=SpawnDegrees(index,burstSeed)*Math.PI/180;
+        var radial=(ArcStartDegrees+(SpawnDegrees(index,burstSeed)-ArcStartDegrees)*Math.Clamp(arcLevel,0,1))*Math.PI/180;
         // Follow the clockwise tangent of the drawn arc at this particle's own spawn point.
         var direction=radial+Math.PI/2+(seed-.5)*.14;
         var originX=60+Math.Cos(radial)*RingRadius;var originY=60+Math.Sin(radial)*RingRadius;
-        var distance=(240+seed*120)*TravelTime(birth,birth+age,fadeStart)*(DurationMilliseconds/1000d);
+        var distance=(240+seed*120)*TravelTime(age,lifetime)*(DurationMilliseconds/1000d);
         var dx=Math.Cos(direction);var dy=Math.Sin(direction);
         var length=3+seed*3;
         var x=originX+dx*(distance+length);var y=originY+dy*(distance+length);

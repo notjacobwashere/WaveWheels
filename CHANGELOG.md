@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+- Stronger, slower mute shake and an oversized slash that eases to its endpoint, holds for half a second, then fades.
+- Render sparks beneath the bar and glow, and keep the label background behind the bar. Hover outlines wrap the unified wheel-and-label silhouette.
+- Sparks continue spawning along the remaining bar for 300 ms after leaving maximum; every particle slows near the end of its own lifespan.
+
 ## 0.9.1-beta.2
 
 - Removed label-join overlap by painting the surface once and keeping rim effects out of the label area.
