@@ -47,7 +47,7 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.9.0-beta.3 version again. Your saved wheels will be kept.", "WaveWheels 0.9.0-beta.3 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.9.0 version again. Your saved wheels will be kept.", "WaveWheels 0.9.0 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")) settingsSignal.Set();
             Shutdown();return;
         }
@@ -70,7 +70,7 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 0.9.0-beta.3",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 0.9.0",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
         var profilesMenu=new Forms.ToolStripMenuItem("Profiles");
         void RefreshProfiles()
@@ -93,7 +93,7 @@ public partial class App : Application
         menu.Items.Add(enabled);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 0.9.0-beta.3 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 0.9.0 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()

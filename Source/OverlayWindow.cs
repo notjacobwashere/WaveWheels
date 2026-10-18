@@ -58,7 +58,7 @@ public sealed class OverlayWindow : Window
         model.ApplicationBlockChanged+=ApplyApplicationBlock;
         model.AppearanceChanged += ApplyAppearance;
         model.InputSettingsChanged += ApplyInputSettings;
-        model.PreviewRequested += ShowAtCursor;
+        model.PreviewRequested += TogglePreview;
         hook.WheelInput = OnGlobalWheel;
         hook.Failed = error => Dispatcher.BeginInvoke(() => { model.Message = "Edge scrolling is unavailable: " + error; App.WriteLog("Hook: " + error); });
         MouseMove += (_, _) => lastActivity = Environment.TickCount64;
@@ -68,6 +68,7 @@ public sealed class OverlayWindow : Window
             if(Environment.TickCount64-screenRefresh>2000)RefreshScreens();
             if (!shown) return;
             UpdateHits(); // Actual animated positions, including monitor/DPI and hover transforms.
+            if(model.IsPreviewing)return;
             if (IsMouseOver || controls.Any(c => c.IsMouseCaptured)) { lastActivity = Environment.TickCount64; return; }
             if (Environment.TickCount64 - lastActivity >= model.Preferences.IdleMilliseconds) Dismiss();
         };
@@ -140,8 +141,9 @@ public sealed class OverlayWindow : Window
         if(!model.RefreshInteractionPolicy())return;
         Native.GetCursorPos(out var point); input.Preview();
         RefreshScreens();var target=screens.FirstOrDefault(s=>model.MonitorId.Length>0?MonitorSelection.Matches(model.MonitorId,s.Monitor):s.Region.Contains(point.X,point.Y))??screens.FirstOrDefault();
-        if(target!=null)Reveal(target.Screen,target.Region.Dpi);
+        if(target!=null)Reveal(target.Screen,target.Region.Dpi);else model.SetPreviewActive(false);
     }
+    private void TogglePreview() {if(model.IsPreviewing)ShowAtCursor();else Dismiss();}
     private void Position()
     {
         if (activeScreen == null) return;
@@ -153,6 +155,8 @@ public sealed class OverlayWindow : Window
         var horizontal=model.ScreenEdge is "Top" or "Bottom";
         var x=horizontal?area.Left+(int)((area.Width-w)*fraction):model.ScreenEdge=="Right"?bounds.Right-w:bounds.Left;
         var y=horizontal?(model.ScreenEdge=="Bottom"?bounds.Bottom-h:bounds.Top):area.Top+(int)((area.Height-h)*fraction);
+        var inset=OverlaySizing.EdgeOffset(model.EdgeDistance,size.Scale,activeDpi);
+        if(horizontal)y+=model.ScreenEdge=="Bottom"?-inset:inset;else x+=model.ScreenEdge=="Right"?-inset:inset;
         Native.SetWindowPos(handle,new IntPtr(-1),x,y,w,h,0x0010|0x0040);
         UpdateLayout(); UpdateHits();
     }
@@ -176,7 +180,7 @@ public sealed class OverlayWindow : Window
     private void Dismiss()
     {
         var current = ++generation;
-        shown = false; input.Close(); UpdateHits();
+        shown = false;model.SetPreviewActive(false); input.Close(); UpdateHits();
         motion.Exit(MotionDistance, model.AnimateWheels, () => { if (generation == current && !shown) Hide(); });
     }
     private double MotionDistance=>model.ScreenEdge is "Top" or "Bottom"?Height:Width;
@@ -184,7 +188,7 @@ public sealed class OverlayWindow : Window
     {
         if(model.IsApplicationBlocked)
         {
-            generation++;shown=false;input.Close();
+            generation++;shown=false;model.SetPreviewActive(false);input.Close();
             foreach(var control in controls) {if(control.IsMouseCaptured)control.ReleaseMouseCapture();control.ResetScroll();}
             if(IsVisible)Hide();
         }

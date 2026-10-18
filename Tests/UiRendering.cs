@@ -48,6 +48,14 @@ internal static class UiRendering
                 System.Windows.Documents.TextElement.SetForeground(root,new SolidColorBrush(Color.FromRgb(243,240,250)));
                 root.Measure(new Size(1160,860));root.Arrange(new Rect(0,0,1160,860));root.UpdateLayout();
                 Console.WriteLine("UI: arranged studio");
+                var previewToggle=(Button)window.FindName("PreviewToggleButton");
+                previewToggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
+                if(!vm.IsPreviewing||previewToggle.Content?.ToString()!="■  Stop preview")throw new Exception("Preview must toggle on and change its label.");
+                previewToggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
+                if(vm.IsPreviewing||previewToggle.Content?.ToString()!="↗  Preview wheels")throw new Exception("Preview must toggle off and restore its label.");
+                if(vm.EdgeDistance!=32||OverlaySizing.EdgeOffset(32,1,1)!=-16||OverlaySizing.EdgeOffset(80,1.5,2)!=96)throw new Exception("Edge distance default and DPI scaling failed.");
+                ((Slider)window.FindName("EdgeDistanceSlider")).SetCurrentValue(Slider.ValueProperty,60d);vm.Save();
+                if(vm.EdgeDistance!=60||store.Load().EdgeDistance!=60)throw new Exception("Placement distance must bind and persist.");vm.EdgeDistance=32;
                 TestHeader(window,root);
                 var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
                 foreach(var wheel in Descendants(root).OfType<WheelControl>()) {wheel.BeginAnimation(WheelControl.DisplayLevelProperty,null);wheel.DisplayLevel=wheel.Wheel?.Level??0;}

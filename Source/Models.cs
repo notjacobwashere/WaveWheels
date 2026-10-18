@@ -72,6 +72,7 @@ public sealed class Preferences
     public string MonitorId { get; set; } = "";
     public int PositionPercent { get; set; } = 50;
     public int WheelSpacing { get; set; }
+    public int EdgeDistance { get; set; } = 32;
     public bool CheckUpdatesAutomatically { get; set; } = true;
     public string UpdateChannel { get; set; } = "Stable";
     public string LastNotifiedUpdate { get; set; } = "";
@@ -128,7 +129,7 @@ public sealed class SettingsStore
             var active=p.Profiles.FirstOrDefault(x=>x.Id==p.ActiveProfileId)??p.Profiles[0];
             p.ActiveProfileId=active.Id;p.Wheels=active.Wheels;
             p.ScreenEdge=new[]{"Left","Right","Top","Bottom"}.Contains(p.ScreenEdge)?p.ScreenEdge:"Left";
-            p.MonitorId??="";p.PositionPercent=Math.Clamp(p.PositionPercent,0,100);p.WheelSpacing=Math.Clamp(p.WheelSpacing,0,36);
+            p.MonitorId??="";p.PositionPercent=Math.Clamp(p.PositionPercent,0,100);p.WheelSpacing=Math.Clamp(p.WheelSpacing,0,36);p.EdgeDistance=Math.Clamp(p.EdgeDistance,0,200);
             p.EdgeWidth = Math.Clamp(p.EdgeWidth, 2, 32);
             p.IdleMilliseconds = Math.Clamp(p.IdleMilliseconds, 500, 5000);
             p.ScrollStepPercent=Math.Clamp(p.ScrollStepPercent,1,10);

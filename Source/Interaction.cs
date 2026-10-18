@@ -52,6 +52,7 @@ internal readonly record struct OverlaySize(double Width, double Height, double 
 internal static class OverlaySizing
 {
     public const double EffectPadding=48,StackWidth=300+EffectPadding*2;
+    internal static int EdgeOffset(int distance,double scale,double dpi)=>(int)Math.Round((Math.Clamp(distance,0,200)-EffectPadding)*scale*dpi);
     public static double StackHeight(int count, int spacing = 0) => Math.Clamp(count, 1, 12) * 120 + EffectPadding*2 + (Math.Clamp(count,1,12)-1)*Math.Clamp(spacing,0,36);
     public static OverlaySize Calculate(int count, int percent, double availableWidth, double availableHeight, int spacing = 0)
     {

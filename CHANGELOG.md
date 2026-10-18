@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- Promoted the beta update channels, stable rollback, and revised wheel effects to stable.
+- Preview wheels now toggles a persistent preview, with an active button state and Stop preview label.
+- Added a saved distance-from-screen-edge slider in Placement, defaulting to 32 px instead of the previous 48 px inset.
+
 ## 0.9.0-beta.3
 
 - Increased maximum-volume bursts to 180 smaller, faster sparks.

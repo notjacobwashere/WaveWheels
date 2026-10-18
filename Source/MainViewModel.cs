@@ -60,6 +60,11 @@ public sealed class MainViewModel : Observable
     public string MonitorId { get=>Preferences.MonitorId;set {if(value==null||value==Preferences.MonitorId)return;Preferences.MonitorId=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
     public int PositionPercent { get=>Preferences.PositionPercent;set { value=Math.Clamp(value,0,100);if(value==Preferences.PositionPercent)return;Preferences.PositionPercent=value;Changed();ScheduleSave();AppearanceChanged?.Invoke(); } }
     public int WheelSpacing { get=>Preferences.WheelSpacing;set { value=Math.Clamp(value,0,36);if(value==Preferences.WheelSpacing)return;Preferences.WheelSpacing=value;Changed();ScheduleSave();LayoutChanged?.Invoke(); } }
+    public int EdgeDistance {get=>Preferences.EdgeDistance;set {value=Math.Clamp(value,0,200);if(value==Preferences.EdgeDistance)return;Preferences.EdgeDistance=value;Changed();ScheduleSave();AppearanceChanged?.Invoke();}}
+    private bool isPreviewing;
+    public bool IsPreviewing=>isPreviewing;
+    public string PreviewButtonLabel=>IsPreviewing?"■  Stop preview":"↗  Preview wheels";
+    internal void SetPreviewActive(bool value) {if(Set(ref isPreviewing,value,nameof(IsPreviewing)))Changed(nameof(PreviewButtonLabel));}
     private readonly CancellationTokenSource updateLifetime=new();
     private readonly DispatcherTimer updateTimer=new() { Interval=TimeSpan.FromHours(6) };
     private string updateStatus="Check GitHub for a newer version.",updateUrl=ReleaseUpdates.ReleasesUrl;
@@ -430,7 +435,7 @@ public sealed class MainViewModel : Observable
         Preferences.PortOverride = int.TryParse(PortText, out var p) ? p : 0;
         ScheduleSave(); Client.Reconnect(Preferences.PortOverride); Message = "Checking the local Wave Link connection…";
     }
-    public void Preview() {if(RefreshInteractionPolicy())PreviewRequested?.Invoke();}
+    public void Preview() {if(IsPreviewing||RefreshInteractionPolicy()) {SetPreviewActive(!IsPreviewing);PreviewRequested?.Invoke();}}
     private void ScheduleSave() { SaveStatus = "Saving…"; saveTimer.Stop(); saveTimer.Start(); }
     public void Save()
     {
