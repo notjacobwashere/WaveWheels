@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-beta.2
+
+- Removed label-join overlap by painting the surface once and keeping rim effects out of the label area.
+- Sparks decelerate during natural fade-out and the fade triggered by lowering volume from maximum.
+- Mute hover bloom follows the speaker glyph instead of a central radial glow or dark disc.
+- Darker, more saturated red muted surfaces, plus a brief shake and red slash on mute; reduced motion is respected.
+
 ## 0.9.1-beta.1
 
 - Added text-sized wheel labels joined flush with the top of the wheel, with matching muted backgrounds.
