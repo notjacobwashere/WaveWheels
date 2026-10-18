@@ -51,14 +51,14 @@ internal sealed class OverlayInputRouter
 internal readonly record struct OverlaySize(double Width, double Height, double Scale);
 internal static class OverlaySizing
 {
-    public const double StackWidth = 328;
-    public static double StackHeight(int count, int spacing = 0) => Math.Clamp(count, 1, 12) * 120 + 24 + (Math.Clamp(count,1,12)-1)*Math.Clamp(spacing,0,36);
+    public const double EffectPadding=48,StackWidth=300+EffectPadding*2;
+    public static double StackHeight(int count, int spacing = 0) => Math.Clamp(count, 1, 12) * 120 + EffectPadding*2 + (Math.Clamp(count,1,12)-1)*Math.Clamp(spacing,0,36);
     public static OverlaySize Calculate(int count, int percent, double availableWidth, double availableHeight, int spacing = 0)
     {
         var height = StackHeight(count, spacing);
         var scale = Math.Min(Math.Clamp(percent, 50, 180) / 100d,
-            Math.Min(Math.Max(1, availableHeight - 32) / height, Math.Max(1, availableWidth - 32) / 350));
-        return new(350 * scale, height * scale, scale);
+            Math.Min(Math.Max(1, availableHeight - 32) / height, Math.Max(1, availableWidth - 32) / StackWidth));
+        return new(StackWidth * scale, height * scale, scale);
     }
 }
 

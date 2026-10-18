@@ -45,6 +45,7 @@ internal static class UpdateTests
         var history="["+string.Join(",",Release("v0.9.0-beta.2",true),Release("v0.9.0-beta.10",true),Release("v0.8.2"),Release("v1.0.0",true,true),Release("v0.8.0",true),Release("v0.9.0-rc.1"),Release("nightly"))+"]";
         Assert(ReleaseUpdates.ParseCatalog(history,"0.8.1",false).Latest?.Version=="0.8.2","Stable must exclude flagged and suffix prereleases and drafts.");
         var catalog=ReleaseUpdates.ParseCatalog(history,"0.8.1",true);
+        Assert(catalog.Stable?.Version=="0.8.2"&&ReleaseUpdates.ParseCatalog(history,"0.9.0-beta.10",false).Stable?.Version=="0.8.2","Latest stable must remain available for explicit rollback from a newer beta.");
         Assert(catalog.Latest?.Version=="0.9.0-rc.1"&&catalog.Betas.Count==4,"Beta channel must include prereleases and retain old versions in its archive.");
         Assert(catalog.Betas[1].Version=="0.9.0-beta.10"&&catalog.Betas[2].Version=="0.9.0-beta.2","Beta identifiers must sort numerically rather than lexically.");
         Assert(ReleaseUpdates.ParseCatalog(history,"0.9.0",true).Latest==null,"Older betas must never be offered as automatic upgrades.");
@@ -99,6 +100,11 @@ internal static class UpdateTests
         vm.ApplyCatalog(new(null,new[]{update with{IsBeta=true}}));
         Assert(vm.CanInstallBeta&&!vm.CanInstallUpdate,"Older archived betas must have an explicit install action independent of automatic upgrades.");
         vm.Save();Assert(store.Load().UpdateChannel=="Beta","The selected update channel must survive reload.");
+        vm.ApplyCatalog(new(null,Array.Empty<ReleaseUpdate>(),update));
+        Assert(vm.CanInstallStable,"An older stable installer must be offered as an explicit rollback.");
+        vm.InstallStableCoreAsync((selected,_,_)=> {Assert(selected==update,"Stable rollback must download the selected stable release.");return Task.FromResult("fixture");},_=> {Assert(store.Load().UpdateChannel=="Stable","Rollback must persist Stable before installer handoff.");launches++;}).GetAwaiter().GetResult();
+        Assert(vm.UpdateChannel=="Stable"&&launches==2&&exits==2,"Returning to stable must use the verified installer lifecycle.");
+        vm.ApplyCatalog(new(null,Array.Empty<ReleaseUpdate>(),update with{Installer=null}));Assert(!vm.CanInstallStable,"Stable rollback requires a verified installer.");
         vm.Dispose();var isolated=new MainViewModel(new SettingsStore(Path.Combine(directory,"isolated")),true);isolated.ApplyRelease(update);Assert(!isolated.CanInstallUpdate,"Isolated profiles must never modify the installed app.");isolated.Dispose();
         Console.WriteLine("PASS: updater lifecycle, save-before-launch, no exit on errors/cancel, retry, and isolated-profile protection.");
     }

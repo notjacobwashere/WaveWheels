@@ -214,7 +214,8 @@ public sealed class WheelControl : FrameworkElement
         var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress);
         if (w.Available)
         {
-            for (var blur = 10; blur >= 2; blur -= 2) dc.DrawGeometry(null, new Pen(WithOpacity(accent, .035+glow*.16), blur+glow*10), arc);
+            for(var width=56;width>=2;width-=2)
+                dc.DrawGeometry(null,new Pen(WithOpacity(accent,(.006+glow*.10)*Math.Exp(-width*width/600d)),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},arc);
             dc.DrawGeometry(null, new Pen(WithOpacity(accent, .85+glow*.15), 2.3+glow*1.2), arc);
             dc.DrawGeometry(null, new Pen(w.Muted ? WithOpacity(Brushes.White, .35) : Brushes.White, 1.15), arc);
         }
@@ -246,12 +247,9 @@ public sealed class WheelControl : FrameworkElement
             {
                 var spark=MaximumVolumeEffect.Spark(i,MaximumEffectProgress,MaximumEffectStarts);var head=new Point(spark.X,spark.Y);var tail=new Point(spark.TailX,spark.TailY);
                 var opacity=sparks*spark.Opacity;if(opacity<=0)continue;
-                var tip=tail+(head-tail)*.65;
-                dc.DrawLine(new Pen(WithOpacity(accent,opacity*.09),8){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tail,head);
-                dc.DrawLine(new Pen(WithOpacity(accent,opacity*.22),4){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tail,head);
-                dc.DrawLine(new Pen(WithOpacity(accent,opacity*.5),2.2){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tail,head);
-                dc.DrawLine(new Pen(WithOpacity(accent,opacity*.9),1.1){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tail,head);
-                dc.DrawLine(new Pen(WithOpacity(Brushes.White,opacity*.95),.55){StartLineCap=PenLineCap.Flat,EndLineCap=PenLineCap.Flat},tip,head);
+                for(var width=14;width>=2;width-=2)
+                    dc.DrawLine(new Pen(WithOpacity(accent,opacity*.12*Math.Exp(-width*width/50d)),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
+                dc.DrawLine(new Pen(WithOpacity(accent,opacity),1.2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},tail,head);
             }
     }
     private static Brush WithOpacity(Brush source, double opacity) { var brush = source.CloneCurrentValue(); brush.Opacity = opacity; return brush; }

@@ -34,9 +34,11 @@ internal static class MaximumEffectTests
                         var angle=angles[i]*Math.PI/180;var radial=new Vector(Math.Cos(angle),Math.Sin(angle));var tangent=new Vector(-radial.Y,radial.X);var origin=new Point(60+radial.X*43,60+radial.Y*43);
                         var birth=MaximumVolumeEffect.Spark(i,0,burst).BirthTime;var launch=MaximumVolumeEffect.Spark(i,birth,burst);
                         Assert((new Point(launch.TailX,launch.TailY)-origin).Length<1e-7,"Every streak must begin on its own randomized point on the bar.");
+                        var fast=MaximumVolumeEffect.Spark(i,birth+.05,burst);
+                        Assert((new Point(fast.TailX,fast.TailY)-origin).Length>=10.3,"Sparks must move at least 10 DIPs in 90 ms rather than hovering over the bar.");
                         var travel=new Point(launch.X,launch.Y)-new Point(launch.TailX,launch.TailY);var forward=Vector.Multiply(travel,tangent);
                         Assert(forward>5.9&&Math.Abs(Vector.CrossProduct(travel,tangent))<forward*.08,"Each spark must follow the clockwise tangent at its own origin.");
-                        Assert(launch.BirthTime+launch.Lifetime<=1.000001&&launch.Lifetime*MaximumVolumeEffect.DurationMilliseconds>=750,"Longer-lived particles must still finish within the effect clock.");
+                        Assert(launch.BirthTime+launch.Lifetime<=1.000001&&launch.Lifetime*MaximumVolumeEffect.DurationMilliseconds>=280,"Fast particles must still finish within the effect clock.");
                     }
                 }
                 Assert(MaximumVolumeEffect.SpawnDegrees(0,0)!=MaximumVolumeEffect.SpawnDegrees(0,1),"Repeated bursts must vary their spawn pattern.");
@@ -76,8 +78,9 @@ internal static class MaximumEffectTests
                     control.SeekMaximumEffect(TimeSpan.FromMilliseconds(ms));
                     control.InvalidateVisual();control.UpdateLayout();
                     Assert(Math.Abs(control.MaximumEffectProgress-ms/(double)MaximumVolumeEffect.DurationMilliseconds)<.001,"The real WPF animation clock must span the configured 1.8 seconds.");
-                    for(var i=0;i<MaximumVolumeEffect.SparkCount;i++) {var s=MaximumVolumeEffect.Spark(i,ms/(double)MaximumVolumeEffect.DurationMilliseconds);Assert(s.X>=0&&s.X<=300&&s.Y>=0&&s.Y<=120,"Sparks must stay inside the existing wheel-control bounds.");}
-                    var frame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);frame.Render(control);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(Path.Combine(directory,$"maximum-{ms:0000}.png"));encoder.Save(file);
+                    for(var i=0;i<MaximumVolumeEffect.SparkCount;i++) {var s=MaximumVolumeEffect.Spark(i,ms/(double)MaximumVolumeEffect.DurationMilliseconds);Assert(s.X>=-48&&s.X<=348&&s.Y>=-48&&s.Y<=168,"Sparks must stay inside the expanded transparent effect gutter.");}
+                    var padded=new DrawingVisual();using(var drawing=padded.RenderOpen()) {drawing.DrawRectangle(new SolidColorBrush(Color.FromRgb(24,22,30)),null,new Rect(0,0,396,216));drawing.PushTransform(new TranslateTransform(48,48));drawing.DrawDrawing(VisualTreeHelper.GetDrawing(control));drawing.Pop();}
+                    var frame=new RenderTargetBitmap(396,216,96,96,PixelFormats.Pbgra32);frame.Render(padded);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(Path.Combine(directory,$"maximum-{ms:0000}.png"));encoder.Save(file);
                 }
                 Assert(control.MaximumEffectProgress==1,"The completed clock must leave no residual glow or particles.");
                 control.StartMaximumEffect();control.Wheel=new Wheel{Available=true,Level=.5};Assert(control.MaximumEffectProgress==1,"Profile/rebinding changes must clear old effects.");

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0-beta.2
+
+- Added an explicit return to the latest stable release from a newer beta, retaining settings and switching future checks to Stable.
+- Increased spark speed, kept particles in the wheel accent color, softened bloom, and added transparent drawing space around the overlay.
+
 ## 0.9.0-beta.1
 
 - Refined maximum-volume feedback into randomized streaks along the filled arc, moving along the local clockwise tangent, with brighter glow lingering for 1.8 seconds.

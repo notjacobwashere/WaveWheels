@@ -12,7 +12,7 @@ namespace WaveWheels;
 
 public sealed record InstallerAsset(string Name,string Url,long Size,string Sha256);
 public sealed record ReleaseUpdate(string Version, string Url,InstallerAsset? Installer=null,bool IsBeta=false);
-internal sealed record ReleaseCatalog(ReleaseUpdate? Latest,IReadOnlyList<ReleaseUpdate> Betas);
+internal sealed record ReleaseCatalog(ReleaseUpdate? Latest,IReadOnlyList<ReleaseUpdate> Betas,ReleaseUpdate? Stable=null);
 internal sealed record ReleaseVersion(Version Core,string Suffix):IComparable<ReleaseVersion>
 {
     public static ReleaseVersion? Parse(string text)
@@ -38,7 +38,7 @@ internal sealed record ReleaseVersion(Version Core,string Suffix):IComparable<Re
 internal static class ReleaseUpdates
 {
     public const string ReleasesUrl="https://github.com/notjacobwashere/WaveWheels/releases/latest";
-    public static string CurrentVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]??typeof(App).Assembly.GetName().Version?.ToString(3)??"0.9.0-beta.1";
+    public static string CurrentVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]??typeof(App).Assembly.GetName().Version?.ToString(3)??"0.9.0-beta.2";
     public static ReleaseUpdate? Parse(string json,Version current)
     {
         using var doc=JsonDocument.Parse(json);var release=Read(doc.RootElement);
@@ -71,7 +71,7 @@ internal static class ReleaseUpdates
         using var doc=JsonDocument.Parse(json);
         var releases=doc.RootElement.EnumerateArray().Select(Read).Where(r=>r!=null).Cast<ReleaseUpdate>().OrderByDescending(r=>ReleaseVersion.Parse(r.Version)).ToArray();
         var installed=ReleaseVersion.Parse(current)??throw new FormatException("Invalid installed version.");
-        return new(releases.FirstOrDefault(r=>(beta||!r.IsBeta)&&ReleaseVersion.Parse(r.Version)!.CompareTo(installed)>0),releases.Where(r=>r.IsBeta).ToArray());
+        return new(releases.FirstOrDefault(r=>(beta||!r.IsBeta)&&ReleaseVersion.Parse(r.Version)!.CompareTo(installed)>0),releases.Where(r=>r.IsBeta).ToArray(),releases.FirstOrDefault(r=>!r.IsBeta));
     }
     public static async Task<ReleaseCatalog> CheckAsync(bool beta,CancellationToken token)
     {

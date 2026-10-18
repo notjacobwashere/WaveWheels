@@ -135,6 +135,7 @@ public partial class SettingsWindow : Window
     private void CancelUpdate(object sender,RoutedEventArgs e)=>model.CancelUpdate();
     private async void InstallBeta(object sender,RoutedEventArgs e)=>await model.InstallBetaAsync();
     private void OpenBetaRelease(object sender,RoutedEventArgs e)=>model.OpenBetaReleasePage();
+    private async void InstallStable(object sender,RoutedEventArgs e)=>await model.InstallStableAsync();
     private void OpenRelease(object sender,RoutedEventArgs e)=>model.OpenReleasePage();
     private void Add(object sender,RoutedEventArgs e) => model.AddWheel();
     private void Remove(object sender,RoutedEventArgs e) => model.RemoveWheel();

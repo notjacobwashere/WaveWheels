@@ -20,7 +20,7 @@ internal static class MaximumVolumeEffect
 {
     public const int DurationMilliseconds=1800,SparkCount=28;
     public const double ArcStartDegrees=90,ArcSweepDegrees=270,EndStopDegrees=ArcStartDegrees+ArcSweepDegrees;
-    private const double EmissionEnd=.35;
+    private const double EmissionEnd=.76;
     public const double RingRadius=43;
     public static double RenderedArcLevel(double level)
     {
@@ -49,7 +49,7 @@ internal static class MaximumVolumeEffect
         var birth=Math.Clamp((index+.22*Math.Sin(index*13))*EmissionEnd/(SparkCount-1),0,EmissionEnd);
         if(index==SparkCount-1)birth=EmissionEnd;
         var seed=Random(index,burstSeed,2);
-        var lifetime=Math.Min(.42+seed*.35,1-birth);
+        var lifetime=Math.Min(.16+seed*.08,1-birth);
         if(index==SparkCount-1)lifetime=1-birth;
         var age=progress-birth;
         var alive=progress>=0&&progress<1&&age>=0&&age<lifetime;
@@ -58,9 +58,9 @@ internal static class MaximumVolumeEffect
         // Follow the clockwise tangent of the drawn arc at this particle's own spawn point.
         var direction=radial+Math.PI/2+(seed-.5)*.14;
         var originX=60+Math.Cos(radial)*RingRadius;var originY=60+Math.Sin(radial)*RingRadius;
-        var distance=(12+seed*8)*age/lifetime;
+        var distance=(115+seed*70)*age*(DurationMilliseconds/1000d);
         var dx=Math.Cos(direction);var dy=Math.Sin(direction);
-        var length=6+seed*4;
+        var length=10+seed*6;
         var x=originX+dx*(distance+length);var y=originY+dy*(distance+length);
         var fade=Math.Clamp((age/lifetime-.55)/.45,0,1);
         var opacity=alive?Math.Min(1,age/.025)*(1-fade*fade):0;

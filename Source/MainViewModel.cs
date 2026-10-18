@@ -76,6 +76,16 @@ public sealed class MainViewModel : Observable
         set {if(!CanCheckUpdates||!UpdateChannels.Contains(value)||value==Preferences.UpdateChannel)return;Preferences.UpdateChannel=value;Changed();Changed(nameof(BetaChannelEnabled));ScheduleSave();ApplyRelease(null);UpdateStatus="Channel changed. Checking GitHub…";_=CheckForUpdatesAsync();}
     }
     public bool BetaChannelEnabled=>UpdateChannel=="Beta";
+    private ReleaseUpdate? stableRelease;
+    public string StableReleaseLabel=>stableRelease==null?"Check for updates to find the latest stable release.":$"Latest stable · {stableRelease.Version}";
+    public bool CanInstallStable=>!isolated&&CanCheckUpdates&&stableRelease?.Installer!=null&&stableRelease.Version!=AppVersion;
+    public Task InstallStableAsync()=>InstallStableCoreAsync(DownloadUpdate,UpdateInstaller.Launch);
+    internal Task InstallStableCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
+    {
+        if(!CanInstallStable)return Task.CompletedTask;
+        Preferences.UpdateChannel="Stable";Changed(nameof(UpdateChannel));Changed(nameof(BetaChannelEnabled));ScheduleSave();
+        ApplyRelease(stableRelease);return InstallUpdateCoreAsync(download,launch);
+    }
     public ObservableCollection<ReleaseUpdate> BetaBuilds {get;}=new();
     private ReleaseUpdate? selectedBetaBuild;
     public ReleaseUpdate? SelectedBetaBuild {get=>selectedBetaBuild;set {if(Set(ref selectedBetaBuild,value))UpdateActionsChanged();}}
@@ -93,7 +103,7 @@ public sealed class MainViewModel : Observable
     public bool CanCheckUpdates=>!CheckingUpdates&&!InstallingUpdate;
     public bool CanInstallUpdate=>!isolated&&!CheckingUpdates&&!InstallingUpdate&&availableUpdate?.Installer!=null;
     public event Action? UpdateInstallationStarted;
-    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));}
+    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
     public event Action<string>? UpdateAvailable;
     private string notifiedVersion="";
@@ -288,9 +298,11 @@ public sealed class MainViewModel : Observable
     }
     internal void ApplyCatalog(ReleaseCatalog catalog)
     {
+        stableRelease=catalog.Stable;Changed(nameof(StableReleaseLabel));
         SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();ApplyRelease(catalog.Latest);
     }
-    public Task InstallUpdateAsync()=>InstallUpdateCoreAsync((update,progress,token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token),UpdateInstaller.Launch);
+    private static Task<string> DownloadUpdate(ReleaseUpdate update,IProgress<DownloadProgress> progress,CancellationToken token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token);
+    public Task InstallUpdateAsync()=>InstallUpdateCoreAsync(DownloadUpdate,UpdateInstaller.Launch);
     internal async Task InstallUpdateCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
     {
         if(!CanInstallUpdate||availableUpdate==null)return;
