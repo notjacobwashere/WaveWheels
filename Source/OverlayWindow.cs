@@ -82,7 +82,7 @@ public sealed class OverlayWindow : Window
         stack.Children.Clear(); controls.Clear(); stack.Children.Add(new Border { Height = OverlaySizing.EffectPadding });
         foreach (var wheel in model.Wheels)
         {
-            var c = new WheelControl { Wheel = wheel, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, Effects=model.Effects, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
             c.Selected += w => { model.SelectedWheel = w; lastActivity = Environment.TickCount64; };
             controls.Add(c); stack.Children.Add(c);

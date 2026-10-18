@@ -51,13 +51,13 @@ internal static class MaximumVolumeEffect
         var rate=3/half;
         return half+(1-Math.Exp(-rate*(age-half)))/rate;
     }
-    public static SparkStreak Spark(int index,double progress,int burstSeed=0,double arcLevel=1)
+    public static SparkStreak Spark(int index,double progress,int burstSeed=0,double arcLevel=1,int count=SparkCount,double speedScale=1)
     {
-        var birth=Math.Clamp((index+.22*Math.Sin(index*13))*EmissionEnd/(SparkCount-1),0,EmissionEnd);
-        if(index==SparkCount-1)birth=EmissionEnd;
+        var birth=count<=1?0:Math.Clamp((index+.22*Math.Sin(index*13))*EmissionEnd/(count-1),0,EmissionEnd);
+        if(count>1&&index==count-1)birth=EmissionEnd;
         var seed=Random(index,burstSeed,2);
-        var lifetime=Math.Min(.09+seed*.04,1-birth);
-        if(index==SparkCount-1)lifetime=1-birth;
+        var lifetime=Math.Min((.09+seed*.04)/Math.Max(1,speedScale),1-birth);
+        if(count>1&&index==count-1)lifetime=(1-birth)/Math.Max(1,speedScale);
         var age=progress-birth;
         var alive=progress>=0&&progress<1&&age>=0&&age<lifetime;
         age=Math.Clamp(age,0,lifetime);
@@ -65,7 +65,7 @@ internal static class MaximumVolumeEffect
         // Follow the clockwise tangent of the drawn arc at this particle's own spawn point.
         var direction=radial+Math.PI/2+(seed-.5)*.14;
         var originX=60+Math.Cos(radial)*RingRadius;var originY=60+Math.Sin(radial)*RingRadius;
-        var distance=(240+seed*120)*TravelTime(age,lifetime)*(DurationMilliseconds/1000d);
+        var distance=(240+seed*120)*speedScale*TravelTime(age,lifetime)*(DurationMilliseconds/1000d);
         var dx=Math.Cos(direction);var dy=Math.Sin(direction);
         var length=3+seed*3;
         var x=originX+dx*(distance+length);var y=originY+dy*(distance+length);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0-beta.1
+
+- Added a live Effects editor for bloom, spark density/speed, mute shake/timing, and wheel/muted colors. Original visuals remain the defaults.
+- Added opt-in global shortcuts for showing wheels, channel volume/mute, and profile cycling, with validation, conflict recovery, and blacklist support.
+- Added page-scoped Restore defaults actions, preserving unrelated settings and wheel bindings.
+- Added persistence, rendering, reset isolation, shortcut dispatch/conflict/cleanup, and disposable-runner native registration checks.
+
 ## 0.9.1
 
 - Stronger, slower mute shake and an oversized slash that eases to its endpoint, holds for half a second, then fades.

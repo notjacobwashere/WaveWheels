@@ -46,6 +46,12 @@ Open **Settings** to choose wheel size or disable slide-and-grow motion. Larger 
 
 Settings save automatically in `%LOCALAPPDATA%\WaveWheels\settings.json`. They are separate from the app folder. No personal settings are bundled in downloads.
 
+## Effects and hotkeys
+
+**Effects** provides a live preview and controls for bloom, sparks, mute movement/timing, and surface colors. **Restore defaults** returns every effect to its original value. Each customization page has its own scoped reset; wheel resets retain channel bindings, and profile resets retain saved layouts.
+
+**Hotkeys** supports showing/hiding wheels, volume/mute actions for a specific wheel, and cycling profiles. Shortcuts start disabled. Enter combinations such as Ctrl+Alt+W, enable hotkeys, and choose **Apply shortcuts**. Duplicate or unavailable combinations show an error; registration conflicts keep the previous shortcuts active. Volume and mute targets work when their profile is active. The app blacklist suppresses all hotkey actions. Disabling and applying unregisters the shortcuts. Isolated profiles never register global keys.
+
 ## Profiles, placement, and updates
 
 Use **Profiles** to create, duplicate, rename, or remove layouts. Each profile keeps its wheel count, ordering, names, colors, and channel/mix bindings. The first launch migrates existing wheels into **Default** without changing mixer volumes. The tray's **Profiles** submenu switches layouts quickly. Size and placement are shared across profiles.

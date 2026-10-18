@@ -23,6 +23,57 @@ public sealed class MainViewModel : Observable
     private MixerSnapshot snapshot = new(false, "Looking for Wave Link…", "", Array.Empty<Channel>(), Array.Empty<Mix>());
     private readonly bool isolated;
     public Preferences Preferences { get; }
+    public EffectSettings Effects=>Preferences.Effects;
+    public string EffectColorStatus=>EffectSettings.ValidColor(Effects.NormalColor)&&EffectSettings.ValidColor(Effects.MutedColor)&&EffectSettings.ValidColor(Effects.MutedButtonColor)?"Colors use #RRGGBB. Changes appear immediately.":"Enter complete #RRGGBB colors. Incomplete colors use the original default until valid.";
+    private GlobalHotkeys? globalHotkeys;
+    public ObservableCollection<HotkeyBinding> Hotkeys {get;}=new();
+    public string[] HotkeyActions=>GlobalHotkeys.Actions;
+    public IEnumerable<Choice> HotkeyWheelChoices=>Profiles.SelectMany(p=>(p==ActiveProfile?Wheels.AsEnumerable():p.Wheels).Select(w=>new Choice(w.Id,p.Name+" · "+w.Name))).GroupBy(c=>c.Id).Select(g=>g.First()).ToArray();
+    public void RefreshHotkeyTargets()=>Changed(nameof(HotkeyWheelChoices));
+    private bool hotkeysEnabled;
+    public bool HotkeysEnabled {get=>hotkeysEnabled;set {if(Set(ref hotkeysEnabled,value))HotkeyStatus="Changes not applied. Choose Apply shortcuts.";}}
+    private string hotkeyStatus="Shortcuts are off. Add combinations, enable them, then choose Apply shortcuts.";
+    public string HotkeyStatus {get=>hotkeyStatus;private set=>Set(ref hotkeyStatus,value);}
+    public void AddHotkey() {if(Hotkeys.Count<20)Hotkeys.Add(new(){Action="Toggle mute",WheelId=SelectedWheel?.Id??""});}
+    public void RemoveHotkey(HotkeyBinding row)=>Hotkeys.Remove(row);
+    public void ApplyHotkeys()
+    {
+        var plan=new List<HotkeyCommand>();var error="";
+        if(HotkeysEnabled&&!GlobalHotkeys.TryPlan(Hotkeys,out plan,out error)) {HotkeyStatus=error;return;}
+        if(HotkeysEnabled&&plan.Any(h=>(h.Binding.Action is "Toggle mute" or "Volume up" or "Volume down")&&!Profiles.Any(p=>p.Wheels.Any(w=>w.Id==h.Binding.WheelId)))) {HotkeyStatus="Choose a wheel for each volume or mute shortcut.";return;}
+        if(globalHotkeys!=null&&!globalHotkeys.Apply(HotkeysEnabled?plan:new(),out error)) {HotkeyStatus=error;return;}
+        Preferences.Hotkeys=Hotkeys.Select(h=>h.Copy()).ToList();Preferences.HotkeysEnabled=HotkeysEnabled;ScheduleSave();
+        HotkeyStatus=isolated?"Saved for the installed app. Global registration is disabled in isolated test profiles.":HotkeysEnabled?$"{plan.Count} shortcut(s) active. Wheel actions apply when that wheel's profile is active.":"Shortcuts are off.";
+    }
+    internal void ExecuteHotkey(HotkeyBinding binding)
+    {
+        if(!RefreshInteractionPolicy())return;
+        if(binding.Action=="Toggle wheels") {Preview();return;}
+        if(binding.Action is "Next profile" or "Previous profile")
+        {
+            if(Profiles.Count>0)ActiveProfile=Profiles[(Profiles.IndexOf(ActiveProfile!)+(binding.Action=="Next profile"?1:Profiles.Count-1))%Profiles.Count];return;
+        }
+        var wheel=Wheels.FirstOrDefault(w=>w.Id==binding.WheelId);if(wheel==null||!wheel.Available)return;
+        if(binding.Action=="Toggle mute")ToggleMute(wheel);
+        else if(binding.Action is "Volume up" or "Volume down")SetLevel(wheel,wheel.Level+(binding.Action=="Volume up"?1:-1)*ScrollStepPercent/100d);
+    }
+    public void RestoreDefaults(string page)
+    {
+        var d=new Preferences();
+        switch(page)
+        {
+            case "Effects":Effects.Reset();break;
+            case "Hotkeys":HotkeysEnabled=false;Hotkeys.Clear();foreach(var h in HotkeyBinding.Defaults())Hotkeys.Add(h);ApplyHotkeys();break;
+            case "Placement":ScreenEdge=d.ScreenEdge;MonitorId=d.MonitorId;PositionPercent=d.PositionPercent;WheelSpacing=d.WheelSpacing;EdgeDistance=d.EdgeDistance;break;
+            case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
+            case "Wheels":if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
+            case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
+            case "Startup":StartupEnabled=false;EdgeEnabled=true;break;
+            case "Connection":PortText="";Reconnect();break;
+            case "Updates":CheckUpdatesAutomatically=true;UpdateChannel="Stable";break;
+        }
+        ScheduleSave();
+    }
     public WaveLinkClient Client { get; } = new();
     public ObservableCollection<Wheel> Wheels { get; }
     public ObservableCollection<WheelProfile> Profiles { get; }
@@ -165,6 +216,10 @@ public sealed class MainViewModel : Observable
     {
         this.store = store; this.isolated = isolated;
         Preferences = store.Load();
+        hotkeysEnabled=Preferences.HotkeysEnabled;foreach(var binding in Preferences.Hotkeys)Hotkeys.Add(binding.Copy());
+        foreach(var row in Hotkeys)row.PropertyChanged+=HotkeyEdited;
+        Hotkeys.CollectionChanged+=(_,e)=> {if(e.OldItems!=null)foreach(HotkeyBinding row in e.OldItems)row.PropertyChanged-=HotkeyEdited;if(e.NewItems!=null)foreach(HotkeyBinding row in e.NewItems)row.PropertyChanged+=HotkeyEdited;HotkeyStatus="Changes not applied. Choose Apply shortcuts.";};
+        Effects.PropertyChanged+=(_,_)=> {ScheduleSave();Changed(nameof(EffectColorStatus));AppearanceChanged?.Invoke();};
         BlacklistedApplications=new(Preferences.BlacklistedApplications);
         notifiedVersion=Preferences.LastNotifiedUpdate;
         if(Preferences.Profiles.Count==0)Preferences.Profiles.Add(new WheelProfile { Wheels=Preferences.Wheels });
@@ -191,7 +246,7 @@ public sealed class MainViewModel : Observable
         updateTimer.Tick+=async(_,_)=> { if(CheckUpdatesAutomatically)await CheckForUpdatesAsync(); };
         foregroundTimer.Tick+=(_,_)=>RefreshForeground();
     }
-    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {globalHotkeys=new(ExecuteHotkey);ApplyHotkeys();foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
     private void RefreshForeground()
     {
         if(AutomaticProfilesEnabled||ApplicationBlacklistEnabled&&BlacklistedApplications.Count>0)ApplyForegroundProcess(ProfileAutomation.ForegroundProcess(),Environment.TickCount64);
@@ -436,6 +491,7 @@ public sealed class MainViewModel : Observable
         ScheduleSave(); Client.Reconnect(Preferences.PortOverride); Message = "Checking the local Wave Link connection…";
     }
     public void Preview() {if(IsPreviewing||RefreshInteractionPolicy()) {SetPreviewActive(!IsPreviewing);PreviewRequested?.Invoke();}}
+    private void HotkeyEdited(object? sender,PropertyChangedEventArgs e)=>HotkeyStatus="Changes not applied. Choose Apply shortcuts.";
     private void ScheduleSave() { SaveStatus = "Saving…"; saveTimer.Stop(); saveTimer.Start(); }
     public void Save()
     {
@@ -443,5 +499,5 @@ public sealed class MainViewModel : Observable
         try {Preferences.BlacklistedApplications=BlacklistedApplications.ToList(); Preferences.Wheels = Wheels.ToList();if(activeProfile!=null) {activeProfile.Wheels=Preferences.Wheels;Preferences.ActiveProfileId=activeProfile.Id;}Preferences.Profiles=Profiles.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
         catch (Exception ex) { SaveStatus = "Could not save changes"; Message = ex.Message; App.WriteLog("Settings: " + ex.Message); }
     }
-    public void Dispose() {foregroundMonitor?.Dispose(); foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
+    public void Dispose() {globalHotkeys?.Dispose();foregroundMonitor?.Dispose(); foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
 }

@@ -75,11 +75,19 @@ internal static class UiRendering
                 settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 root.UpdateLayout();
                 if(((FrameworkElement)window.FindName("SettingsPage")).Visibility!=Visibility.Visible)throw new Exception("Settings navigation did not open the page.");
-                foreach(var section in new[]{"Profiles","Placement","Updates"})
+                foreach(var section in new[]{"Profiles","Placement","Effects","Hotkeys","Updates"})
                 {
                     ((Button)window.FindName(section+"Nav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
                     if(((FrameworkElement)window.FindName(section+"Page")).Visibility!=Visibility.Visible)throw new Exception(section+" navigation failed.");
                     if(section=="Profiles"&&!Descendants((ComboBox)window.FindName("ProfilePicker")).OfType<TextBlock>().Any(t=>t.Text==vm.ActiveProfile!.Name))throw new Exception("The profile picker must show its friendly name.");
+                    if(section=="Effects")
+                    {
+                        if(((WheelControl)window.FindName("EffectsDemo")).Effects!=vm.Effects)throw new Exception("Effects preview must share the live settings object.");
+                        vm.Effects.BloomPercent=150;
+                        Descendants((FrameworkElement)window.FindName("EffectsPage")).OfType<Button>().Single(b=>b.Content?.ToString()=="Restore defaults").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        if(vm.Effects.BloomPercent!=100)throw new Exception("Effects Restore defaults button did not reset actual settings.");
+                    }
+                    if(section=="Hotkeys"&&Descendants((FrameworkElement)window.FindName("HotkeyRows")).OfType<ComboBox>().First().Items.Count!=6)throw new Exception("Hotkey rows must display the available actions.");
                     if(section=="Updates")
                     {
                         if(((Button)window.FindName("InstallUpdateButton")).IsEnabled||((Button)window.FindName("CancelUpdateButton")).IsEnabled)throw new Exception("Update buttons must be disabled before discovery and outside downloads.");
@@ -131,6 +139,7 @@ internal static class UiRendering
                 vm.RemoveProfile();if(vm.ActiveProfile!=baseline)throw new Exception("Removing a profile did not preserve the remaining layout.");
                 NewFeatures.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"new-features-profile-"+Guid.NewGuid().ToString("N")));
                 MonitorPersistenceTests.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"monitor-profile-"+Guid.NewGuid().ToString("N")));
+                CustomizationTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"customization-profile-"+Guid.NewGuid().ToString("N")));
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}
