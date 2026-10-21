@@ -27,13 +27,3 @@ public sealed class EffectSettings:Observable
     }
     public void Reset() {var d=new EffectSettings();BloomPercent=d.BloomPercent;SparkCount=d.SparkCount;SparkSpeedPercent=d.SparkSpeedPercent;ShakePercent=d.ShakePercent;MuteSpeedPercent=d.MuteSpeedPercent;NormalColor=d.NormalColor;MutedColor=d.MutedColor;MutedButtonColor=d.MutedButtonColor;}
 }
-
-public sealed class HotkeyBinding:Observable
-{
-    private string shortcut="",action="Toggle wheels",wheelId="";
-    public string Shortcut {get=>shortcut;set=>Set(ref shortcut,value??"");}
-    public string Action {get=>action;set=>Set(ref action,value??"");}
-    public string WheelId {get=>wheelId;set=>Set(ref wheelId,value??"");}
-    public HotkeyBinding Copy()=>new(){Shortcut=Shortcut,Action=Action,WheelId=WheelId};
-    public static List<HotkeyBinding> Defaults()=>new(){new(){Action="Toggle wheels"},new(){Action="Toggle mute"},new(){Action="Next profile"},new(){Action="Previous profile"}};
-}

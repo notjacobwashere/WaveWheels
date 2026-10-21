@@ -75,7 +75,7 @@ internal static class UiRendering
                 settingsNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 root.UpdateLayout();
                 if(((FrameworkElement)window.FindName("SettingsPage")).Visibility!=Visibility.Visible)throw new Exception("Settings navigation did not open the page.");
-                foreach(var section in new[]{"Profiles","Placement","Effects","Hotkeys","Updates"})
+                foreach(var section in new[]{"Profiles","Placement","Effects","Updates"})
                 {
                     ((Button)window.FindName(section+"Nav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
                     if(((FrameworkElement)window.FindName(section+"Page")).Visibility!=Visibility.Visible)throw new Exception(section+" navigation failed.");
@@ -87,7 +87,6 @@ internal static class UiRendering
                         Descendants((FrameworkElement)window.FindName("EffectsPage")).OfType<Button>().Single(b=>b.Content?.ToString()=="Restore defaults").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                         if(vm.Effects.BloomPercent!=100)throw new Exception("Effects Restore defaults button did not reset actual settings.");
                     }
-                    if(section=="Hotkeys"&&Descendants((FrameworkElement)window.FindName("HotkeyRows")).OfType<ComboBox>().First().Items.Count!=6)throw new Exception("Hotkey rows must display the available actions.");
                     if(section=="Updates")
                     {
                         if(((Button)window.FindName("InstallUpdateButton")).IsEnabled||((Button)window.FindName("CancelUpdateButton")).IsEnabled)throw new Exception("Update buttons must be disabled before discovery and outside downloads.");

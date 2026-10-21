@@ -91,7 +91,6 @@ public partial class SettingsWindow : Window
     private void Navigate(object sender,RoutedEventArgs e)
     {
         var section=(sender as Button)?.Tag as string;
-        if(section=="Hotkeys")model.RefreshHotkeyTargets();
         WheelsPage.Visibility=section=="Wheels"?Visibility.Visible:Visibility.Collapsed;
         StartupPage.Visibility=section=="Startup"?Visibility.Visible:Visibility.Collapsed;
         SettingsPage.Visibility=section=="Settings"?Visibility.Visible:Visibility.Collapsed;
@@ -100,8 +99,7 @@ public partial class SettingsWindow : Window
         PlacementPage.Visibility=section=="Placement"?Visibility.Visible:Visibility.Collapsed;
         UpdatesPage.Visibility=section=="Updates"?Visibility.Visible:Visibility.Collapsed;
         EffectsPage.Visibility=section=="Effects"?Visibility.Visible:Visibility.Collapsed;
-        HotkeysPage.Visibility=section=="Hotkeys"?Visibility.Visible:Visibility.Collapsed;
-        foreach(var button in new[]{WheelsNav,SettingsNav,EffectsNav,HotkeysNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(39,33,50):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(223,201,255):Color.FromRgb(151,138,167)); }
+        foreach(var button in new[]{WheelsNav,SettingsNav,EffectsNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(39,33,50):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(223,201,255):Color.FromRgb(151,138,167)); }
     }
     private void RestoreDefaults(object sender,RoutedEventArgs e)=>model.RestoreDefaults((string)((FrameworkElement)sender).Tag);
     private void PreviewMaxEffect(object sender,RoutedEventArgs e)
@@ -110,9 +108,6 @@ public partial class SettingsWindow : Window
         if(model.AnimateWheels&&SystemParameters.ClientAreaAnimation)EffectsDemo.StartMaximumEffect();
     }
     private void PreviewMuteEffect(object sender,RoutedEventArgs e)=>EffectsDemo.Wheel!.Muted=!EffectsDemo.Wheel.Muted;
-    private void AddHotkey(object sender,RoutedEventArgs e)=>model.AddHotkey();
-    private void RemoveHotkey(object sender,RoutedEventArgs e) {if(((FrameworkElement)sender).DataContext is HotkeyBinding row)model.RemoveHotkey(row);}
-    private void ApplyHotkeys(object sender,RoutedEventArgs e)=>model.ApplyHotkeys();
     private void NewProfile(object sender,RoutedEventArgs e)=>model.AddProfile(false);
     private void DuplicateProfile(object sender,RoutedEventArgs e)=>model.AddProfile(true);
     private void RemoveProfile(object sender,RoutedEventArgs e)=>model.RemoveProfile();

@@ -69,8 +69,6 @@ public sealed class Preferences
     public int WheelSizePercent { get; set; } = 100;
     public bool AnimateWheels { get; set; } = true;
     public EffectSettings Effects {get;set;}=new();
-    public bool HotkeysEnabled {get;set;}
-    public List<HotkeyBinding> Hotkeys {get;set;}=HotkeyBinding.Defaults();
     public string ScreenEdge { get; set; } = "Left";
     public string MonitorId { get; set; } = "";
     public int PositionPercent { get; set; } = 50;
@@ -112,7 +110,7 @@ public sealed class SettingsStore
         {
             var p = File.Exists(FilePath) ? JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath), options) ?? new() : new Preferences();
             p.Wheels ??= new();
-            p.Effects??=new();p.Effects.Normalize();p.Hotkeys=(p.Hotkeys??HotkeyBinding.Defaults()).Where(h=>h!=null).Take(20).ToList();
+            p.Effects??=new();p.Effects.Normalize();
             p.UpdateChannel=p.UpdateChannel=="Beta"?"Beta":"Stable";
             p.Wheels = p.Wheels.Where(w => w != null).Take(12).ToList();
             if (p.Wheels.Count == 0) p.Wheels.Add(new Wheel());
