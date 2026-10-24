@@ -20,7 +20,7 @@ public sealed class WheelControl : FrameworkElement
     public Wheel? Wheel { get => (Wheel?)GetValue(WheelProperty); set => SetValue(WheelProperty, value); }
     public double DisplayLevel { get => (double)GetValue(DisplayLevelProperty); set => SetValue(DisplayLevelProperty, value); }
     internal static readonly DependencyProperty MaximumEffectProgressProperty=DependencyProperty.Register("MaximumEffectProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
-    public static readonly DependencyProperty EffectsEnabledProperty=DependencyProperty.Register(nameof(EffectsEnabled),typeof(bool),typeof(WheelControl),new PropertyMetadata(true,(d,e)=> {if(!(bool)e.NewValue) {var control=(WheelControl)d;control.StopMaximumEffect();control.StopNumberTransition();control.StopMuteFeedback();control.StopShiftFeedback();control.StopUnmuteFeedback();}}));
+    public static readonly DependencyProperty EffectsEnabledProperty=DependencyProperty.Register(nameof(EffectsEnabled),typeof(bool),typeof(WheelControl),new PropertyMetadata(true,(d,e)=> {if(!(bool)e.NewValue) {var control=(WheelControl)d;control.StopMaximumEffect();control.StopNumberTransition();control.StopMuteFeedback();control.StopShiftFeedback();control.StopUnmuteFeedback();control.AnimateLevel();control.AnimateScale(control.active?1.04:1);}}));
     public bool EffectsEnabled {get=>(bool)GetValue(EffectsEnabledProperty);set=>SetValue(EffectsEnabledProperty,value);}
     public static readonly DependencyProperty EffectsProperty=DependencyProperty.Register(nameof(Effects),typeof(EffectSettings),typeof(WheelControl),new PropertyMetadata(null,(d,e)=>
     {
@@ -270,7 +270,7 @@ public sealed class WheelControl : FrameworkElement
     private void AnimateLevel()
     {
         var target = Wheel?.Level ?? 0;
-        if (!SystemParameters.ClientAreaAnimation) {levelClock=null;BeginAnimation(DisplayLevelProperty, null); DisplayLevel = target; return; }
+        if (!EffectsEnabled||!SystemParameters.ClientAreaAnimation) {levelClock=null;BeginAnimation(DisplayLevelProperty, null); DisplayLevel = target; return; }
         var current = DisplayLevel;
         levelClock=(AnimationClock)new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(400)) { EasingFunction = new PowerEase { Power = 5, EasingMode = EasingMode.EaseOut } }.CreateClock(true);
         ApplyAnimationClock(DisplayLevelProperty,levelClock);
@@ -279,7 +279,7 @@ public sealed class WheelControl : FrameworkElement
     {
         var scale = RenderTransform as ScaleTransform;
         if (scale == null) { RenderTransformOrigin = new Point(0, .5); RenderTransform = scale = new ScaleTransform(1, 1); }
-        var animation = new DoubleAnimation(scale.ScaleX,target, TimeSpan.FromMilliseconds(SystemParameters.ClientAreaAnimation ? 500 : 0)) { EasingFunction = new ExponentialEase { Exponent = 10, EasingMode = EasingMode.EaseOut } };
+        var animation = new DoubleAnimation(scale.ScaleX,target, TimeSpan.FromMilliseconds(EffectsEnabled&&SystemParameters.ClientAreaAnimation ? 500 : 0)) { EasingFunction = new ExponentialEase { Exponent = 10, EasingMode = EasingMode.EaseOut } };
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, animation); scale.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
     }
     public void Adjust(double delta)=>AdjustInput(delta,Native.ShiftDown,Environment.TickCount64);

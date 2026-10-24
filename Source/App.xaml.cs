@@ -25,7 +25,6 @@ public partial class App : Application
     private RegisteredWaitHandle? exitWait;
     private static string? logPath;
     public static bool Exiting { get; private set; }
-    [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr icon);
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -47,7 +46,7 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.10.0-beta.3 version again. Your saved wheels will be kept.", "WaveWheels 0.10.0-beta.3 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 1.10.1 version again. Your saved wheels will be kept.", "WaveWheels 1.10.1 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")) settingsSignal.Set();
             Shutdown();return;
         }
@@ -70,7 +69,7 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 0.10.0-beta.3",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 1.10.1",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
         var modeItem=new Forms.ToolStripMenuItem(model!.AudioModeTitle){Enabled=false};menu.Items.Add(modeItem);
         var profilesMenu=new Forms.ToolStripMenuItem("Profiles"){Enabled=model.Connected};
@@ -88,13 +87,9 @@ public partial class App : Application
         model.Profiles.CollectionChanged+=(_,e)=> {if(e.NewItems!=null)foreach(WheelProfile profile in e.NewItems)profile.PropertyChanged+=(_,_)=>RefreshProfiles();RefreshProfiles();};
         model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.ActiveProfile))RefreshProfiles();if(e.PropertyName==nameof(model.Connected)) {profilesMenu.Enabled=model.Connected;modeItem.Text=model.AudioModeTitle;if(tray!=null)tray.Text="WaveWheels · "+(model.Connected?"Wave Link connected":"Windows audio · Wave Link disconnected");}};
         menu.Items.Add("Check for updates",null,async(_,_)=>await model.CheckForUpdatesAsync());
-        var enabled=new Forms.ToolStripMenuItem("Enable edge scrolling"){Checked=model!.EdgeEnabled,CheckOnClick=true};
-        enabled.CheckedChanged+=(_,_)=> {model.EdgeEnabled=enabled.Checked;};
-        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.EdgeEnabled))enabled.Checked=model.EdgeEnabled;};
-        menu.Items.Add(enabled);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 0.10.0-beta.3 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 1.10.1 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()
@@ -117,19 +112,8 @@ public partial class App : Application
     }
     private static Icon CreateIcon()
     {
-        using var bitmap=new Bitmap(32,32);
-        using(var g=Graphics.FromImage(bitmap))
-        {
-            g.SmoothingMode=System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            g.Clear(System.Drawing.Color.Transparent);
-            using var background=new SolidBrush(System.Drawing.Color.FromArgb(18,30,46));
-            g.FillEllipse(background,0,0,32,32);
-            using var pen=new System.Drawing.Pen(System.Drawing.Color.FromArgb(89,217,231),3.4f);
-            g.DrawArc(pen,5,5,22,22,90,270);
-            using var dot=new SolidBrush(System.Drawing.Color.FromArgb(225,239,250));
-            g.FillEllipse(dot,13,13,6,6);
-        }
-        var h=bitmap.GetHicon();try{return (Icon)Icon.FromHandle(h).Clone();}finally{DestroyIcon(h);}
+        var resource=GetResourceStream(new Uri("pack://application:,,,/WaveWheels;component/Assets/WaveWheels.ico"))??throw new IOException("Application icon is missing.");
+        using var stream=resource.Stream;using var icon=new Icon(stream,32,32);return (Icon)icon.Clone();
     }
     private void OpenConfiguration()
     {

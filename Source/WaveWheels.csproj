@@ -10,7 +10,7 @@
     <ApplicationIcon>Assets/WaveWheels.ico</ApplicationIcon>
     <AssemblyName>WaveWheels</AssemblyName>
     <RootNamespace>WaveWheels</RootNamespace>
-    <Version>0.10.0-beta.3</Version>
+    <Version>1.10.1</Version>
     <Description>Edge-triggered volume wheels for Elgato Wave Link</Description>
     <Company>WaveWheels</Company>
     <Product>WaveWheels</Product>
@@ -20,4 +20,5 @@
     <!-- WPF owns the process and reads PerMonitorV2 from its manifest. WinForms is only used for NotifyIcon. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
+  <ItemGroup><Resource Include="Assets/WaveWheels.ico" /></ItemGroup>
 </Project>

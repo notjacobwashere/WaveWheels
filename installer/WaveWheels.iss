@@ -95,16 +95,16 @@ begin
     else Log('WaveWheels intro: existing install or settings');
   if WizardSilent() then Log('WaveWheels intro: silent skip');
 
-  IntroControlsPage := CreateOutputMsgPage(wpWelcome, 'Meet WaveWheels',
-    'Your mix, one scroll away.',
+  IntroControlsPage := CreateOutputMsgPage(wpWelcome, 'WaveWheels setup',
+    'Audio controls',
     'WaveWheels runs quietly in the system tray. Without Wave Link, one wheel controls your Windows output volume. Connect Wave Link to use multiple channel wheels.' + #13#10#13#10 +
     'REVEAL AND ADJUST' + #13#10 +
     'Scroll at the left screen edge to bring out your wheels. The opening scroll does not change volume. Pause briefly, move over a wheel, then scroll again to adjust it.' + #13#10#13#10 +
     'Click a wheel to mute or unmute; scroll to adjust volume. Settings can enable a dedicated speaker button and drag adjustment instead. Scrolling at the very edge only opens the wheels.' + #13#10#13#10 +
     'Configuration opens after Setup. Closing it keeps WaveWheels running; use the tray icon near the clock to open it again.');
 
-  IntroSettingsPage := CreateOutputMsgPage(IntroControlsPage.ID, 'Make it yours',
-    'A quick first setup, then tune it your way.',
+  IntroSettingsPage := CreateOutputMsgPage(IntroControlsPage.ID, 'Configuration',
+    'Configuration options',
     '1. Customize the Windows volume wheel, or open Wave Link and bind multiple wheels to its input channels and mixes. Wave Link wheels return automatically when connected.' + #13#10 +
     '2. Choose Preview wheels and try scrolling over a wheel.' + #13#10#13#10 +
     'Profiles - save layouts and optionally switch for focused apps.' + #13#10 +

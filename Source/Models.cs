@@ -54,7 +54,6 @@ public sealed class Wheel : Observable
 public sealed class Preferences
 {
     public int SchemaVersion { get; set; } = 1;
-    public bool EdgeEnabled { get; set; } = true;
     public int EdgeWidth { get; set; } = 6;
     public int IdleMilliseconds { get; set; } = 1000;
     public int ScrollStepPercent { get; set; } = 1;

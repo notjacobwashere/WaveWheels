@@ -64,7 +64,7 @@ On **Profiles**, turn on automatic switching and add executable names such as `d
 
 Use **Export profile** or **Export all** to save a `.wavewheels.json` file. **Import profiles** adds independent copies and resolves duplicate names. Files preserve wheels, bindings, volume limits, and app rules, but exclude live levels and global settings. Check channel bindings when moving between PCs.
 
-In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. Fractional hardware input accumulates into complete configured steps, with fresh input state after a volume boundary. Hold **Shift** over a wheel to snap between larger increments, with a 180 ms cooldown. Its separate setting defaults to 20% and supports 5–50%. **Show Shift increment dots** is off by default; enable it for dots at the snap positions, without numeric labels. Animation effects respect the animation setting and Windows motion preference. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
+In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. Fractional hardware input accumulates into complete configured steps, with fresh input state after a volume boundary. Hold **Shift** over a wheel to snap between larger increments, with a 180 ms cooldown. Its separate setting defaults to 20% and supports 5–50%. **Show Shift increment dots** is off by default; enable it for dots at the snap positions, without numeric labels. **Toggle animations** controls opening, hover, volume, mute, and reorder motion, respecting Windows motion preferences. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
 
 ## Application blacklist
 
@@ -79,6 +79,8 @@ Enable **Start at Windows sign-in** on the **Startup** page to register the per-
 Use the in-app installation button or run a newer Setup to upgrade an installed copy. Releases before 0.6.0 need a one-time Setup upgrade to gain the in-app install button. Setup closes the installed app gracefully and preserves saved preferences. If startup was already enabled, it updates that registration to the installed location. Uninstall removes the app and its startup entry while keeping preferences for a future reinstall.
 
 When switching from an early portable build, quit that older tray instance first. For manual portable upgrades, quit before replacing files; if you move the folder, toggle startup off and on to update its path.
+
+Screen-edge activation is always enabled except for blacklisted applications. The configuration window, tray, and executable share the same app icon.
 
 ## Audio modes
 

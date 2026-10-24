@@ -32,7 +32,7 @@ public sealed class MainViewModel : Observable
     public int DisplayWheelCount {get=>Connected?Wheels.Count:1;set {if(Connected)WheelCount=value;}}
     public Wheel? EditorWheel {get=>Connected?SelectedWheel:WindowsWheel;set {if(Connected)SelectedWheel=value;}}
     public string AudioModeTitle=>Connected?"WAVE LINK CONNECTED":"WINDOWS AUDIO MODE";
-    public string AudioModeDescription=>Connected?"Your saved Wave Link wheels are active. If Wave Link disconnects, one Windows volume wheel takes over automatically.":"Wave Link is disconnected. One wheel controls your overall Windows output volume. Its name and color are saved separately. Connect Wave Link to restore your saved wheels and add more.";
+    public string AudioModeDescription=>Connected?"Wave Link channels are active. Windows Audio is used automatically if the connection is lost.":"Wave Link is disconnected. Windows Audio controls the default output. Connect Wave Link to restore your saved channel wheels.";
     public string ModeAccent=>Connected?"#8ED7BB":"#F4B16F";
     public string WindowsAudioStatus=>Connected?"Wave Link controls are active. Your Windows wheel is saved for automatic fallback.":WindowsWheel.Detail;
     public string WheelArrangementHint=>Connected?"Drag the handle · Alt + ↑ / ↓ to move selection":"One Windows volume wheel · connect Wave Link to add more";
@@ -50,7 +50,7 @@ public sealed class MainViewModel : Observable
         catch(Exception ex) when(ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException) {Message="Could not start Wave Link: "+ex.Message;}
     }
 
-    public string EffectColorStatus=>EffectSettings.ValidColor(Effects.NormalColor)&&EffectSettings.ValidColor(Effects.MutedColor)&&EffectSettings.ValidColor(Effects.MutedButtonColor)?"Colors use #RRGGBB. Changes appear immediately.":"Enter complete #RRGGBB colors. Incomplete colors use the original default until valid.";
+    public string EffectColorStatus=>EffectSettings.ValidColor(Effects.NormalColor)&&EffectSettings.ValidColor(Effects.MutedColor)&&EffectSettings.ValidColor(Effects.MutedButtonColor)?"Use #RRGGBB hex colors.":"Enter a valid #RRGGBB color. Invalid values use the default.";
     public void RestoreDefaults(string page)
     {
         var d=new Preferences();
@@ -61,7 +61,7 @@ public sealed class MainViewModel : Observable
             case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;UseMuteButton=d.UseMuteButton;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
             case "Wheels":if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
-            case "Startup":StartupEnabled=false;EdgeEnabled=true;break;
+            case "Startup":StartupEnabled=false;break;
             case "Connection":PortText="";Reconnect();break;
             case "Updates":CheckUpdatesAutomatically=true;UpdateChannel="Stable";break;
         }
@@ -175,20 +175,30 @@ public sealed class MainViewModel : Observable
         get { try { return !isolated && startup.IsRegistered; } catch { return false; } }
         set
         {
-            try { if (isolated) throw new InvalidOperationException("Startup changes are disabled in the isolated test profile."); startup.SetEnabled(value); Message = value ? "WaveWheels will start quietly at Windows sign-in." : "Sign-in startup is off."; }
+            try { if (isolated) throw new InvalidOperationException("Startup changes are disabled in the isolated test profile."); startup.SetEnabled(value); Message = value ? "Launch at Windows sign-in enabled." : "Sign-in startup is off."; }
             catch (Exception ex) { Message = "Could not update startup: " + ex.Message; }
             Changed(); Changed(nameof(StartupDescription));
         }
     }
     public string StartupDescription { get { try { return isolated ? "Isolated test profile · startup registration disabled" : startup.Description; } catch { return "Windows startup registration is unavailable."; } } }
-    public bool EdgeEnabled { get => Preferences.EdgeEnabled; set { if (value == Preferences.EdgeEnabled) return; Preferences.EdgeEnabled = value; Changed(); ScheduleSave(); LayoutChanged?.Invoke(); } }
     public int WheelSizePercent
     {
         get => Preferences.WheelSizePercent;
-        set { value = Math.Clamp(value, 50, 180); if (value == Preferences.WheelSizePercent) return; Preferences.WheelSizePercent = value; Changed(); Changed(nameof(WheelSizeLabel)); Changed(nameof(PreviewWidth)); ScheduleSave(); AppearanceChanged?.Invoke(); }
+        set { value = Math.Clamp(value, 50, 180); if (value == Preferences.WheelSizePercent) return; Preferences.WheelSizePercent = value; Changed(); Changed(nameof(WheelSizeLabel)); Changed(nameof(PreviewWidth));Changed(nameof(PreviewHeight)); ScheduleSave(); AppearanceChanged?.Invoke(); }
     }
     public string WheelSizeLabel => WheelSizePercent + "%";
-    public double PreviewWidth => Math.Min(360, 300 * WheelSizePercent / 100d);
+    public double PreviewCanvasWidth
+    {
+        get
+        {
+            var name=string.IsNullOrWhiteSpace(EditorWheel?.Name)?"UNTITLED":EditorWheel.Name.ToUpperInvariant();
+            var text=new System.Windows.Media.FormattedText(name,System.Globalization.CultureInfo.CurrentUICulture,FlowDirection.LeftToRight,new System.Windows.Media.Typeface(new System.Windows.Media.FontFamily("Segoe UI"),FontStyles.Normal,FontWeights.SemiBold,FontStretches.Normal),12,System.Windows.Media.Brushes.White,1){MaxTextWidth=188,MaxLineCount=1,Trimming=TextTrimming.CharacterEllipsis};
+            return Math.Max(120,60+Math.Min(232,Math.Max(64,text.Width+44)))+OverlaySizing.EffectPadding*2;
+        }
+    }
+    public double PreviewWidth => PreviewCanvasWidth*WheelSizePercent/100d;
+    private void RefreshPreviewSize() {Changed(nameof(PreviewCanvasWidth));Changed(nameof(PreviewWidth));}
+    public double PreviewHeight=>Math.Clamp(216*WheelSizePercent/100d,150,248);
     public bool AnimateWheels
     {
         get => Preferences.AnimateWheels;
@@ -198,7 +208,7 @@ public sealed class MainViewModel : Observable
     public Wheel? SelectedWheel
     {
         get => selected;
-        set { if (Set(ref selected, value)) { Changed(nameof(EditorWheel));UpdateMixChoices(); SelectionChanged?.Invoke(); } }
+        set { if (Set(ref selected, value)) { Changed(nameof(EditorWheel));RefreshPreviewSize();UpdateMixChoices(); SelectionChanged?.Invoke(); } }
     }
     public event Action? LayoutChanged;
     public event Action? AppearanceChanged;
@@ -233,7 +243,7 @@ public sealed class MainViewModel : Observable
         Client.Updated += data => dispatcher.BeginInvoke(() => Update(data));
         Client.Log = line => App.WriteLog(line);
         SelectedWheel = Wheels.FirstOrDefault();
-        Message = store.Warning ?? "Scroll at the left edge of a screen to bring up your wheels.";
+        Message = store.Warning ?? "Scroll at the selected screen edge to open audio controls.";
         WindowsWheel.Detail="Waiting for the Windows playback device…";
         WindowsWheel.PropertyChanged+=WindowsWheelChanged;
         windowsAudioTimer.Tick+=(_,_)=>RefreshWindowsAudio();
@@ -391,9 +401,10 @@ public sealed class MainViewModel : Observable
         if (e.NewItems != null) foreach (Wheel w in e.NewItems) w.PropertyChanged += WheelChanged;
         UpdatePositions(); Changed(nameof(WheelCount));Changed(nameof(DisplayWheelCount)); ScheduleSave(); Update(snapshot); LayoutChanged?.Invoke();
     }
-    private void WindowsWheelChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName is nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.MaximumVolumePercent))ScheduleSave();}
+    private void WindowsWheelChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName is nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.MaximumVolumePercent))ScheduleSave();if(e.PropertyName==nameof(Wheel.Name))RefreshPreviewSize();}
     private void WheelChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if(e.PropertyName==nameof(Wheel.Name))RefreshPreviewSize();
         if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId) or nameof(Wheel.MaximumVolumePercent))) return;
         if(e.PropertyName==nameof(Wheel.MaximumVolumePercent)) {ScheduleSave();StateChanged?.Invoke();return;}
         if (e.PropertyName == nameof(Wheel.ChannelId) && sender is Wheel wheel)
@@ -413,7 +424,7 @@ public sealed class MainViewModel : Observable
         ReplaceChoices(Channels, choices.ToArray());
         UpdateMixChoices(); SyncWheels();
         Changed(nameof(Status)); Changed(nameof(Connected)); Changed(nameof(ConnectionLabel)); Changed(nameof(ChannelCount));
-        Changed(nameof(DisplayWheels));Changed(nameof(DisplayWheelCount));Changed(nameof(EditorWheel));Changed(nameof(AudioModeTitle));Changed(nameof(AudioModeDescription));Changed(nameof(ModeAccent));Changed(nameof(WindowsAudioStatus));Changed(nameof(WheelArrangementHint));
+        Changed(nameof(DisplayWheels));Changed(nameof(DisplayWheelCount));Changed(nameof(EditorWheel));RefreshPreviewSize();Changed(nameof(AudioModeTitle));Changed(nameof(AudioModeDescription));Changed(nameof(ModeAccent));Changed(nameof(WindowsAudioStatus));Changed(nameof(WheelArrangementHint));
         if(modeChanged) {if(!Connected&&!isolated)RefreshWindowsAudio();SelectionChanged?.Invoke();LayoutChanged?.Invoke();Message=Connected?"Wave Link reconnected. Your saved Wave Link wheels are active.":"Wave Link disconnected. Switched to your saved Windows audio wheel.";}
         StateChanged?.Invoke();
     }

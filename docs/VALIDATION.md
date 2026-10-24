@@ -32,3 +32,6 @@ Blacklist regressions cover exact/case-insensitive/dotted executable names, reje
 The production animation clocks are checked for staggered per-row delays, completed slide/scale poses, immediate reduced-motion placement, Shift bounce strength/direction/settling/reversal continuity, no feedback on capped/cooldown/blocked input, and unmute surface-color recovery/lifecycle cleanup. Wave Link launch discovery checks desktop install paths, registry records, and Store package manifests; physical application launching and subjective animation feel remain manual checks.
 
 Beta 3 also verifies whole-wheel mute as the default, ignored clicks in empty artwork space, speaker-only muting in optional button mode, persisted/live preview bindings and restore defaults, the Windows Audio default label, and hidden channel/scope fields that reappear on Wave Link connection.
+
+
+1.10.1 verifies the packaged application icon in the header/window, preview containment with long labels at 1000/1160 px window widths and 50/100/180% wheel sizes, and immediate volume-arc updates with animations disabled. The preview uses label-aware width and effect padding. The obsolete edge activation preference and both toggle surfaces are removed; existing blacklisting and opening-scroll protection remain covered. Configuration titles and descriptions use concise labels.

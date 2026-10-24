@@ -34,7 +34,7 @@ internal static class UiRendering
                     new Channel("game","Game",.82,false,true,new[]{new ChannelMix("personal",.82,false)}),
                     new Channel("voice","Voice chat",.55,false,true,new[]{new ChannelMix("personal",.55,false)})
                 },new[]{new Mix("personal","Headphones")}));
-                vm.SelectedWheel=vm.Wheels[0];vm.WheelSizePercent=100;vm.AnimateWheels=true;vm.ScreenEdge="Left";vm.MonitorId="";vm.PositionPercent=50;vm.WheelSpacing=0;vm.EdgeEnabled=true;vm.CheckUpdatesAutomatically=true;
+                vm.SelectedWheel=vm.Wheels[0];vm.WheelSizePercent=100;vm.AnimateWheels=true;vm.ScreenEdge="Left";vm.MonitorId="";vm.PositionPercent=50;vm.WheelSpacing=0;vm.CheckUpdatesAutomatically=true;
                 vm.ScrollStepPercent=1;vm.ScrollAccelerationEnabled=true;vm.IdleMilliseconds=1000;vm.AutomaticProfilesEnabled=false;
                 foreach(var wheel in vm.Wheels)wheel.MaximumVolumePercent=100;
                 vm.Message="Preview with example channels · configuration rendered without desktop input";
@@ -118,6 +118,7 @@ internal static class UiRendering
                 ((Button)window.FindName("WheelsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 root.Measure(new Size(1000,740));root.Arrange(new Rect(0,0,1000,740));root.UpdateLayout();
                 Save(root,Path.Combine(Path.GetDirectoryName(path)!,Path.GetFileNameWithoutExtension(path)+"-compact.png"),1000,740);
+                ConfigurationLayoutTests.Run(vm,window,root,Path.GetDirectoryName(path)!);
                 // Exercise the actual collection move and persistence code without a visible window.
                 var first=vm.Wheels[0];var original=vm.Wheels.Select(w=>w.Id).ToArray();
                 vm.MoveToInsertion(first,vm.Wheels.Count);

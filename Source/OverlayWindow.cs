@@ -219,7 +219,7 @@ public sealed class OverlayWindow : Window
                 if(right>left&&bottom>top)rows.Add(new(i,left,top,right,bottom,c.Wheel?.Available==true));
             }
         }
-        hitState = new(shown,model.EdgeEnabled&&!model.IsApplicationBlocked,model.Preferences.EdgeWidth,generation,rows.ToArray(),model.ScreenEdge,model.MonitorId,screens);
+        hitState = new(shown,!model.IsApplicationBlocked,model.Preferences.EdgeWidth,generation,rows.ToArray(),model.ScreenEdge,model.MonitorId,screens);
     }
     private IntPtr WindowProc(IntPtr hwnd,int message,IntPtr wp,IntPtr lp,ref bool handled)
     {

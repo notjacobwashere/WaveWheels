@@ -268,7 +268,7 @@ public partial class SettingsWindow : Window
         foreach(var wheel in model.Wheels)if(WheelList.ItemContainerGenerator.ContainerFromItem(wheel) is ListBoxItem item)before[wheel.Id]=item.TranslatePoint(new Point(0,0),WheelList).Y;
         change();WheelList.UpdateLayout();
         foreach(var wheel in model.Wheels)if(WheelList.ItemContainerGenerator.ContainerFromItem(wheel) is ListBoxItem item)item.RenderTransform=Transform.Identity;
-        if(!SystemParameters.ClientAreaAnimation)return;
+        if(!model.AnimateWheels||!SystemParameters.ClientAreaAnimation)return;
         foreach(var wheel in model.Wheels)
         {
             if(!before.TryGetValue(wheel.Id,out var old)||WheelList.ItemContainerGenerator.ContainerFromItem(wheel) is not ListBoxItem item)continue;
