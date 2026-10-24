@@ -154,27 +154,40 @@ public partial class SettingsWindow : Window
     private void RowDown(object sender,RoutedEventArgs e) { if(sender is Button {Tag:Wheel wheel}) { model.SelectedWheel=wheel; AnimateReorder(()=>model.Move(1)); } }
     private void Preview(object sender,RoutedEventArgs e) => model.Preview();
     private void Reconnect(object sender,RoutedEventArgs e) => model.Reconnect();
-    private void SetColor(object sender,RoutedEventArgs e) { if(model.SelectedWheel!=null && sender is Button b && b.Tag is string color)model.SelectedWheel.Color=color; }
+    private void FindAndStartWaveLink(object sender,RoutedEventArgs e)
+    {
+        if(model.Isolated) {model.Message="Launching Wave Link is disabled in an isolated profile.";return;}
+        var installed=WaveLinkLauncher.Find(model.Preferences.WaveLinkExecutable);
+        if(installed!=null)model.StartWaveLink(installed);else {model.Message="Wave Link was not found automatically. Select its executable if it is installed.";LocateWaveLink(sender,e);}
+    }
+    private void LocateWaveLink(object sender,RoutedEventArgs e)
+    {
+        if(model.Isolated)return;
+        var dialog=new OpenFileDialog{Title="Locate Wave Link to start it",Filter="Wave Link (WaveLink.exe)|WaveLink.exe|Applications (*.exe)|*.exe",CheckFileExists=true};
+        if(dialog.ShowDialog(this)==true)model.StartWaveLink(new(dialog.FileName));
+    }
+    private void SetColor(object sender,RoutedEventArgs e) { if(model.EditorWheel!=null && sender is Button b && b.Tag is string color)model.EditorWheel.Color=color; }
     private void ApplyHex(object sender,RoutedEventArgs e)
     {
         var text=ColorBox.Text.Trim();
         if(!text.StartsWith('#'))text="#"+text;
-        if(Regex.IsMatch(text,"^#[0-9A-Fa-f]{6}$") && model.SelectedWheel!=null) model.SelectedWheel.Color=text.ToUpperInvariant();
+        if(Regex.IsMatch(text,"^#[0-9A-Fa-f]{6}$") && model.EditorWheel!=null) model.EditorWheel.Color=text.ToUpperInvariant();
         else model.Message="Use a six-digit hex color, such as #36BBD3.";
         ColorBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
     }
     private void ColorKey(object sender,KeyEventArgs e) { if(e.Key==Key.Enter) {ApplyHex(sender,e);e.Handled=true;} }
     private void ChannelSelected(object sender,SelectionChangedEventArgs e) { if(ChannelBox.IsDropDownOpen)ApplyChannel(); }
     private void ChannelClosed(object? sender,EventArgs e) => ApplyChannel();
-    internal void ApplyChannel() { if(ChannelBox.SelectedValue is string id && model.SelectedWheel!=null && id!=model.SelectedWheel.ChannelId)model.SelectedWheel.ChannelId=id; }
+    internal void ApplyChannel() { if(model.Connected&&ChannelBox.SelectedValue is string id && model.SelectedWheel!=null && id!=model.SelectedWheel.ChannelId)model.SelectedWheel.ChannelId=id; }
     private void MixSelected(object sender,SelectionChangedEventArgs e) { if(MixBox.IsDropDownOpen)ApplyMix(); }
     private void MixClosed(object? sender,EventArgs e) => ApplyMix();
     private void MonitorSelected(object sender,SelectionChangedEventArgs e) {if(MonitorBox.IsDropDownOpen)ApplyMonitor();}
     private void MonitorClosed(object? sender,EventArgs e) {ApplyMonitor();QueueEditorBindings();}
     internal void ApplyMonitor() {if(MonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;}
-    private void ApplyMix() { if(MixBox.SelectedValue is string id && model.SelectedWheel!=null)model.SelectedWheel.MixId=id; }
+    private void ApplyMix() { if(model.Connected&&MixBox.SelectedValue is string id && model.SelectedWheel!=null)model.SelectedWheel.MixId=id; }
     private void DragStart(object sender,MouseButtonEventArgs e)
     {
+        if(!model.Connected)return;
         start=e.GetPosition(WheelList);dragWheel=null;
         var item=ItemsControl.ContainerFromElement(WheelList,e.OriginalSource as DependencyObject) as ListBoxItem;
         for(var element=e.OriginalSource as DependencyObject; element!=null&&element!=item; element=GetAncestorNode(element))
@@ -195,7 +208,7 @@ public partial class SettingsWindow : Window
     }
     private void DragOverWheel(object sender,DragEventArgs e)
     {
-        if(!e.Data.GetDataPresent(typeof(Wheel))) {e.Effects=DragDropEffects.None;return;}
+        if(!model.Connected||!e.Data.GetDataPresent(typeof(Wheel))) {e.Effects=DragDropEffects.None;return;}
         var point=e.GetPosition(WheelList);
         var scroll=FindChild<ScrollViewer>(WheelList);
         if(scroll!=null&&Environment.TickCount64-lastAutoScroll>45)

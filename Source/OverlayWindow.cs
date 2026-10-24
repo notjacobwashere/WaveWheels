@@ -18,6 +18,7 @@ public sealed class OverlayWindow : Window
     private readonly OverlayMotion motion;
     private readonly Viewbox viewport = new() { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
     private readonly List<WheelControl> controls = new();
+    private readonly List<OverlayMotion> rowMotions=new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(32) };
     private readonly EdgeHook hook = new();
     private readonly OverlayInputRouter input = new();
@@ -79,13 +80,14 @@ public sealed class OverlayWindow : Window
     private void Rebuild()
     {
         generation++; // Drop queued input that targeted the previous layout/profile.
-        stack.Children.Clear(); controls.Clear(); stack.Children.Add(new Border { Height = OverlaySizing.EffectPadding });
-        foreach (var wheel in model.Wheels)
+        stack.Children.Clear(); controls.Clear();rowMotions.Clear(); stack.Children.Add(new Border { Height = OverlaySizing.EffectPadding });
+        foreach (var wheel in model.DisplayWheels)
         {
-            var c = new WheelControl { Wheel = wheel, Effects=model.Effects, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.Wheels.Count-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, Effects=model.Effects, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.DisplayWheelCount-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
-            c.Selected += w => { model.SelectedWheel = w; lastActivity = Environment.TickCount64; };
-            controls.Add(c); stack.Children.Add(c);
+            c.Selected += w => { model.EditorWheel = w; lastActivity = Environment.TickCount64; };
+            var row=new Border{Child=c};var rowMotion=new OverlayMotion(row);rowMotion.SetEdge(model.ScreenEdge);
+            controls.Add(c);rowMotions.Add(rowMotion);stack.Children.Add(row);
         }
         stack.Children.Add(new Border { Height = OverlaySizing.EffectPadding });
         if (shown) Position();
@@ -94,7 +96,12 @@ public sealed class OverlayWindow : Window
     private void ApplyAppearance()
     {
         foreach(var control in controls)control.EffectsEnabled=model.AnimateWheels;
-        RefreshScreens();motion.SetEdge(model.ScreenEdge);
+        RefreshScreens();motion.SetEdge(model.ScreenEdge);foreach(var row in rowMotions)row.SetEdge(model.ScreenEdge);
+        if(!model.AnimateWheels||!SystemParameters.ClientAreaAnimation)
+        {
+            foreach(var row in rowMotions)row.Enter(70,false,false,()=>{});
+            if(shown)motion.Enter(MotionDistance,false,false,()=>{});
+        }
         var selected=model.MonitorId.Length>0?screens.FirstOrDefault(s=>MonitorSelection.Matches(model.MonitorId,s.Monitor)):null;
         if(shown&&selected!=null) {activeScreen=selected.Screen;activeDpi=selected.Region.Dpi;}
         if (shown) Position();
@@ -128,7 +135,7 @@ public sealed class OverlayWindow : Window
             else if (!shown || (state.Visible && state.Generation != generation)) return;
             lastActivity = Environment.TickCount64;
             var index = route.Index;
-            if (index >= 0 && index < controls.Count) { model.SelectedWheel = controls[index].Wheel; controls[index].Adjust(delta/120d); }
+            if (index >= 0 && index < controls.Count) { model.EditorWheel = controls[index].Wheel; controls[index].Adjust(delta/120d); }
         });
         return true;
     }
@@ -147,10 +154,10 @@ public sealed class OverlayWindow : Window
     private void Position()
     {
         if (activeScreen == null) return;
-        var size = OverlaySizing.Calculate(model.Wheels.Count, model.WheelSizePercent, activeScreen.WorkingArea.Width/activeDpi, activeScreen.WorkingArea.Height/activeDpi,model.WheelSpacing);
+        var size = OverlaySizing.Calculate(model.DisplayWheelCount, model.WheelSizePercent, activeScreen.WorkingArea.Width/activeDpi, activeScreen.WorkingArea.Height/activeDpi,model.WheelSpacing);
         Width = size.Width; Height = size.Height;
         viewport.Width = OverlaySizing.StackWidth*size.Scale;
-        viewport.Height = OverlaySizing.StackHeight(model.Wheels.Count,model.WheelSpacing)*size.Scale;
+        viewport.Height = OverlaySizing.StackHeight(model.DisplayWheelCount,model.WheelSpacing)*size.Scale;
         var area=activeScreen.WorkingArea;var bounds=activeScreen.Bounds;var w=(int)Math.Ceiling(Width*activeDpi);var h=(int)Math.Ceiling(Height*activeDpi);var fraction=model.PositionPercent/100d;
         var horizontal=model.ScreenEdge is "Top" or "Bottom";
         var x=horizontal?area.Left+(int)((area.Width-w)*fraction):model.ScreenEdge=="Right"?bounds.Right-w:bounds.Left;
@@ -165,23 +172,26 @@ public sealed class OverlayWindow : Window
         if(!model.RefreshInteractionPolicy())return;
         generation++; activeScreen = screen; activeDpi = dpi;
         var wasHidden = !IsVisible;
-        model.SelectedWheel = model.Wheels.FirstOrDefault();
+        model.EditorWheel = model.DisplayWheels.FirstOrDefault();
         if (wasHidden)
         {
             // Set the hidden pose before Show, preventing a full-size flash on the first frame.
             motion.PrepareHidden(MotionDistance);
+            foreach(var row in rowMotions)row.PrepareHidden(70);
             Show();
         }
         shown = true; Position(); lastActivity = Environment.TickCount64;
         foreach (var c in controls) c.ResetScroll();
-        motion.Enter(MotionDistance, wasHidden, model.AnimateWheels, () => { });
+        var animate=model.AnimateWheels&&SystemParameters.ClientAreaAnimation;
+        motion.Enter(MotionDistance, wasHidden, animate, () => { });
+        if(wasHidden)for(var i=0;i<rowMotions.Count;i++)rowMotions[i].Enter(70,true,animate,()=>{},OverlayMotion.StaggerDelay(i));
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateHits);
     }
     private void Dismiss()
     {
         var current = ++generation;
         shown = false;model.SetPreviewActive(false); input.Close(); UpdateHits();
-        motion.Exit(MotionDistance, model.AnimateWheels, () => { if (generation == current && !shown) Hide(); });
+        motion.Exit(MotionDistance, model.AnimateWheels&&SystemParameters.ClientAreaAnimation, () => { if (generation == current && !shown) Hide(); });
     }
     private double MotionDistance=>model.ScreenEdge is "Top" or "Bottom"?Height:Width;
     private void ApplyApplicationBlock()

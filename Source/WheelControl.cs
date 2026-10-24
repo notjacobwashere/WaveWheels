@@ -20,7 +20,7 @@ public sealed class WheelControl : FrameworkElement
     public Wheel? Wheel { get => (Wheel?)GetValue(WheelProperty); set => SetValue(WheelProperty, value); }
     public double DisplayLevel { get => (double)GetValue(DisplayLevelProperty); set => SetValue(DisplayLevelProperty, value); }
     internal static readonly DependencyProperty MaximumEffectProgressProperty=DependencyProperty.Register("MaximumEffectProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
-    public static readonly DependencyProperty EffectsEnabledProperty=DependencyProperty.Register(nameof(EffectsEnabled),typeof(bool),typeof(WheelControl),new PropertyMetadata(true,(d,e)=> {if(!(bool)e.NewValue) {var control=(WheelControl)d;control.StopMaximumEffect();control.StopNumberTransition();control.StopMuteFeedback();}}));
+    public static readonly DependencyProperty EffectsEnabledProperty=DependencyProperty.Register(nameof(EffectsEnabled),typeof(bool),typeof(WheelControl),new PropertyMetadata(true,(d,e)=> {if(!(bool)e.NewValue) {var control=(WheelControl)d;control.StopMaximumEffect();control.StopNumberTransition();control.StopMuteFeedback();control.StopShiftFeedback();control.StopUnmuteFeedback();}}));
     public bool EffectsEnabled {get=>(bool)GetValue(EffectsEnabledProperty);set=>SetValue(EffectsEnabledProperty,value);}
     public static readonly DependencyProperty EffectsProperty=DependencyProperty.Register(nameof(Effects),typeof(EffectSettings),typeof(WheelControl),new PropertyMetadata(null,(d,e)=>
     {
@@ -53,6 +53,54 @@ public sealed class WheelControl : FrameworkElement
         muteFeedbackClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MuteFeedbackMilliseconds*100d/Effects.MuteSpeedPercent)){FillBehavior=FillBehavior.Stop}.CreateClock(true);ApplyAnimationClock(MuteFeedbackProgressProperty,muteFeedbackClock);
     }
     private void StopMuteFeedback() {muteFeedbackClock?.Controller?.Remove();muteFeedbackClock=null;BeginAnimation(MuteFeedbackProgressProperty,null);SetValue(MuteFeedbackProgressProperty,1d);}
+    private static readonly DependencyProperty UnmuteProgressProperty=DependencyProperty.Register("UnmuteProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    private AnimationClock? unmuteClock;
+    internal double UnmuteProgress=>(double)GetValue(UnmuteProgressProperty);
+    internal int UnmuteFeedbackStarts {get;private set;}
+    internal void SeekUnmuteFeedback(TimeSpan time)=>unmuteClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+    private void StartUnmuteFeedback()
+    {
+        UnmuteFeedbackStarts++;unmuteClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(620)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
+        ApplyAnimationClock(UnmuteProgressProperty,unmuteClock);
+    }
+    private void StopUnmuteFeedback() {unmuteClock?.Controller?.Remove();unmuteClock=null;BeginAnimation(UnmuteProgressProperty,null);SetValue(UnmuteProgressProperty,1d);}
+    internal static Color RecoveryColor(Color muted,Color normal,double progress)
+    {
+        var t=1-Math.Pow(1-Math.Clamp(progress,0,1),3);
+        byte Blend(byte from,byte to)=>(byte)Math.Round(from+(to-from)*t);
+        return Color.FromRgb(Blend(muted.R,normal.R),Blend(muted.G,normal.G),Blend(muted.B,normal.B));
+    }
+    private static readonly DependencyProperty ShiftFeedbackProgressProperty=DependencyProperty.Register("ShiftFeedbackProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    private AnimationClock? shiftFeedbackClock;
+    private double shiftStrength,shiftDirection;
+    private ShiftPose shiftInitial;
+    internal readonly record struct ShiftPose(double X,double Y,double Angle,double Stretch);
+    internal const int ShiftFeedbackMilliseconds=620;
+    internal int ShiftFeedbackStarts {get;private set;}
+    internal double ShiftFeedbackProgress=>(double)GetValue(ShiftFeedbackProgressProperty);
+    internal ShiftPose CurrentShiftPose=>ShiftSpring(ShiftFeedbackProgress,shiftStrength,shiftDirection,shiftInitial);
+    internal static ShiftPose ShiftSpring(double progress,double strength,double direction,ShiftPose initial=default)
+    {
+        var p=Math.Clamp(progress,0,1);var envelope=Math.Pow(1-p,2);var carry=Math.Exp(-10*p)*(1-p);
+        return new(initial.X*carry+direction*3*Math.Sin(p*Math.PI*5)*envelope*strength,
+            initial.Y*carry-8*Math.Sin(p*Math.PI*3)*envelope*strength,
+            initial.Angle*carry+direction*5*Math.Sin(p*Math.PI*5)*envelope*strength,
+            initial.Stretch*carry+.065*Math.Sin(p*Math.PI*4)*envelope*strength);
+    }
+    private void StartShiftFeedback(double change)
+    {
+        if(Math.Abs(change)<1e-7||!EffectsEnabled||!SystemParameters.ClientAreaAnimation)return;
+        var pose=CurrentShiftPose;StopShiftFeedback();shiftInitial=pose;
+        shiftStrength=Math.Clamp(Math.Abs(change)/.2,.35,1.5);shiftDirection=Math.Sign(change);ShiftFeedbackStarts++;
+        shiftFeedbackClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(ShiftFeedbackMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
+        ApplyAnimationClock(ShiftFeedbackProgressProperty,shiftFeedbackClock);
+    }
+    internal void SeekShiftFeedback(TimeSpan time)=>shiftFeedbackClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+    private void StopShiftFeedback()
+    {
+        shiftFeedbackClock?.Controller?.Remove();shiftFeedbackClock=null;BeginAnimation(ShiftFeedbackProgressProperty,null);
+        SetValue(ShiftFeedbackProgressProperty,1d);shiftInitial=default;shiftStrength=0;
+    }
     private static readonly DependencyProperty NumberProgressProperty=DependencyProperty.Register("NumberProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     internal const int NumberTransitionMilliseconds=150;
     private AnimationClock? numberClock;
@@ -117,7 +165,7 @@ public sealed class WheelControl : FrameworkElement
         MouseEnter += (_, _) => EnterHover();
         MouseLeave += (_, _) => LeaveHover();
         hoverExitTimer.Tick+=(_,_)=>CompleteHoverExit();
-        Unloaded += (_, _) => { active=false;Effects.PropertyChanged-=EffectsChanged;hoverExitTimer.Stop();precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();StopMuteFeedback();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
+        Unloaded += (_, _) => { active=false;Effects.PropertyChanged-=EffectsChanged;hoverExitTimer.Stop();precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();StopMuteFeedback();StopShiftFeedback();StopUnmuteFeedback();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
         Loaded += (_, _) => {Effects.PropertyChanged-=EffectsChanged;Effects.PropertyChanged+=EffectsChanged; if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; maximumTransition.Reset(Wheel.Available,Wheel.Level);ResetNumberDisplay();AnimateLevel(); } };
         MouseLeftButtonDown += Down;
         MouseMove += (_, e) => {SetMuteHovered(HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
@@ -129,7 +177,7 @@ public sealed class WheelControl : FrameworkElement
     private static void OnWheelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var control = (WheelControl)d;
-        control.StopMuteFeedback();
+        control.StopMuteFeedback();control.StopShiftFeedback();control.StopUnmuteFeedback();
         if (e.OldValue is Wheel old) old.PropertyChanged -= control.ModelChanged;
         if (e.NewValue is Wheel next) next.PropertyChanged += control.ModelChanged;
         control.StopMaximumEffect();control.maximumTransition.Reset(control.Wheel?.Available==true,control.Wheel?.Level??0);
@@ -146,8 +194,12 @@ public sealed class WheelControl : FrameworkElement
             else if(Wheel?.Level<1&&maximumClock!=null&&MaximumEffectProgress<1)StopSparkEmission();
             AnimateLevel();
         }
-        else if(e.PropertyName==nameof(Wheel.Available)) {ResetNumberDisplay();maximumTransition.Reset(Wheel?.Available==true,Wheel?.Level??0);if(Wheel?.Available!=true) {StopMaximumEffect();StopMuteFeedback();}}
-        else if(e.PropertyName==nameof(Wheel.Muted)) {if(Wheel?.Muted==true&&Wheel.Available&&EffectsEnabled&&SystemParameters.ClientAreaAnimation)StartMuteFeedback();else StopMuteFeedback();}
+        else if(e.PropertyName==nameof(Wheel.Available)) {ResetNumberDisplay();maximumTransition.Reset(Wheel?.Available==true,Wheel?.Level??0);if(Wheel?.Available!=true) {StopMaximumEffect();StopMuteFeedback();StopShiftFeedback();StopUnmuteFeedback();}}
+        else if(e.PropertyName==nameof(Wheel.Muted))
+        {
+            StopMuteFeedback();StopUnmuteFeedback();
+            if(Wheel?.Available==true&&EffectsEnabled&&SystemParameters.ClientAreaAnimation) {if(Wheel.Muted)StartMuteFeedback();else StartUnmuteFeedback();}
+        }
         InvalidateVisual();
         if (Wheel != null) System.Windows.Automation.AutomationProperties.SetName(this, Wheel.Name + ", " + Wheel.VolumeLabel);
     }
@@ -233,7 +285,12 @@ public sealed class WheelControl : FrameworkElement
     {
         if (Wheel?.Available != true || CanAdjustVolume?.Invoke() == false) return;
         SetPrecisionMode(shift);
-        if(shift) {var target=snap.Adjust(delta,Wheel.Level,now);if(target.HasValue)VolumeRequested?.Invoke(Wheel,target.Value);return;}
+        if(shift)
+        {
+            var before=Wheel.Level;var target=snap.Adjust(delta,before,now);
+            if(target.HasValue) {VolumeRequested?.Invoke(Wheel,target.Value);StartShiftFeedback(Wheel.Level-before);}
+            return;
+        }
         if((Wheel.Level>=Wheel.MaximumVolumePercent/100d&&delta>0)||(Wheel.Level<=0&&delta<0)) {scroll.Reset();return;}
         var steps=scroll.Adjust(delta,ScrollStepPercent,ScrollAccelerationEnabled,now);
         if (steps == 0) return;
@@ -258,8 +315,17 @@ public sealed class WheelControl : FrameworkElement
         if (w == null) return;
         var accent = w.Accent;
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, ActualWidth, ActualHeight));
+        // Move only the drawing: the stationary input surface prevents hover loss while bobbling.
+        var spring=CurrentShiftPose;var springMatrix=Matrix.Identity;
+        var recovery=Math.Sin(UnmuteProgress*Math.PI)*(1-UnmuteProgress);
+        springMatrix.ScaleAt(1+recovery*.04,1+recovery*.04,60,60);
+        springMatrix.ScaleAt(1+spring.Stretch,1-spring.Stretch,60,60);
+        springMatrix.RotateAt(spring.Angle,60,60);springMatrix.Translate(spring.X,spring.Y);
+        dc.PushTransform(new MatrixTransform(springMatrix));
         dc.PushTransform(new TranslateTransform(MuteShake(MuteFeedbackProgress)*Effects.ShakePercent/100d,0));
-        var surface=new SolidColorBrush(EffectSettings.ColorOr(w.Muted?Effects.MutedColor:Effects.NormalColor,w.Muted?"#26050D":"#11141B"));
+        var surfaceColor=EffectSettings.ColorOr(w.Muted?Effects.MutedColor:Effects.NormalColor,w.Muted?"#26050D":"#11141B");
+        if(!w.Muted&&UnmuteProgress<1)surfaceColor=RecoveryColor(EffectSettings.ColorOr(Effects.MutedColor,"#26050D"),surfaceColor,UnmuteProgress);
+        var surface=new SolidColorBrush(surfaceColor);
         FormattedText? label=null;
         if(!Compact)
         {
@@ -269,6 +335,8 @@ public sealed class WheelControl : FrameworkElement
         }
         else LabelBounds=Rect.Empty;
         var outline=WheelSilhouette(LabelBounds);
+        if(!w.Muted&&recovery>0)
+            for(var width=22;width>=4;width-=3)dc.DrawGeometry(null,new Pen(WithOpacity(accent,recovery*.14*Effects.BloomPercent/100d*Math.Exp(-width*width/180d)),width),outline);
         dc.DrawGeometry(surface,null,outline);
         if (active) dc.DrawGeometry(null,new Pen(WithOpacity(accent,.25),1),outline);
         DrawMaximumSparks(dc,accent);
@@ -314,7 +382,7 @@ public sealed class WheelControl : FrameworkElement
             for(var width=10;width>=4;width-=2)dc.DrawLine(new Pen(WithOpacity(red,opacity*.07),width){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},start,end);
             dc.DrawLine(new Pen(WithOpacity(red,opacity),2){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round},start,end);
         }
-        dc.Pop();
+        dc.Pop();dc.Pop();
     }
     private void DrawMaximumSparks(DrawingContext dc,Brush accent)
     {

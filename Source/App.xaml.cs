@@ -47,7 +47,7 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.10.0-beta.2 version again. Your saved wheels will be kept.", "WaveWheels 0.10.0-beta.2 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.10.0-beta.3 version again. Your saved wheels will be kept.", "WaveWheels 0.10.0-beta.3 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")) settingsSignal.Set();
             Shutdown();return;
         }
@@ -70,9 +70,10 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 0.10.0-beta.2",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 0.10.0-beta.3",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
-        var profilesMenu=new Forms.ToolStripMenuItem("Profiles");
+        var modeItem=new Forms.ToolStripMenuItem(model!.AudioModeTitle){Enabled=false};menu.Items.Add(modeItem);
+        var profilesMenu=new Forms.ToolStripMenuItem("Profiles"){Enabled=model.Connected};
         void RefreshProfiles()
         {
             while(profilesMenu.DropDownItems.Count>0) {var item=profilesMenu.DropDownItems[0];profilesMenu.DropDownItems.RemoveAt(0);item.Dispose();}
@@ -85,7 +86,7 @@ public partial class App : Application
         RefreshProfiles();menu.Items.Add(profilesMenu);
         foreach(var profile in model!.Profiles)profile.PropertyChanged+=(_,_)=>RefreshProfiles();
         model.Profiles.CollectionChanged+=(_,e)=> {if(e.NewItems!=null)foreach(WheelProfile profile in e.NewItems)profile.PropertyChanged+=(_,_)=>RefreshProfiles();RefreshProfiles();};
-        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.ActiveProfile))RefreshProfiles();};
+        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.ActiveProfile))RefreshProfiles();if(e.PropertyName==nameof(model.Connected)) {profilesMenu.Enabled=model.Connected;modeItem.Text=model.AudioModeTitle;if(tray!=null)tray.Text="WaveWheels · "+(model.Connected?"Wave Link connected":"Windows audio · Wave Link disconnected");}};
         menu.Items.Add("Check for updates",null,async(_,_)=>await model.CheckForUpdatesAsync());
         var enabled=new Forms.ToolStripMenuItem("Enable edge scrolling"){Checked=model!.EdgeEnabled,CheckOnClick=true};
         enabled.CheckedChanged+=(_,_)=> {model.EdgeEnabled=enabled.Checked;};
@@ -93,7 +94,7 @@ public partial class App : Application
         menu.Items.Add(enabled);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 0.10.0-beta.2 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 0.10.0-beta.3 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()

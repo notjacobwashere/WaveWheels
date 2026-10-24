@@ -24,6 +24,32 @@ public sealed class MainViewModel : Observable
     private readonly bool isolated;
     public Preferences Preferences { get; }
     public EffectSettings Effects=>Preferences.Effects;
+    private readonly IWindowsMasterAudio windowsAudio;
+    private readonly bool canWriteWindowsAudio;
+    private readonly DispatcherTimer windowsAudioTimer=new(){Interval=TimeSpan.FromMilliseconds(150)};
+    public Wheel WindowsWheel=>Preferences.WindowsWheel;
+    public IEnumerable<Wheel> DisplayWheels=>Connected?Wheels:new[]{WindowsWheel};
+    public int DisplayWheelCount {get=>Connected?Wheels.Count:1;set {if(Connected)WheelCount=value;}}
+    public Wheel? EditorWheel {get=>Connected?SelectedWheel:WindowsWheel;set {if(Connected)SelectedWheel=value;}}
+    public string AudioModeTitle=>Connected?"WAVE LINK CONNECTED":"WINDOWS AUDIO MODE";
+    public string AudioModeDescription=>Connected?"Your saved Wave Link wheels are active. If Wave Link disconnects, one Windows volume wheel takes over automatically.":"Wave Link is disconnected. One wheel controls your overall Windows output volume. Its name and color are saved separately. Connect Wave Link to restore your saved wheels and add more.";
+    public string ModeAccent=>Connected?"#8ED7BB":"#F4B16F";
+    public string WindowsAudioStatus=>Connected?"Wave Link controls are active. Your Windows wheel is saved for automatic fallback.":WindowsWheel.Detail;
+    public string WheelArrangementHint=>Connected?"Drag the handle · Alt + ↑ / ↓ to move selection":"One Windows volume wheel · connect Wave Link to add more";
+    internal void RefreshWindowsAudio() {if(!Connected)ApplyWindowsAudio(windowsAudio.Read());}
+    private void ApplyWindowsAudio(WindowsAudioState state)
+    {
+        WindowsWheel.Available=state.Available;WindowsWheel.Detail=state.Status;
+        if(state.Available) {WindowsWheel.Level=state.Level;WindowsWheel.Muted=state.Muted;}
+        Changed(nameof(WindowsAudioStatus));StateChanged?.Invoke();
+    }
+    internal void StartWaveLink(WaveLinkInstallation installation)
+    {
+        if(isolated){Message="Launching other apps is disabled in an isolated test profile.";return;}
+        try {WaveLinkLauncher.Start(installation);if(!installation.Packaged)Preferences.WaveLinkExecutable=installation.Target;ScheduleSave();Client.Reconnect(Preferences.PortOverride);Message="Wave Link is starting. Your saved wheels will return automatically when it connects.";}
+        catch(Exception ex) when(ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException) {Message="Could not start Wave Link: "+ex.Message;}
+    }
+
     public string EffectColorStatus=>EffectSettings.ValidColor(Effects.NormalColor)&&EffectSettings.ValidColor(Effects.MutedColor)&&EffectSettings.ValidColor(Effects.MutedButtonColor)?"Colors use #RRGGBB. Changes appear immediately.":"Enter complete #RRGGBB colors. Incomplete colors use the original default until valid.";
     public void RestoreDefaults(string page)
     {
@@ -33,7 +59,7 @@ public sealed class MainViewModel : Observable
             case "Effects":Effects.Reset();break;
             case "Placement":ScreenEdge=d.ScreenEdge;MonitorId=d.MonitorId;PositionPercent=d.PositionPercent;WheelSpacing=d.WheelSpacing;EdgeDistance=d.EdgeDistance;break;
             case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
-            case "Wheels":if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
+            case "Wheels":if(!Connected) {WindowsWheel.Name="Windows audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
             case "Startup":StartupEnabled=false;EdgeEnabled=true;break;
             case "Connection":PortText="";Reconnect();break;
@@ -137,9 +163,9 @@ public sealed class MainViewModel : Observable
     public string SaveStatus { get => saveStatus; private set => Set(ref saveStatus, value); }
     public string Message { get => message; set => Set(ref message, value); }
     public string Status => snapshot.Status;
-    public string ConnectionLabel => snapshot.Connected ? "CONNECTED" : "WAITING FOR WAVE LINK";
+    public string ConnectionLabel => snapshot.Connected ? "WAVE LINK" : "WINDOWS AUDIO";
     public bool Connected => snapshot.Connected;
-    public string ChannelCount => snapshot.Connected ? $"{snapshot.Channels.Count} input channels available" : "Your bindings are kept while offline";
+    public string ChannelCount => snapshot.Connected ? $"{snapshot.Channels.Count} input channels available" : "1 Windows volume wheel active · Wave Link layouts are saved";
     public string SettingsPath => store.FilePath;
     public bool Isolated => isolated;
     public string PortText { get => portText; set => Set(ref portText, value); }
@@ -167,11 +193,11 @@ public sealed class MainViewModel : Observable
         get => Preferences.AnimateWheels;
         set { if (value == Preferences.AnimateWheels) return; Preferences.AnimateWheels = value; Changed(); ScheduleSave(); AppearanceChanged?.Invoke(); }
     }
-    public int WheelCount { get => Wheels.Count; set { value = Math.Clamp(value, 1, 12); while (Wheels.Count < value) AddWheel(); while (Wheels.Count > value) RemoveWheel(Wheels[^1]); } }
+    public int WheelCount { get => Wheels.Count; set { if(!Connected)return;value = Math.Clamp(value, 1, 12); while (Wheels.Count < value) AddWheel(); while (Wheels.Count > value) RemoveWheel(Wheels[^1]); } }
     public Wheel? SelectedWheel
     {
         get => selected;
-        set { if (Set(ref selected, value)) { UpdateMixChoices(); SelectionChanged?.Invoke(); } }
+        set { if (Set(ref selected, value)) { Changed(nameof(EditorWheel));UpdateMixChoices(); SelectionChanged?.Invoke(); } }
     }
     public event Action? LayoutChanged;
     public event Action? AppearanceChanged;
@@ -179,8 +205,10 @@ public sealed class MainViewModel : Observable
     public event Action? SelectionChanged;
     public event Action? PreviewRequested;
 
-    public MainViewModel(SettingsStore store, bool isolated)
+    public MainViewModel(SettingsStore store, bool isolated):this(store,isolated,null) { }
+    internal MainViewModel(SettingsStore store,bool isolated,IWindowsMasterAudio? audio)
     {
+        windowsAudio=audio??new WindowsMasterAudio();canWriteWindowsAudio=!isolated||audio!=null;
         this.store = store; this.isolated = isolated;
         Preferences = store.Load();
         Effects.PropertyChanged+=(_,_)=> {ScheduleSave();Changed(nameof(EffectColorStatus));AppearanceChanged?.Invoke();};
@@ -205,12 +233,15 @@ public sealed class MainViewModel : Observable
         Client.Log = line => App.WriteLog(line);
         SelectedWheel = Wheels.FirstOrDefault();
         Message = store.Warning ?? "Scroll at the left edge of a screen to bring up your wheels.";
+        WindowsWheel.Detail="Waiting for the Windows playback device…";
+        WindowsWheel.PropertyChanged+=WindowsWheelChanged;
+        windowsAudioTimer.Tick+=(_,_)=>RefreshWindowsAudio();
         Update(snapshot);
         RefreshMonitors();
         updateTimer.Tick+=async(_,_)=> { if(CheckUpdatesAutomatically)await CheckForUpdatesAsync(); };
         foregroundTimer.Tick+=(_,_)=>RefreshForeground();
     }
-    public void Start() { Client.Start(Preferences.PortOverride);if(!isolated) {foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    public void Start() {if(!isolated) {RefreshWindowsAudio();windowsAudioTimer.Start();} Client.Start(Preferences.PortOverride);if(!isolated) {foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
     private void RefreshForeground()
     {
         if(AutomaticProfilesEnabled||ApplicationBlacklistEnabled&&BlacklistedApplications.Count>0)ApplyForegroundProcess(ProfileAutomation.ForegroundProcess(),Environment.TickCount64);
@@ -357,8 +388,9 @@ public sealed class MainViewModel : Observable
         if(switchingProfile)return;
         if (e.OldItems != null) foreach (Wheel w in e.OldItems) w.PropertyChanged -= WheelChanged;
         if (e.NewItems != null) foreach (Wheel w in e.NewItems) w.PropertyChanged += WheelChanged;
-        UpdatePositions(); Changed(nameof(WheelCount)); ScheduleSave(); Update(snapshot); LayoutChanged?.Invoke();
+        UpdatePositions(); Changed(nameof(WheelCount));Changed(nameof(DisplayWheelCount)); ScheduleSave(); Update(snapshot); LayoutChanged?.Invoke();
     }
+    private void WindowsWheelChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName is nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.MaximumVolumePercent))ScheduleSave();}
     private void WheelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId) or nameof(Wheel.MaximumVolumePercent))) return;
@@ -372,13 +404,17 @@ public sealed class MainViewModel : Observable
     }
     internal void Update(MixerSnapshot data)
     {
+        var modeChanged=snapshot.Connected!=data.Connected;
         snapshot = data;
         var choices = data.Channels.Select(c => new Choice(c.Id, c.Name)).ToList();
         choices.Insert(0, new("", "None"));
         foreach (var w in Wheels.Where(w => w.ChannelId.Length > 0)) if (!choices.Any(c => c.Id == w.ChannelId)) choices.Add(new(w.ChannelId, "Saved channel · currently unavailable"));
         ReplaceChoices(Channels, choices.ToArray());
         UpdateMixChoices(); SyncWheels();
-        Changed(nameof(Status)); Changed(nameof(Connected)); Changed(nameof(ConnectionLabel)); Changed(nameof(ChannelCount)); StateChanged?.Invoke();
+        Changed(nameof(Status)); Changed(nameof(Connected)); Changed(nameof(ConnectionLabel)); Changed(nameof(ChannelCount));
+        Changed(nameof(DisplayWheels));Changed(nameof(DisplayWheelCount));Changed(nameof(EditorWheel));Changed(nameof(AudioModeTitle));Changed(nameof(AudioModeDescription));Changed(nameof(ModeAccent));Changed(nameof(WindowsAudioStatus));Changed(nameof(WheelArrangementHint));
+        if(modeChanged) {if(!Connected&&!isolated)RefreshWindowsAudio();SelectionChanged?.Invoke();LayoutChanged?.Invoke();Message=Connected?"Wave Link reconnected. Your saved Wave Link wheels are active.":"Wave Link disconnected. Switched to your saved Windows audio wheel.";}
+        StateChanged?.Invoke();
     }
     private void SyncWheels()
     {
@@ -409,13 +445,14 @@ public sealed class MainViewModel : Observable
     }
     public void AddWheel()
     {
-        if (Wheels.Count >= 12) return;
+        if (!Connected||Wheels.Count >= 12) return;
         var colors = new[] { "#36BBD3", "#DA5DAD", "#A99AFF", "#63CEA4", "#F4B16F" };
         var w = new Wheel { Name = "Wheel " + (Wheels.Count + 1), Color = colors[Wheels.Count % colors.Length] };
         Wheels.Add(w); SelectedWheel = w;
     }
     public void RemoveWheel(Wheel? wheel = null)
     {
+        if(!Connected)return;
         wheel ??= SelectedWheel;
         if (wheel == null || Wheels.Count <= 1) { Message = "Keep at least one wheel in your layout."; return; }
         var i = Wheels.IndexOf(wheel); Wheels.Remove(wheel); SelectedWheel = Wheels[Math.Min(i, Wheels.Count - 1)];
@@ -423,6 +460,7 @@ public sealed class MainViewModel : Observable
     public void Move(int delta) { if (SelectedWheel != null) MoveTo(SelectedWheel, Wheels.IndexOf(SelectedWheel) + delta); }
     public void MoveTo(Wheel wheel, int index)
     {
+        if(!Connected)return;
         var old = Wheels.IndexOf(wheel); index = Math.Clamp(index, 0, Wheels.Count - 1);
         if (old < 0 || old == index) return;
         Wheels.Move(old, index); SelectedWheel = wheel;
@@ -435,6 +473,12 @@ public sealed class MainViewModel : Observable
     private void UpdatePositions() { for (var i = 0; i < Wheels.Count; i++) Wheels[i].Position = i; }
     public void SetLevel(Wheel wheel, double level)
     {
+        if(ReferenceEquals(wheel,WindowsWheel))
+        {
+            if(Connected||!canWriteWindowsAudio||!wheel.Available||!double.IsFinite(level)||!RefreshInteractionPolicy())return;
+            ApplyWindowsAudio(windowsAudio.SetLevel(Math.Clamp(level,0,wheel.MaximumVolumePercent/100d)));return;
+        }
+        if(!Connected)return;
         if (!Wheels.Contains(wheel)||!wheel.Available||!double.IsFinite(level)||!RefreshInteractionPolicy()) return;
         var cap=Wheels.Where(w=>w.ChannelId==wheel.ChannelId&&w.MixId==wheel.MixId).Select(w=>w.MaximumVolumePercent).DefaultIfEmpty(wheel.MaximumVolumePercent).Min()/100d;
         level = Math.Round(Math.Clamp(level, 0, cap), 2);
@@ -443,6 +487,11 @@ public sealed class MainViewModel : Observable
     }
     public void ToggleMute(Wheel wheel)
     {
+        if(ReferenceEquals(wheel,WindowsWheel))
+        {
+            if(!Connected&&canWriteWindowsAudio&&wheel.Available&&RefreshInteractionPolicy())ApplyWindowsAudio(windowsAudio.SetMuted(!wheel.Muted));return;
+        }
+        if(!Connected)return;
         if (!Wheels.Contains(wheel)||!wheel.Available||!RefreshInteractionPolicy()) return;
         var value = !wheel.Muted;
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) { other.Muted = value; other.Changed(nameof(Wheel.VolumeLabel)); }
@@ -462,5 +511,5 @@ public sealed class MainViewModel : Observable
         try {Preferences.BlacklistedApplications=BlacklistedApplications.ToList(); Preferences.Wheels = Wheels.ToList();if(activeProfile!=null) {activeProfile.Wheels=Preferences.Wheels;Preferences.ActiveProfileId=activeProfile.Id;}Preferences.Profiles=Profiles.ToList(); store.Save(Preferences); SaveStatus = "All changes saved"; }
         catch (Exception ex) { SaveStatus = "Could not save changes"; Message = ex.Message; App.WriteLog("Settings: " + ex.Message); }
     }
-    public void Dispose() {foregroundMonitor?.Dispose(); foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
+    public void Dispose() {windowsAudioTimer.Stop();WindowsWheel.PropertyChanged-=WindowsWheelChanged;foregroundMonitor?.Dispose(); foregroundTimer.Stop();updateTimer.Stop();updateLifetime.Cancel();Save(); Client.Dispose(); }
 }

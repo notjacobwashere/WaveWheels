@@ -46,7 +46,7 @@ internal static class NewFeatures
     public static void ViewModel(string directory)
     {
         Directory.CreateDirectory(directory);
-        var store=new SettingsStore(directory);var vm=new MainViewModel(store,true);
+        var store=new SettingsStore(directory);var vm=new MainViewModel(store,true);vm.Update(new(true,"Test mixer","",Array.Empty<Channel>(),Array.Empty<Mix>()));
         vm.WheelCount=2;var music=vm.Wheels[0];var game=vm.Wheels[1];
         music.ChannelId="fake-music";music.MixId="personal";game.ChannelId="fake-game";game.MixId="personal";
         vm.Update(new(true,"Fixture mixer","Wave Link 3",new[]{new Channel("fake-music","Music",.8,false,true,new[]{new ChannelMix("personal",.8,false)}),new Channel("fake-game","Game",.7,false,true,new[]{new ChannelMix("personal",.7,false)})},new[]{new Mix("personal","Headphones")}));

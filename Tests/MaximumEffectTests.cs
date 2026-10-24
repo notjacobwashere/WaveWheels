@@ -141,6 +141,41 @@ internal static class MaximumEffectTests
                 if(!SystemParameters.ClientAreaAnimation)control.StartMaximumEffect();
                 Assert(control.MaximumEffectOpacity==1&&control.MaximumEmissionCutoff==1,"Starting a new burst must restore full opacity and emission.");
                 control.StartMaximumEffect();control.Wheel=new Wheel{Available=true,Level=.5};Assert(control.MaximumEffectProgress==1,"Profile/rebinding changes must clear old effects.");
+                var mutedColor=Color.FromRgb(38,5,13);var normalColor=Color.FromRgb(17,20,27);
+                Assert(WheelControl.RecoveryColor(mutedColor,normalColor,0)==mutedColor&&WheelControl.RecoveryColor(mutedColor,normalColor,1)==normalColor,"Unmute must smoothly restore the normal surface color, including the label.");
+                var recoveryWheel=new Wheel{Available=true,Muted=true,Level=.5};var recoveryControl=new WheelControl{Wheel=recoveryWheel};
+                recoveryWheel.Muted=false;Assert(recoveryControl.UnmuteFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Only real unmute changes may trigger recovery, respecting reduced motion.");
+                if(SystemParameters.ClientAreaAnimation) {recoveryControl.SeekUnmuteFeedback(TimeSpan.FromMilliseconds(180));Assert(recoveryControl.UnmuteProgress>0&&recoveryControl.UnmuteProgress<1,"Unmute recovery must animate over time.");}
+                recoveryControl.EffectsEnabled=false;Assert(recoveryControl.UnmuteProgress==1,"Disabling effects must clear unmute feedback.");
+                recoveryControl.EffectsEnabled=true;recoveryWheel.Muted=true;recoveryWheel.Muted=false;recoveryControl.Wheel=new Wheel{Available=true};Assert(recoveryControl.UnmuteProgress==1,"Rebinding must clear an old unmute pulse.");
+                Assert(WheelControl.ShiftSpring(0,1,1)==default(WheelControl.ShiftPose)&&WheelControl.ShiftSpring(1,1,1)==default(WheelControl.ShiftPose),"Shift bounce must start and settle exactly at rest.");
+                var kick=WheelControl.ShiftSpring(.12,1,1);var reverseKick=WheelControl.ShiftSpring(.12,1,-1);
+                Assert(kick.Y < -3&&kick.Angle>1&&kick.Stretch>0&&kick.Angle==-reverseKick.Angle,"Shift feedback must bob, stretch and jiggle in the adjustment direction.");
+                Assert(Math.Abs(WheelControl.ShiftSpring(.85,1,1).Y)<Math.Abs(kick.Y)*.1,"The spring must settle with a damped tail.");
+                Assert(WheelControl.ShiftSpring(0,1,-1,kick)==kick,"Interrupting a spring must retain its current pose rather than snapping to rest.");
+                var shiftWheel=new Wheel{Available=true,Level=.2,MaximumVolumePercent=60};
+                var shiftControl=new WheelControl{Wheel=shiftWheel};
+                shiftControl.VolumeRequested+=(w,v)=>w.Level=Math.Clamp(v,0,w.MaximumVolumePercent/100d);
+                shiftControl.AdjustInput(1,true,0);
+                Assert(shiftControl.ShiftFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"An accepted Shift volume change must trigger feedback unless motion is reduced.");
+                if(SystemParameters.ClientAreaAnimation)
+                {
+                    shiftControl.SeekShiftFeedback(TimeSpan.FromMilliseconds(75));var interrupted=shiftControl.CurrentShiftPose;
+                    Assert(Math.Abs(interrupted.Y)>1&&shiftControl.RenderTransform.Value.IsIdentity,"Bobbles must move the drawing without changing the input or hover surface.");
+                    shiftControl.AdjustInput(-1,true,220);shiftControl.SeekShiftFeedback(TimeSpan.Zero);
+                    Assert((new Vector(shiftControl.CurrentShiftPose.X-interrupted.X,shiftControl.CurrentShiftPose.Y-interrupted.Y)).Length<1e-6,"Rapid reversals must retarget continuously from the current pose.");
+                    shiftControl.SeekShiftFeedback(TimeSpan.FromMilliseconds(75));
+                    shiftControl.Measure(new Size(300,120));shiftControl.Arrange(new Rect(0,0,300,120));
+                    var bobbleFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);bobbleFrame.Render(shiftControl);
+                    var bobbleEncoder=new PngBitmapEncoder();bobbleEncoder.Frames.Add(BitmapFrame.Create(bobbleFrame));using(var file=File.Create(Path.Combine(directory,"shift-bobble.png")))bobbleEncoder.Save(file);
+                }
+                var feedbackStarts=shiftControl.ShiftFeedbackStarts;
+                shiftControl.AdjustInput(1,true,230);Assert(shiftControl.ShiftFeedbackStarts==feedbackStarts,"Cooldown input must not restart the bounce.");
+                shiftWheel.Level=.6;shiftControl.AdjustInput(1,true,500);Assert(shiftControl.ShiftFeedbackStarts==feedbackStarts,"A clamped channel must not bounce when no volume changes.");
+                shiftControl.CanAdjustVolume=()=>false;shiftControl.AdjustInput(-1,true,800);Assert(shiftControl.ShiftFeedbackStarts==feedbackStarts,"Blocked opening scroll must not animate.");
+                shiftControl.CanAdjustVolume=null;shiftControl.EffectsEnabled=false;Assert(shiftControl.CurrentShiftPose==default(WheelControl.ShiftPose),"Disabling motion must stop the Shift spring immediately.");
+                shiftControl.AdjustInput(-1,true,1100);Assert(shiftControl.ShiftFeedbackStarts==feedbackStarts,"Disabled effects must suppress Shift feedback.");
+                shiftControl.EffectsEnabled=true;shiftControl.AdjustInput(-1,true,1400);shiftControl.Wheel=new Wheel{Available=true,Level=.5};Assert(shiftControl.CurrentShiftPose==default(WheelControl.ShiftPose),"Rebinding must clear an old wheel's spring.");
                 control.Wheel=wheel;wheel.Level=.33;control.AdjustInput(120,true,2000);Assert(wheel.Level==.4&&control.PrecisionMode,"Shift input must still snap the real control.");
                 control.AdjustInput(120,true,2100);Assert(wheel.Level==.4,"Rapid repeated Shift input must not skip through steps.");
                 control.AdjustInput(120,true,2220);Assert(wheel.Level==.6,"A new Shift step must work after cooldown.");

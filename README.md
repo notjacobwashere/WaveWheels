@@ -1,6 +1,6 @@
 # WaveWheels
 
-An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from the edge of your screen.
+An osu!-inspired control surface for **Windows audio and Elgato Wave Link**, one scroll away from the edge of your screen.
 
 [Download the Windows release](https://github.com/notjacobwashere/WaveWheels/releases/latest) · [Report an issue](https://github.com/notjacobwashere/WaveWheels/issues)
 
@@ -24,11 +24,11 @@ An osu!-inspired control surface for **Elgato Wave Link**, one scroll away from 
 
 ## Download and run
 
-1. Download **`WaveWheels-0.8.0-Setup.exe`** from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
+1. Download the **Setup.exe** installer from [Releases](https://github.com/notjacobwashere/WaveWheels/releases/latest).
 2. Run Setup and install. First-time installs include a short, skippable intro to the controls and settings before configuration opens. Existing installations and saved settings bypass it. The runtime is bundled; no separate .NET download or administrator account is needed.
-3. Choose **Open WaveWheels configuration** when Setup finishes, then bind your wheels to Wave Link channels. Select **None** for an unbound wheel.
+3. Choose **Open WaveWheels configuration** when Setup finishes, then customize the Windows volume wheel, or open Wave Link to bind multiple wheels to its channels. Select **None** for an unbound Wave Link wheel.
 
-Requires Windows 10/11 x64 and a running Wave Link installation with its local control service available. Setup installs for your user in `%LOCALAPPDATA%\Programs\WaveWheels`, adds Start menu shortcuts, and registers an uninstaller in Windows Settings → Apps. An optional desktop shortcut is available.
+Requires Windows 10/11 x64. Wave Link is optional: without a connection, one wheel controls the default Windows playback device. Multiple channel wheels require a connected Wave Link installation. Setup installs for your user in `%LOCALAPPDATA%\Programs\WaveWheels`, adds Start menu shortcuts, and registers an uninstaller in Windows Settings → Apps. An optional desktop shortcut is available.
 
 Use **Configure WaveWheels** in the Start menu or click the system tray icon near the clock to open configuration later. The tray icon may be under the overflow arrow.
 
@@ -80,11 +80,21 @@ Use the in-app installation button or run a newer Setup to upgrade an installed 
 
 When switching from an early portable build, quit that older tray instance first. For manual portable upgrades, quit before replacing files; if you move the folder, toggle startup off and on to update its path.
 
+## Audio modes
+
+An amber **Windows audio mode** banner means Wave Link is disconnected. Exactly one wheel controls Windows master volume and mute for the current default playback device, including changes made in Windows or other apps. Its name, color, and volume limit save separately from your Wave Link profiles. Adding and reordering wheels, channel binding, and profile editing are unavailable in this mode. No playback device disables the wheel until a device becomes available.
+
+When Wave Link connects, the banner turns green and your saved channel wheels return automatically. Disconnecting restores the Windows wheel. Switching modes never copies volume or mute between the two mixers. The **Connection** page can find and start installed desktop/Store versions of Wave Link, or lets you locate its executable manually. Discovery continues automatically in the background; Wave Link launches only when requested.
+
+Windows master volume uses Microsoft's [Core Audio endpoint-volume API](https://learn.microsoft.com/en-us/windows/win32/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume). Tests use an injected backend; the local native smoke check only reads volume and mute.
+
+Wheels now open in a short stagger, Shift volume steps give a directional spring bounce, and unmuting restores the normal color with a soft pulse. These effects respect the motion setting and Windows reduced motion.
+
 ## Wave Link compatibility
 
 WaveWheels discovers the local service port from Wave Link's `ws-info.json` and checks newer and legacy fallback ports. The **Connection** page provides a manual local port override. Connections are limited to `127.0.0.1`; no account or Stream Deck is required.
 
-Wave Link 3 provides overall channel and per-mix targets. Legacy protocol connections provide Monitor and Stream targets. The app controls **input channels**, not Windows system volume or hardware headphone output volume. Channel and mix identifiers are saved, so recreating a channel may require rebinding it.
+Wave Link 3 provides overall channel and per-mix targets. Legacy protocol connections provide Monitor and Stream targets. While connected, the app controls Wave Link **input channels**. While disconnected, it hides those wheels and shows one Windows master-volume wheel instead. Channel and mix identifiers are saved, so recreating a channel may require rebinding it.
 
 This is an independent project using an unofficial local protocol. Read-only discovery has been checked with Wave Link 3, and automated simulator tests cover both protocol variants. A topmost overlay may not appear over exclusive-fullscreen applications or Windows secure surfaces. See [validation details](docs/VALIDATION.md) for the limits of testing.
 

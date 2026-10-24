@@ -139,6 +139,7 @@ internal static class UiRendering
                 NewFeatures.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"new-features-profile-"+Guid.NewGuid().ToString("N")));
                 MonitorPersistenceTests.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"monitor-profile-"+Guid.NewGuid().ToString("N")));
                 CustomizationTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"customization-profile-"+Guid.NewGuid().ToString("N")));
+                AudioModeTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"audio-mode-"+Guid.NewGuid().ToString("N")));
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}
@@ -194,6 +195,12 @@ internal static class UiRendering
             motion.Seek(TimeSpan.FromMilliseconds(380));
             if(Math.Abs(motion.Slide.X)>.001||Math.Abs(motion.Slide.Y)>.001)throw new Exception("Edge entrance must finish at its resting position.");
         }
+        var firstRow=new OverlayMotion(new Border());var lastRow=new OverlayMotion(new Border());
+        firstRow.Enter(70,true,true,()=>{},OverlayMotion.StaggerDelay(0));lastRow.Enter(70,true,true,()=>{},OverlayMotion.StaggerDelay(2));
+        firstRow.Seek(TimeSpan.FromMilliseconds(50));lastRow.Seek(TimeSpan.FromMilliseconds(50));
+        if(firstRow.Slide.X<=lastRow.Slide.X||lastRow.Slide.X!=-70)throw new Exception($"Staggered rows must wait at their hidden pose before sliding in: first={firstRow.Slide.X}, last={lastRow.Slide.X}.");
+        lastRow.Seek(TimeSpan.FromMilliseconds(600));if(Math.Abs(lastRow.Slide.X)>.001||Math.Abs(lastRow.Scale.ScaleX-1)>.001)throw new Exception("Staggered opening must finish fully visible.");
+        lastRow.Enter(70,true,false,()=>{},210);if(lastRow.Slide.X!=0||lastRow.Scale.ScaleX!=1)throw new Exception("Reduced motion must skip delays as well as movement.");
         // Drive the real wheel controls using the same router used by the global hook.
         var controls=Descendants(surface).OfType<WheelControl>().ToArray();var router=overlay.Input;
         long now=0;
