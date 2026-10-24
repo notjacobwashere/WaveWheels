@@ -97,7 +97,7 @@ begin
 
   IntroControlsPage := CreateOutputMsgPage(wpWelcome, 'Meet WaveWheels',
     'Your mix, one scroll away.',
-    'WaveWheels runs quietly in the system tray and controls Elgato Wave Link input channels.' + #13#10#13#10 +
+    'WaveWheels runs quietly in the system tray. Without Wave Link, one wheel controls your Windows output volume. Connect Wave Link to use multiple channel wheels.' + #13#10#13#10 +
     'REVEAL AND ADJUST' + #13#10 +
     'Scroll at the left screen edge to bring out your wheels. The opening scroll does not change volume. Pause briefly, move over a wheel, then scroll again to adjust it.' + #13#10#13#10 +
     'Drag a wheel up or down to adjust it, or click its speaker button to mute. Scrolling at the very edge only opens the wheels.' + #13#10#13#10 +
@@ -105,13 +105,13 @@ begin
 
   IntroSettingsPage := CreateOutputMsgPage(IntroControlsPage.ID, 'Make it yours',
     'A quick first setup, then tune it your way.',
-    '1. Open Wave Link. In configuration, bind each wheel to an input channel and mix. Choose None to leave a wheel unbound.' + #13#10 +
+    '1. Customize the Windows volume wheel, or open Wave Link and bind multiple wheels to its input channels and mixes. Wave Link wheels return automatically when connected.' + #13#10 +
     '2. Choose Preview wheels and try scrolling over a wheel.' + #13#10#13#10 +
     'Profiles - save layouts and optionally switch for focused apps.' + #13#10 +
     'Blacklist - pause wheels while selected apps are focused.' + #13#10 +
     'Scroll - tune normal steps, acceleration, and hide delay.' + #13#10 +
     'Shift - snap in larger increments (20% default); optional dots.' + #13#10 +
-    'Style - choose wheel count, order, names, colors, and size.' + #13#10 +
+    'Style - choose names, colors, and size. Wave Link also unlocks multiple wheels and reordering.' + #13#10 +
     'Limits - cap wheel volume; external mixer controls can exceed it.' + #13#10 +
     'Placement - choose screen edge, display, position, and spacing.' + #13#10 +
     'Updates - check, download, and install from the app.' + #13#10#13#10 +
