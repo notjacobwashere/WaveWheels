@@ -60,6 +60,7 @@ public sealed class Preferences
     public int ScrollStepPercent { get; set; } = 1;
     public int ShiftStepPercent { get; set; } = 20;
     public bool ShowShiftMarkers { get; set; }
+    public bool UseMuteButton {get;set;}
     public bool ApplicationBlacklistEnabled {get;set;}=true;
     public List<string> BlacklistedApplications {get;set;}=new();
     public bool ScrollAccelerationEnabled { get; set; } = true;
@@ -69,7 +70,7 @@ public sealed class Preferences
     public int WheelSizePercent { get; set; } = 100;
     public bool AnimateWheels { get; set; } = true;
     public EffectSettings Effects {get;set;}=new();
-    public Wheel WindowsWheel {get;set;}=new(){Name="Windows audio",Color="#63CEA4"};
+    public Wheel WindowsWheel {get;set;}=new(){Name="Windows Audio",Color="#63CEA4"};
     public string WaveLinkExecutable {get;set;}="";
     public string ScreenEdge { get; set; } = "Left";
     public string MonitorId { get; set; } = "";
@@ -112,7 +113,7 @@ public sealed class SettingsStore
         {
             var p = File.Exists(FilePath) ? JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath), options) ?? new() : new Preferences();
             p.Wheels ??= new();
-            p.WindowsWheel??=new(){Name="Windows audio",Color="#63CEA4"};p.WaveLinkExecutable??="";
+            p.WindowsWheel??=new(){Name="Windows Audio",Color="#63CEA4"};p.WaveLinkExecutable??="";
             p.Effects??=new();p.Effects.Normalize();
             p.UpdateChannel=p.UpdateChannel=="Beta"?"Beta":"Stable";
             p.Wheels = p.Wheels.Where(w => w != null).Take(12).ToList();

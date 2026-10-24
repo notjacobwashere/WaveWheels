@@ -23,7 +23,7 @@ internal static class AudioModeTests
     internal static void Run(string directory)
     {
         var fake=new FakeAudio();var store=new SettingsStore(directory);var vm=new MainViewModel(store,true,fake);
-        vm.RefreshWindowsAudio();var fallback=vm.WindowsWheel;var original=vm.Wheels.Select(w=>w.Id).ToArray();
+        vm.RefreshWindowsAudio();var fallback=vm.WindowsWheel;Assert(fallback.Name=="Windows Audio","The built-in Windows wheel name must default to Windows Audio.");var original=vm.Wheels.Select(w=>w.Id).ToArray();
         Assert(!vm.Connected&&vm.DisplayWheels.Single()==fallback&&vm.EditorWheel==fallback&&fallback.Level==.47,"Disconnected startup must show exactly the live Windows wheel.");
         vm.AddWheel();vm.WheelCount=8;vm.RemoveWheel();Assert(vm.Wheels.Count==original.Length&&vm.DisplayWheelCount==1,"Offline wheel-count commands must preserve the hidden Wave Link layout.");
         fallback.Name="My speakers";fallback.Color="#DA5DAD";fallback.MaximumVolumePercent=75;vm.SetLevel(fallback,1);vm.ToggleMute(fallback);
@@ -48,10 +48,18 @@ internal static class AudioModeTests
         Flush();var list=(ListBox)window.FindName("WheelList");
         Assert(list.Items.Count==1&&ReferenceEquals(list.Items[0],fallback)&&!((ComboBox)window.FindName("CountBox")).IsEnabled&&!((ComboBox)window.FindName("ChannelBox")).IsEnabled,"Offline UI must show one fallback wheel with Wave Link-only controls disabled.");
         Assert(((WheelControl)window.FindName("SelectedPreview")).Wheel==fallback,"The editor preview must show the Windows wheel while offline.");
+        Assert(((FrameworkElement)window.FindName("WaveLinkBindingFields")).Visibility==Visibility.Collapsed,"Windows audio must not show input-channel or mix-scope fields.");
+        ((Button)window.FindName("SettingsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();
+        var muteToggle=(CheckBox)window.FindName("UseMuteButtonToggle");Assert(muteToggle.IsChecked==false,"Speaker-button mode must default off.");
+        muteToggle.SetCurrentValue(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty,true);Flush();vm.Save();
+        Assert(vm.UseMuteButton&&store.Load().UseMuteButton&&((WheelControl)window.FindName("SelectedPreview")).UseMuteButton,"The mute setting must persist and reach the live preview.");
+        vm.RestoreDefaults("Settings");Flush();Assert(!vm.UseMuteButton&&muteToggle.IsChecked==false,"Settings defaults must restore whole-wheel muting.");
+        ((Button)window.FindName("WheelsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();
+
         var preview=(WheelControl)window.FindName("SelectedPreview");preview.BeginAnimation(WheelControl.DisplayLevelProperty,null);preview.DisplayLevel=fallback.Level;root.UpdateLayout();
         Save(root,Path.Combine(Path.GetDirectoryName(directory)!,"windows-audio-mode.png"));
         ((Button)window.FindName("ConnectionNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();Assert(window.FindName("StartWaveLinkButton") is Button,"Connection must provide an installed-app launch/locate control.");Save(root,Path.Combine(Path.GetDirectoryName(directory)!,"windows-audio-connection.png"));
-        vm.Update(connected);Flush();Assert(list.Items.Count==original.Length&&((ComboBox)window.FindName("CountBox")).IsEnabled,"Reconnecting must restore the actual editor wheel list and controls.");
+        vm.Update(connected);Flush();Assert(list.Items.Count==original.Length&&((ComboBox)window.FindName("CountBox")).IsEnabled&&((FrameworkElement)window.FindName("WaveLinkBindingFields")).Visibility==Visibility.Visible,"Reconnecting must restore the actual editor wheel list and controls.");
         vm.Dispose();Console.WriteLine("PASS: Windows fallback backend, caps/mute, stale-write guards, disconnect/reconnect, separate settings, device loss/recovery and mode UI.");
     }
     private static void Save(FrameworkElement root,string path)

@@ -116,6 +116,8 @@ public sealed class WheelControl : FrameworkElement
     public Func<bool>? CanAdjustVolume { get; set; }
     public static readonly DependencyProperty CompactProperty = DependencyProperty.Register(nameof(Compact), typeof(bool), typeof(WheelControl), new PropertyMetadata(false, (d,e) => { var c = (WheelControl)d; c.Width = (bool)e.NewValue ? 120 : 300; c.InvalidateVisual(); }));
     public bool Compact { get => (bool)GetValue(CompactProperty); set => SetValue(CompactProperty, value); }
+    public static readonly DependencyProperty UseMuteButtonProperty=DependencyProperty.Register(nameof(UseMuteButton),typeof(bool),typeof(WheelControl),new FrameworkPropertyMetadata(false,FrameworkPropertyMetadataOptions.AffectsRender,(d,e)=>((WheelControl)d).SetMuteHovered(false)));
+    public bool UseMuteButton {get=>(bool)GetValue(UseMuteButtonProperty);set=>SetValue(UseMuteButtonProperty,value);}
     private bool dragging;
     private Point dragStart;
     private double dragLevel;
@@ -168,7 +170,7 @@ public sealed class WheelControl : FrameworkElement
         Unloaded += (_, _) => { active=false;Effects.PropertyChanged-=EffectsChanged;hoverExitTimer.Stop();precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();StopMuteFeedback();StopShiftFeedback();StopUnmuteFeedback();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
         Loaded += (_, _) => {Effects.PropertyChanged-=EffectsChanged;Effects.PropertyChanged+=EffectsChanged; if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; maximumTransition.Reset(Wheel.Available,Wheel.Level);ResetNumberDisplay();AnimateLevel(); } };
         MouseLeftButtonDown += Down;
-        MouseMove += (_, e) => {SetMuteHovered(HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
+        MouseMove += (_, e) => {SetMuteHovered(UseMuteButton&&HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
         MouseLeftButtonUp += (_, e) => { if (dragging) { dragging = false; ReleaseMouseCapture(); e.Handled = true; } };
         LostMouseCapture += (_, _) => dragging = false;
         MouseWheel += (_, e) => { if (Wheel?.Available == true) { Adjust(e.Delta / 120d); e.Handled = true; } };
@@ -300,12 +302,19 @@ public sealed class WheelControl : FrameworkElement
         if(Wheel.Level<=0||Wheel.Level>=Wheel.MaximumVolumePercent/100d||Math.Abs(Wheel.Level-requested)>1e-7)scroll.Reset();
     }
     public void ResetScroll() {scroll.Reset();snap.Reset();}
+    internal bool TryMuteAt(Point point)
+    {
+        if(Wheel==null)return false;
+        var hit=UseMuteButton?HitsMute(point):WheelSilhouette(LabelBounds).FillContains(point);
+        if(!hit)return false;
+        MuteRequested?.Invoke(Wheel);return true;
+    }
     private void Down(object sender, MouseButtonEventArgs e)
     {
         if (Wheel == null) return;
         var p = e.GetPosition(this);
-        if (HitsMute(p)) MuteRequested?.Invoke(Wheel);
-        else if (Wheel.Available && CanAdjustVolume?.Invoke() != false) { dragStart = p; dragLevel = Wheel.Level; dragging = true; CaptureMouse(); }
+        if (TryMuteAt(p)) {e.Handled=true;}
+        else if (UseMuteButton&&Wheel.Available && CanAdjustVolume?.Invoke() != false) { dragStart = p; dragLevel = Wheel.Level; dragging = true; CaptureMouse(); }
         Selected?.Invoke(Wheel); e.Handled = true;
     }
     protected override void OnRender(DrawingContext dc)
@@ -361,6 +370,8 @@ public sealed class WheelControl : FrameworkElement
         {
             dc.DrawText(label!,new Point(92,4+(26-label!.Height)/2));
         }
+        if(UseMuteButton)
+        {
         if(w.Muted)dc.DrawEllipse(new SolidColorBrush(EffectSettings.ColorOr(Effects.MutedButtonColor,"#460715")),null,MuteCenter,13,13);
         // Segoe Fluent Icons is provided by Windows; no third-party artwork is distributed.
         var icon = new FormattedText(w.Muted ? "\uE74F" : "\uE767", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Segoe Fluent Icons"), 13, w.Available ? Brushes.White : Brushes.Gray, VisualTreeHelper.GetDpi(this).PixelsPerDip);
@@ -373,6 +384,7 @@ public sealed class WheelControl : FrameworkElement
                 dc.DrawGeometry(null,new Pen(WithOpacity(tint,Math.Min(1,.16*Effects.BloomPercent/100d*Math.Exp(-width*width/65d))),width){LineJoin=PenLineJoin.Round},glyph);
         }
         dc.DrawText(icon,iconPosition);
+        }
         var muteProgress=MuteFeedbackProgress;
         if(w.Muted&&muteProgress>0&&muteProgress<1)
         {

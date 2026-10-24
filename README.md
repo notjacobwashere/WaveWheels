@@ -86,7 +86,11 @@ An amber **Windows audio mode** banner means Wave Link is disconnected. Exactly 
 
 When Wave Link connects, the banner turns green and your saved channel wheels return automatically. Disconnecting restores the Windows wheel. Switching modes never copies volume or mute between the two mixers. The **Connection** page can find and start installed desktop/Store versions of Wave Link, or lets you locate its executable manually. Discovery continues automatically in the background; Wave Link launches only when requested.
 
+The default fallback name is **Windows Audio**. Channel and mix-scope fields are hidden for this wheel.
+
 Windows master volume uses Microsoft's [Core Audio endpoint-volume API](https://learn.microsoft.com/en-us/windows/win32/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume). Tests use an injected backend; the local native smoke check only reads volume and mute.
+
+By default, speaker buttons are hidden: click anywhere on the wheel or its label to mute/unmute, and scroll to change volume. **Settings → Show a dedicated mute button** restores the speaker control; only that button toggles mute in this mode, and dragging elsewhere adjusts volume. Restore defaults turns button mode off.
 
 Wheels now open in a short stagger, Shift volume steps give a directional spring bounce, and unmuting restores the normal color with a soft pulse. These effects respect the motion setting and Windows reduced motion.
 

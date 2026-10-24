@@ -58,8 +58,8 @@ public sealed class MainViewModel : Observable
         {
             case "Effects":Effects.Reset();break;
             case "Placement":ScreenEdge=d.ScreenEdge;MonitorId=d.MonitorId;PositionPercent=d.PositionPercent;WheelSpacing=d.WheelSpacing;EdgeDistance=d.EdgeDistance;break;
-            case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
-            case "Wheels":if(!Connected) {WindowsWheel.Name="Windows audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
+            case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;UseMuteButton=d.UseMuteButton;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
+            case "Wheels":if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
             case "Startup":StartupEnabled=false;EdgeEnabled=true;break;
             case "Connection":PortText="";Reconnect();break;
@@ -95,6 +95,7 @@ public sealed class MainViewModel : Observable
     public int ShiftStepPercent {get=>Preferences.ShiftStepPercent;set {value=Math.Clamp(value,5,50);if(value==Preferences.ShiftStepPercent)return;Preferences.ShiftStepPercent=value;Changed();Changed(nameof(ShiftStepLabel));ScheduleSave();InputSettingsChanged?.Invoke();}}
     public string ShiftStepLabel=>ShiftStepPercent+"% while holding Shift";
     public bool ShowShiftMarkers {get=>Preferences.ShowShiftMarkers;set {if(value==Preferences.ShowShiftMarkers)return;Preferences.ShowShiftMarkers=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
+    public bool UseMuteButton {get=>Preferences.UseMuteButton;set {if(value==Preferences.UseMuteButton)return;Preferences.UseMuteButton=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public bool ScrollAccelerationEnabled {get=>Preferences.ScrollAccelerationEnabled;set {if(value==Preferences.ScrollAccelerationEnabled)return;Preferences.ScrollAccelerationEnabled=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public int IdleMilliseconds {get=>Preferences.IdleMilliseconds;set {value=Math.Clamp(value,500,5000);if(value==Preferences.IdleMilliseconds)return;Preferences.IdleMilliseconds=value;Changed();Changed(nameof(IdleLabel));ScheduleSave();}}
     public string IdleLabel=>(IdleMilliseconds/1000d).ToString("0.0")+" seconds";

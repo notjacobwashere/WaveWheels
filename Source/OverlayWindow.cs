@@ -83,7 +83,7 @@ public sealed class OverlayWindow : Window
         stack.Children.Clear(); controls.Clear();rowMotions.Clear(); stack.Children.Add(new Border { Height = OverlaySizing.EffectPadding });
         foreach (var wheel in model.DisplayWheels)
         {
-            var c = new WheelControl { Wheel = wheel, Effects=model.Effects, EffectsEnabled=model.AnimateWheels,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.DisplayWheelCount-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
+            var c = new WheelControl { Wheel = wheel, Effects=model.Effects, EffectsEnabled=model.AnimateWheels,UseMuteButton=model.UseMuteButton,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.DisplayWheelCount-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
             c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
             c.Selected += w => { model.EditorWheel = w; lastActivity = Environment.TickCount64; };
             var row=new Border{Child=c};var rowMotion=new OverlayMotion(row);rowMotion.SetEdge(model.ScreenEdge);
@@ -106,7 +106,7 @@ public sealed class OverlayWindow : Window
         if(shown&&selected!=null) {activeScreen=selected.Screen;activeDpi=selected.Region.Dpi;}
         if (shown) Position();
     }
-    private void ApplyInputSettings() {foreach(var control in controls) {control.ScrollStepPercent=model.ScrollStepPercent;control.ShiftStepPercent=model.ShiftStepPercent;control.ShowShiftMarkers=model.ShowShiftMarkers;control.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;control.ResetScroll();}}
+    private void ApplyInputSettings() {foreach(var control in controls) {control.UseMuteButton=model.UseMuteButton;control.ScrollStepPercent=model.ScrollStepPercent;control.ShiftStepPercent=model.ShiftStepPercent;control.ShowShiftMarkers=model.ShowShiftMarkers;control.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;control.ResetScroll();}}
     private void RefreshScreens()
     {
         screens=Forms.Screen.AllScreens.Select((s,i)=>new ScreenTarget(s,new EdgeRegion(s.Bounds.Left,s.Bounds.Top,s.Bounds.Right,s.Bounds.Bottom,ScaleFor(s.Bounds.Left+s.Bounds.Width/2,s.Bounds.Top+s.Bounds.Height/2)),MonitorDescriptor.Capture(s,i))).ToArray();

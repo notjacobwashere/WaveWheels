@@ -100,7 +100,7 @@ begin
     'WaveWheels runs quietly in the system tray. Without Wave Link, one wheel controls your Windows output volume. Connect Wave Link to use multiple channel wheels.' + #13#10#13#10 +
     'REVEAL AND ADJUST' + #13#10 +
     'Scroll at the left screen edge to bring out your wheels. The opening scroll does not change volume. Pause briefly, move over a wheel, then scroll again to adjust it.' + #13#10#13#10 +
-    'Drag a wheel up or down to adjust it, or click its speaker button to mute. Scrolling at the very edge only opens the wheels.' + #13#10#13#10 +
+    'Click a wheel to mute or unmute; scroll to adjust volume. Settings can enable a dedicated speaker button and drag adjustment instead. Scrolling at the very edge only opens the wheels.' + #13#10#13#10 +
     'Configuration opens after Setup. Closing it keeps WaveWheels running; use the tray icon near the clock to open it again.');
 
   IntroSettingsPage := CreateOutputMsgPage(IntroControlsPage.ID, 'Make it yours',

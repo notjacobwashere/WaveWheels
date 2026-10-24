@@ -105,6 +105,13 @@ internal static class MaximumEffectTests
                     Assert(background[2]==expected.R&&background[1]==expected.G&&background[0]==expected.B,"Muted wheels must render their reddish base surface.");
                     var labelEncoder=new PngBitmapEncoder();labelEncoder.Frames.Add(BitmapFrame.Create(labelFrame));using var labelFile=File.Create(Path.Combine(directory,$"label-{scenario}.png"));labelEncoder.Save(labelFile);
                 }
+                var clickWheel=new Wheel{Available=true,Level=.5};var clickControl=new WheelControl{Wheel=clickWheel};var muteClicks=0;clickControl.MuteRequested+=_=>muteClicks++;
+                Assert(!clickControl.UseMuteButton&&clickControl.TryMuteAt(new Point(60,60))&&clickControl.TryMuteAt(WheelControl.MuteCenter)&&muteClicks==2,"Default whole-wheel mode must hide the speaker button and accept body clicks.");
+                Assert(!clickControl.TryMuteAt(new Point(295,110))&&muteClicks==2,"Blank space outside the wheel artwork must not mute.");
+                clickControl.Measure(new Size(300,120));clickControl.Arrange(new Rect(0,0,300,120));var clickFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);clickFrame.Render(clickControl);
+                Assert(clickControl.TryMuteAt(new Point(140,17))&&muteClicks==3,"The label must share the default wheel mute target.");
+                clickControl.UseMuteButton=true;Assert(!clickControl.TryMuteAt(new Point(60,60))&&!clickControl.TryMuteAt(new Point(140,17))&&clickControl.TryMuteAt(WheelControl.MuteCenter)&&muteClicks==4,"Dedicated-button mode must mute only through its speaker target.");
+                control.UseMuteButton=true;
                 Assert(WheelControl.MuteCenter.Y<88&&WheelControl.HitsMute(WheelControl.MuteCenter)&&!WheelControl.HitsMute(new Point(60,103)),"Raised mute artwork and its click target must agree.");
                 control.Wheel.Muted=false;control.Wheel.Level=1;control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=1;control.StartMaximumEffect();control.SeekMaximumEffect(TimeSpan.FromMilliseconds(300));control.EnterHover();
                 control.InvalidateVisual();control.UpdateLayout();var overlapFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);overlapFrame.Render(control);
