@@ -43,6 +43,18 @@ internal static class AnimationRefreshTests
         wheel.Level=.8;var requests=0;control.VolumeRequested+=(_,_)=>requests++;var bursts=control.MaximumEffectStarts;
         control.AdjustInput(1,false,300);control.AdjustInput(1,false,320);Assert(requests==0&&control.MaximumEffectStarts==bursts,"Limit feedback must not write audio or restart maximum sparks.");
         Assert(control.BoundaryFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Held limit input must be rate-limited and respect reduced motion.");
+        Assert(WheelControl.BoundaryShake(0)==0&&WheelControl.BoundaryShake(1)==0&&WheelControl.BoundaryStretch(0)==0&&WheelControl.BoundaryStretch(1)==0,"Elastic limit feedback must begin and finish at rest.");
+        Assert(Math.Abs(WheelControl.BoundaryShake(.05))>.5&&WheelControl.BoundaryShake(.05)*WheelControl.BoundaryShake(.15)<0,"Upper-limit feedback must include a small alternating shake.");
+        var peakStretch=Enumerable.Range(0,101).Max(i=>WheelControl.BoundaryStretch(i/100d));
+        Assert(peakStretch>4&&peakStretch<8&&WheelControl.BoundaryStretch(.8)<WheelControl.BoundaryStretch(.3),"The arc must stretch slightly forward and recoil without wrapping around.");
+        control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=.8;
+        foreach(var ms in new[]{0,45,90,150,240,300})
+        {
+            control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(ms));
+            if(SystemParameters.ClientAreaAnimation&&ms==90)Assert(control.BoundaryBarStretch>4,"A capped wheel must render elastic bar feedback.");
+            Render(control,Path.Combine(directory,$"elastic-limit-{ms}.png"));
+        }
+        Assert(wheel.Level==.8&&control.DisplayLevel==.8&&requests==0&&control.MaximumEffectStarts==bursts&&control.BoundaryBarStretch==0,"Recoil must preserve the audio level and displayed value, without writes or fresh sparks.");
         control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(90));Render(control,Path.Combine(directory,"wheel-limit-feedback.png"));
         control.TryMuteAt(new Point(60,60));Assert(wheel.Muted&&control.TapFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Accepted wheel clicks must animate without changing the mute action.");
         control.EffectsEnabled=false;Assert(control.ActivityAmount==0&&control.BoundaryProgress==1&&control.TapProgress==1,"Disabling animations must clear every new feedback clock.");

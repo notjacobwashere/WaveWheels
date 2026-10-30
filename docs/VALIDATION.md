@@ -41,3 +41,6 @@ Beta 3 also verifies whole-wheel mute as the default, ignored clicks in empty ar
 
 
 0.10.3 Beta 1 retains the complete configuration binding suite and adds profile-menu duplicate/remove command checks, editing settings inside an expanded group, idle update-control visibility, and access to stable rollback and archived betas. Every page is rendered, including minimum-width previews, offline mode, and both update channels. Existing audio and installer suites remain required.
+
+
+0.10.3 Beta 2 checks upper-limit shake and elastic arc overshoot/recoil across deterministic frames, bounded angular travel, exact rest endpoints, unchanged volume/display values, no extra audio writes or maximum bursts, and existing motion/disconnect cleanup.

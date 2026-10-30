@@ -117,6 +117,15 @@ public sealed class WheelControl : FrameworkElement
     internal int BoundaryFeedbackStarts {get;private set;}
     internal int TapFeedbackStarts {get;private set;}
     internal static double FeedbackPulse(double progress) {var p=Math.Clamp(progress,0,1);return Math.Sin(p*Math.PI)*Math.Pow(1-p,1.5);}
+    internal static double BoundaryShake(double progress)
+    {
+        var p=Math.Clamp(progress,0,1);return Math.Sin(p*Math.PI*10)*2.2*Math.Pow(1-p,2);
+    }
+    internal static double BoundaryStretch(double progress)
+    {
+        var p=Math.Clamp(progress,0,1);return Math.Sin(p*Math.PI)*Math.Pow(1-p,1.4)*14;
+    }
+    internal double BoundaryBarStretch=>boundaryDirection>0&&Wheel?.Available==true&&Wheel.Level>=Wheel.MaximumVolumePercent/100d-1e-7?BoundaryStretch(BoundaryProgress):0;
     internal static int ArcMilliseconds(double distance)=>(int)Math.Round(130+Math.Min(1,Math.Abs(distance))*170);
     private bool MotionEnabled=>EffectsEnabled&&SystemParameters.ClientAreaAnimation;
     private AnimationClock FeedbackClock(DependencyProperty property,int milliseconds)
@@ -390,7 +399,7 @@ public sealed class WheelControl : FrameworkElement
         var recovery=Math.Sin(UnmuteProgress*Math.PI)*(1-UnmuteProgress);
         var tap=1-.055*FeedbackPulse(TapProgress);
         springMatrix.ScaleAt((1+recovery*.04)*tap,(1+recovery*.04)*tap,60,60);
-        springMatrix.Translate(0,-boundaryDirection*7*FeedbackPulse(BoundaryProgress));
+        springMatrix.Translate(boundaryDirection>0?BoundaryShake(BoundaryProgress):0,-boundaryDirection*7*FeedbackPulse(BoundaryProgress));
         springMatrix.ScaleAt(1+spring.Stretch,1-spring.Stretch,60,60);
         springMatrix.RotateAt(spring.Angle,60,60);springMatrix.Translate(spring.X,spring.Y);
         dc.PushTransform(new MatrixTransform(springMatrix));
@@ -414,7 +423,9 @@ public sealed class WheelControl : FrameworkElement
         var boundary=FeedbackPulse(BoundaryProgress);
         if(boundary>0)dc.DrawGeometry(null,new Pen(WithOpacity(accent,boundary*.6),1.5),outline);
         DrawMaximumSparks(dc,accent);
-        var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius, MaximumVolumeEffect.ArcSweepDegrees * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel));
+        // Visual elasticity never changes DisplayLevel, channel volume, caps, or spark origins.
+        var stretch=BoundaryBarStretch;
+        var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius+stretch*.18, MaximumVolumeEffect.ArcSweepDegrees * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel)+stretch);
         var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress)*MaximumEffectOpacity*Effects.BloomPercent/100d+ActivityAmount*.35*Effects.BloomPercent/100d;
         if (w.Available)
         {
