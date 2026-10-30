@@ -38,3 +38,6 @@ Beta 3 also verifies whole-wheel mute as the default, ignored clicks in empty ar
 
 
 0.10.2 Beta 1 checks interrupted page transitions in the actual configuration window, immediate toggle cancellation, stable button pointer targets, press/release and inherited-toggle cleanup, adaptive arc timings, continuous adjustment highlights during repeated input, rate-limited limit feedback without mixer writes, click confirmation, disconnect cleanup, and bounded number-retarget snapshots preserving visible glyph pose/opacity. Rendered frames cover limit feedback and the redesigned number roll. Existing modern/legacy protocol, overlay-input, fallback-mode, number-column, spark, and installer suites remain required.
+
+
+0.10.3 Beta 1 retains the complete configuration binding suite and adds profile-menu duplicate/remove command checks, editing settings inside an expanded group, idle update-control visibility, and access to stable rollback and archived betas. Every page is rendered, including minimum-width previews, offline mode, and both update channels. Existing audio and installer suites remain required.

@@ -99,7 +99,9 @@ public partial class SettingsWindow : Window
     private void Navigate(object sender,RoutedEventArgs e)
     {
         var section=(sender as Button)?.Tag as string;
-        if(section==null||section==currentSection)return;
+        if(section==null)return;
+        if(FindName(section+"Nav") is DependencyObject nav)for(var ancestor=LogicalTreeHelper.GetParent(nav);ancestor!=null;ancestor=LogicalTreeHelper.GetParent(ancestor))if(ancestor is Expander group)group.IsExpanded=true;
+        if(section==currentSection)return;
         var order=new[]{"Wheels","Settings","Effects","Profiles","Placement","Startup","Updates","Connection"};
         var direction=Array.IndexOf(order,section)>=Array.IndexOf(order,currentSection)?1:-1;
         foreach(var motion in pageMotion.Values)motion.Reset();
@@ -113,10 +115,11 @@ public partial class SettingsWindow : Window
         UpdatesPage.Visibility=section=="Updates"?Visibility.Visible:Visibility.Collapsed;
         EffectsPage.Visibility=section=="Effects"?Visibility.Visible:Visibility.Collapsed;
         var activePage=pageMotion.Keys.FirstOrDefault(p=>p.Name==section+"Page");if(activePage!=null)pageMotion[activePage].Enter(direction,MotionEnabled);
-        foreach(var button in new[]{WheelsNav,SettingsNav,EffectsNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(39,33,50):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(223,201,255):Color.FromRgb(151,138,167)); }
+        foreach(var button in new[]{WheelsNav,SettingsNav,EffectsNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(28,54,55):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(163,230,217):Color.FromRgb(151,138,167)); }
     }
     private bool MotionEnabled=>model.AnimateWheels&&SystemParameters.ClientAreaAnimation;
     internal void SeekInterfaceMotion(TimeSpan time) {foreach(var motion in pageMotion.Values)motion.Seek(time);modeMotion?.Seek(time);}
+    private void OpenActions(object sender,RoutedEventArgs e) {if(sender is Button {ContextMenu: {} menu} button) {menu.PlacementTarget=button;menu.IsOpen=true;}}
     private void RestoreDefaults(object sender,RoutedEventArgs e)=>model.RestoreDefaults((string)((FrameworkElement)sender).Tag);
     private void PreviewMaxEffect(object sender,RoutedEventArgs e)
     {

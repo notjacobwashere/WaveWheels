@@ -18,6 +18,7 @@ internal static class BlacklistTests
         vm.Update(new(true,"Fixture mixer","Wave Link 3",new[]{new Channel("music","Music",.6,false,true,Array.Empty<ChannelMix>())},Array.Empty<Mix>()));
         var window=new SettingsWindow(vm);var root=(FrameworkElement)window.Content;window.Content=null;root.DataContext=vm;root.Resources=window.Resources;
         ((Button)window.FindName("SettingsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.Measure(new Size(1160,860));root.Arrange(new Rect(0,0,1160,860));root.UpdateLayout();
+        for(DependencyObject? parent=(DependencyObject)window.FindName("BlacklistEnabledToggle");parent!=null;parent=LogicalTreeHelper.GetParent(parent))if(parent is Expander group)group.IsExpanded=true;root.UpdateLayout();
         var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);root.UpdateLayout();
         var box=(TextBox)window.FindName("BlacklistAppBox");box.SetCurrentValue(TextBox.TextProperty,"GAME.exe");
         var add=FindButtons(root).Single(b=>b.Content?.ToString()=="Add app");add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

@@ -26,8 +26,9 @@ internal static class ChannelEditorSmoke
         var vm=new MainViewModel(store,true);
         MixerSnapshot Fixture(string name)=>new(true,"Fixture mixer","Wave Link 3",new[]{new Channel("music",name,.6,false,true,new[]{new ChannelMix("personal",.6,false)})},new[]{new Mix("personal","Headphones")});
         vm.Update(Fixture("Music"));var first=vm.SelectedWheel;var window=new SettingsWindow(vm);var root=(FrameworkElement)window.Content;window.Content=null;root.DataContext=vm;root.Resources=window.Resources;root.Measure(new Size(1160,860));root.Arrange(new Rect(0,0,1160,860));Flush(root);
+        Descendants(root).OfType<Expander>().Single(e=>e.Header?.ToString()=="Audio controls").IsExpanded=true;Flush(root);
         var channel=(ComboBox)window.FindName("ChannelBox");var mix=(ComboBox)window.FindName("MixBox");
-        Assert((string?)channel.SelectedValue=="music"&&(string?)mix.SelectedValue=="personal"&&Descendants(channel).OfType<TextBlock>().Any(t=>t.Text=="Music"),"Saved channel and mix must be selected and visibly named immediately without switching wheels.");
+        Assert((string?)channel.SelectedValue=="music"&&(string?)mix.SelectedValue=="personal"&&Descendants(channel).OfType<TextBlock>().Any(t=>t.Text=="Music"),"Opening audio controls must show the saved channel and mix without switching wheels.");
         Assert(((WheelControl)window.FindName("SelectedPreview")).Wheel==first&&vm.SelectedWheel==first,"The initial preview must remain bound to the selected wheel.");
         vm.Update(Fixture("Music renamed"));Flush(root);Assert((string?)channel.SelectedValue=="music"&&Descendants(channel).OfType<TextBlock>().Any(t=>t.Text=="Music renamed"),"Refreshing channel choices must not leave a blank selection.");
         Assert(vm.Channels.Any(c=>c.Id==""&&c.Name=="None")&&!vm.Channels.Any(c=>c.Name.Contains("Choose an input")),"The unbound option must be explicitly named None.");
