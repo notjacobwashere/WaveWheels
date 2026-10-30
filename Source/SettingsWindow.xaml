@@ -1,5 +1,5 @@
 <Window x:Class="WaveWheels.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
- Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 0.10.2-beta.1 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D0E15" Foreground="#F3F0FA" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
+ Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 0.10.2 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D0E15" Foreground="#F3F0FA" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
  <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="14" GlassFrameThickness="0"/></shell:WindowChrome.WindowChrome>
  <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Theme.xaml"/></ResourceDictionary.MergedDictionaries>
  </ResourceDictionary></Window.Resources>
