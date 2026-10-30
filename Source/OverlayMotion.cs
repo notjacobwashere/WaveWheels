@@ -54,15 +54,16 @@ internal sealed class OverlayMotion
     private void Animate(double x, double scale, int milliseconds, EasingMode easing, Action completed,int delayMilliseconds=0)
     {
         if (milliseconds == 0) { Set(x, scale); completed(); return; }
-        AnimationClock Clock(double from,double to)
+        AnimationClock Clock(double from,double to,bool settle=false)
         {
             var animation=new DoubleAnimationUsingKeyFrames{Duration=TimeSpan.FromMilliseconds(milliseconds+delayMilliseconds)};
             animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(from,KeyTime.FromTimeSpan(TimeSpan.Zero)));
             if(delayMilliseconds>0)animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(from,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delayMilliseconds))));
+            if(settle)animation.KeyFrames.Add(new EasingDoubleKeyFrame(1.014,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(delayMilliseconds+milliseconds*.76)),new CubicEase{EasingMode=EasingMode.EaseOut}));
             animation.KeyFrames.Add(new EasingDoubleKeyFrame(to,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(milliseconds+delayMilliseconds)),new CubicEase{EasingMode=easing}));
             return (AnimationClock)animation.CreateClock(true);
         }
-        slideClock = Clock(Offset, x); xClock = Clock(Scale.ScaleX, scale); yClock = Clock(Scale.ScaleY, scale);
+        slideClock = Clock(Offset, x); xClock = Clock(Scale.ScaleX, scale,easing==EasingMode.EaseOut); yClock = Clock(Scale.ScaleY, scale,easing==EasingMode.EaseOut);
         slideClock.Completed += (_, _) => completed();
         Slide.ApplyAnimationClock(Axis, slideClock);
         Scale.ApplyAnimationClock(ScaleTransform.ScaleXProperty, xClock);

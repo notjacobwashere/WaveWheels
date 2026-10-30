@@ -27,11 +27,19 @@ public partial class SettingsWindow : Window
     private int insertion;
     private long lastAutoScroll;
     private bool editorRefreshQueued;
+    private string currentSection="Wheels";
+    private readonly Dictionary<FrameworkElement,SurfaceMotion> pageMotion=new();
+    private SurfaceMotion? modeMotion;
     public SettingsWindow(MainViewModel model)
     {
         this.model = model;
         InitializeComponent();
         DataContext = model;
+        foreach(var page in new FrameworkElement[]{WheelsPage,SettingsPage,EffectsPage,ProfilesPage,PlacementPage,UpdatesPage,StartupPage,ConnectionPage})pageMotion[page]=new SurfaceMotion(page);
+        modeMotion=new SurfaceMotion(AudioModeBanner);
+        var previousConnection=model.Connected;
+        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.Connected)&&previousConnection!=model.Connected) {previousConnection=model.Connected;modeMotion.Enter(-1,MotionEnabled);}};
+        model.AppearanceChanged+=()=> {if(!MotionEnabled) {foreach(var motion in pageMotion.Values)motion.Reset();modeMotion.Reset();}};
         model.SelectionChanged+=QueueEditorBindings;
         model.Channels.CollectionChanged+=(_,_)=>QueueEditorBindings();
         model.MixChoices.CollectionChanged+=(_,_)=>QueueEditorBindings();
@@ -91,6 +99,11 @@ public partial class SettingsWindow : Window
     private void Navigate(object sender,RoutedEventArgs e)
     {
         var section=(sender as Button)?.Tag as string;
+        if(section==null||section==currentSection)return;
+        var order=new[]{"Wheels","Settings","Effects","Profiles","Placement","Startup","Updates","Connection"};
+        var direction=Array.IndexOf(order,section)>=Array.IndexOf(order,currentSection)?1:-1;
+        foreach(var motion in pageMotion.Values)motion.Reset();
+        currentSection=section;
         WheelsPage.Visibility=section=="Wheels"?Visibility.Visible:Visibility.Collapsed;
         StartupPage.Visibility=section=="Startup"?Visibility.Visible:Visibility.Collapsed;
         SettingsPage.Visibility=section=="Settings"?Visibility.Visible:Visibility.Collapsed;
@@ -99,8 +112,11 @@ public partial class SettingsWindow : Window
         PlacementPage.Visibility=section=="Placement"?Visibility.Visible:Visibility.Collapsed;
         UpdatesPage.Visibility=section=="Updates"?Visibility.Visible:Visibility.Collapsed;
         EffectsPage.Visibility=section=="Effects"?Visibility.Visible:Visibility.Collapsed;
+        var activePage=pageMotion.Keys.FirstOrDefault(p=>p.Name==section+"Page");if(activePage!=null)pageMotion[activePage].Enter(direction,MotionEnabled);
         foreach(var button in new[]{WheelsNav,SettingsNav,EffectsNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(39,33,50):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(223,201,255):Color.FromRgb(151,138,167)); }
     }
+    private bool MotionEnabled=>model.AnimateWheels&&SystemParameters.ClientAreaAnimation;
+    internal void SeekInterfaceMotion(TimeSpan time) {foreach(var motion in pageMotion.Values)motion.Seek(time);modeMotion?.Seek(time);}
     private void RestoreDefaults(object sender,RoutedEventArgs e)=>model.RestoreDefaults((string)((FrameworkElement)sender).Tag);
     private void PreviewMaxEffect(object sender,RoutedEventArgs e)
     {

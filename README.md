@@ -140,3 +140,10 @@ Protocol references: [Wave Link 3 implementation notes](https://github.com/Agash
 ## License
 
 Copyright 2026 notjacobwashere. Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE).
+
+
+## Animation beta
+
+0.10.2 Beta 1 adds short directional page transitions, connection-banner transitions on mode changes, and button-press feedback. Wheel entrances settle softly, hover outlines and speaker glows blend in and out, and volume arcs use shorter transitions for small changes. Volume adjustments briefly highlight the arc; limits produce a rate-limited nudge without changing audio or retriggering maximum sparks.
+
+The number display now rolls over a full digit height in 180 ms. Increases travel upward and decreases downward. Unchanged columns stay fixed, while rapid retargeting carries forward the dominant visible digit's position and opacity. The animation toggle and Windows motion preference apply to the new effects.

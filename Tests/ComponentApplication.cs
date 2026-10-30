@@ -14,7 +14,7 @@ internal sealed class ComponentApplication : Application
         ShutdownMode=ShutdownMode.OnExplicitShutdown;
         var xaml=XDocument.Load(Path.Combine(AppContext.BaseDirectory,"AppResources.xaml"));
         var resources=xaml.Root!.Element(XName.Get("Application.Resources","http://schemas.microsoft.com/winfx/2006/xaml/presentation"))!;
-        Resources=(ResourceDictionary)XamlReader.Parse("<ResourceDictionary xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">"+string.Concat(resources.Elements().Select(e=>e.ToString()))+"</ResourceDictionary>");
+        Resources=(ResourceDictionary)XamlReader.Parse("<ResourceDictionary xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\" xmlns:local=\"clr-namespace:WaveWheels;assembly=WaveWheels\">"+string.Concat(resources.Elements().Select(e=>e.ToString()))+"</ResourceDictionary>");
     }
     protected override void OnStartup(StartupEventArgs e) { }
     protected override void OnExit(ExitEventArgs e) { }

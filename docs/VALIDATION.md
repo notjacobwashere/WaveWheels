@@ -35,3 +35,6 @@ Beta 3 also verifies whole-wheel mute as the default, ignored clicks in empty ar
 
 
 0.10.1 verifies the packaged application icon in the header/window, preview containment with long labels at 1000/1160 px window widths and 50/100/180% wheel sizes, and immediate volume-arc updates with animations disabled. The preview uses label-aware width and effect padding. The obsolete edge activation preference and both toggle surfaces are removed; existing blacklisting and opening-scroll protection remain covered. Configuration titles and descriptions use concise labels.
+
+
+0.10.2 Beta 1 checks interrupted page transitions in the actual configuration window, immediate toggle cancellation, stable button pointer targets, press/release and inherited-toggle cleanup, adaptive arc timings, continuous adjustment highlights during repeated input, rate-limited limit feedback without mixer writes, click confirmation, disconnect cleanup, and bounded number-retarget snapshots preserving visible glyph pose/opacity. Rendered frames cover limit feedback and the redesigned number roll. Existing modern/legacy protocol, overlay-input, fallback-mode, number-column, spark, and installer suites remain required.

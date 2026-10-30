@@ -141,6 +141,7 @@ internal static class UiRendering
                 MonitorPersistenceTests.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"monitor-profile-"+Guid.NewGuid().ToString("N")));
                 CustomizationTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"customization-profile-"+Guid.NewGuid().ToString("N")));
                 AudioModeTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"audio-mode-"+Guid.NewGuid().ToString("N")));
+                AnimationRefreshTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"animation-refresh"));
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}

@@ -218,7 +218,7 @@ internal static class MaximumEffectTests
                 number.SeekNumberTransition(TimeSpan.FromMilliseconds(75));
                 if(SystemParameters.ClientAreaAnimation)Assert(number.NumberProgress>0&&number.NumberProgress<1,"The number must roll/fade between its endpoints.");
                 number.InvalidateVisual();number.UpdateLayout();var numberFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);numberFrame.Render(number);var numberEncoder=new PngBitmapEncoder();numberEncoder.Frames.Add(BitmapFrame.Create(numberFrame));using(var numberFile=File.Create(Path.Combine(directory,"rolling-number.png")))numberEncoder.Save(numberFile);
-                number.SeekNumberTransition(TimeSpan.FromMilliseconds(150));Assert(number.NumberProgress==1,"Numbers must settle within 150 ms.");
+                number.SeekNumberTransition(TimeSpan.FromMilliseconds(WheelControl.NumberTransitionMilliseconds));Assert(number.NumberProgress==1,"Numbers must settle within 180 ms.");
                 numberWheel.Level=.4;Assert(number.NumberDirection==-1&&number.NumberText=="40","Decreases must roll in the inverse direction.");
                 numberWheel.Level=.41;numberWheel.Level=.42;Assert(number.NumberText=="42"&&numberWheel.Level==.42,"Rapid input must retarget immediately without queuing or blocking volume updates.");
                 number.EffectsEnabled=false;numberWheel.Level=.43;Assert(number.NumberProgress==1&&number.NumberText=="43","Disabling animation must immediately show the latest number.");
@@ -230,15 +230,15 @@ internal static class MaximumEffectTests
                     Assert(glyphs.Where(g=>g.Value!='6').All(g=>g.Animated&&g.X==67),"Only the changed units column may roll.");
                     var units=NumberRollLayout.Glyphs("9","19",progress).Single(g=>g.Value=='9');Assert(!units.Animated&&units.X==67&&units.OffsetY==0&&units.Opacity==1,"Adding a tens digit must leave unchanged units in place.");
                 }
-                var inverse=NumberRollLayout.Glyphs("61","60",.5,-1);Assert(inverse.Single(g=>g.Value=='1').OffsetY<0&&inverse.Single(g=>g.Value=='0').OffsetY>0,"Scrolling down must roll changed digits upward, with incoming digits arriving from below.");
-                var carry=NumberRollLayout.Glyphs("19","20",.5,1);Assert(carry.Single(g=>g.Value=='2').OffsetY<0&&carry.Single(g=>g.Value=='0').OffsetY<0,"Scrolling up across a carry must roll both changed digits downward together, entering from above.");
-                var reverseCarry=NumberRollLayout.Glyphs("20","19",.5,-1);Assert(reverseCarry.Where(g=>g.Value is '1' or '9').All(g=>g.OffsetY>0),"Scrolling down across a borrow must reverse both changed digits together.");
+                var inverse=NumberRollLayout.Glyphs("61","60",.5,-1);Assert(inverse.Single(g=>g.Value=='1').OffsetY>0&&inverse.Single(g=>g.Value=='0').OffsetY<0,"Decreases must move outgoing digits down and bring new digits from above.");
+                var carry=NumberRollLayout.Glyphs("19","20",.5,1);Assert(carry.Single(g=>g.Value=='2').OffsetY>0&&carry.Single(g=>g.Value=='0').OffsetY>0,"Increases across a carry must bring both incoming digits from below.");
+                var reverseCarry=NumberRollLayout.Glyphs("20","19",.5,-1);Assert(reverseCarry.Where(g=>g.Value is '1' or '9').All(g=>g.OffsetY<0),"Scrolling down across a borrow must reverse both changed digits together.");
                 Assert(!NumberRollLayout.CanSplit("99","MAX")&&NumberRollLayout.Glyphs("59","60",.5).All(g=>g.Animated),"Whole display type changes and carries must animate every changed portion.");
                 number.EffectsEnabled=true;number.Wheel=new Wheel{Available=true,Level=.6};number.Wheel.Level=.61;number.SeekNumberTransition(TimeSpan.FromMilliseconds(50));number.InvalidateVisual();number.UpdateLayout();
                 var digitFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);digitFrame.Render(number);var digitEncoder=new PngBitmapEncoder();digitEncoder.Frames.Add(BitmapFrame.Create(digitFrame));using(var digitFile=File.Create(Path.Combine(directory,"rolling-digit.png")))digitEncoder.Save(digitFile);
                 Console.WriteLine("PASS: max pulse/clocks, Shift markers/cooldown, boundary reversals with default and 10% steps/acceleration/caps, and fractional-notch quantization.");
                 Console.WriteLine("PASS: randomized arc origins, tangent spark travel, extended glow, bounded paths, fixed-length tails, and clean stop.");
-                Console.WriteLine("PASS: 150 ms directional number roll/fade, unchanged-value suppression, immediate retargeting, reduced motion, and rebind reset.");
+                Console.WriteLine("PASS: 180 ms directional number roll/fade, unchanged-value suppression, immediate retargeting, reduced motion, and rebind reset.");
                 Console.WriteLine("PASS: stationary unchanged digits across all frames, per-column transitions/carries, and stable units on digit-count changes.");
                 ChannelEditorSmoke.Run(Path.Combine(directory,"channel-editor-profile-"+Guid.NewGuid().ToString("N")));
                 BlacklistTests.Run(Path.Combine(directory,"blacklist-profile-"+Guid.NewGuid().ToString("N")));
