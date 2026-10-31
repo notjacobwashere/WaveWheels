@@ -44,3 +44,5 @@ Beta 3 also verifies whole-wheel mute as the default, ignored clicks in empty ar
 
 
 0.10.3 Beta 2 checks upper-limit shake and elastic arc overshoot/recoil across deterministic frames, bounded angular travel, exact rest endpoints, unchanged volume/display values, no extra audio writes or maximum bursts, and existing motion/disconnect cleanup.
+
+0.10.3 Beta 3 removes the upper-limit horizontal shake while retaining the upward nudge and elastic bar recoil. Regression checks exercise repeated volume increases/decreases and external changes below maximum without adjustment glow, and confirm that reaching maximum still starts the existing glow and spark effect. Motion suppression, audio caps, no extra writes, and rendered recoil frames remain covered.

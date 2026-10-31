@@ -34,17 +34,16 @@ internal static class AnimationRefreshTests
         control.VolumeRequested+=(w,v)=>w.Level=Math.Clamp(v,0,w.MaximumVolumePercent/100d);control.MuteRequested+=w=>w.Muted=!w.Muted;
         control.Measure(new Size(300,120));control.Arrange(new Rect(0,0,300,120));control.EnterHover();control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(80));
         if(SystemParameters.ClientAreaAnimation)Assert(control.HoverAmount>0&&control.HoverAmount<1,"Hover outlines must blend into place.");
-        control.AdjustInput(1,false,0);control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(45));
-        if(SystemParameters.ClientAreaAnimation)
+        foreach(var delta in new[]{1d,1d,-1d,1d,-1d})
         {
-            Assert(control.ActivityAmount>.99,"A real volume change must produce a short arc highlight.");
-            var amount=control.ActivityAmount;control.AdjustInput(1,false,40);control.SeekInteractionFeedback(TimeSpan.Zero);Assert(Math.Abs(control.ActivityAmount-amount)<.001,"Rapid changes must retain the current highlight instead of flashing off.");
+            control.AdjustInput(delta,false,0);control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(45));
+            Assert(control.ArcGlowAmount==0&&control.MaximumEffectStarts==0,"Normal scrolling in either direction must not trigger bar glow or maximum effects.");
         }
+        wheel.Level=.7;Assert(control.ArcGlowAmount==0,"External volume changes below maximum must not trigger bar glow.");
         wheel.Level=.8;var requests=0;control.VolumeRequested+=(_,_)=>requests++;var bursts=control.MaximumEffectStarts;
         control.AdjustInput(1,false,300);control.AdjustInput(1,false,320);Assert(requests==0&&control.MaximumEffectStarts==bursts,"Limit feedback must not write audio or restart maximum sparks.");
         Assert(control.BoundaryFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Held limit input must be rate-limited and respect reduced motion.");
-        Assert(WheelControl.BoundaryShake(0)==0&&WheelControl.BoundaryShake(1)==0&&WheelControl.BoundaryStretch(0)==0&&WheelControl.BoundaryStretch(1)==0,"Elastic limit feedback must begin and finish at rest.");
-        Assert(Math.Abs(WheelControl.BoundaryShake(.05))>.5&&WheelControl.BoundaryShake(.05)*WheelControl.BoundaryShake(.15)<0,"Upper-limit feedback must include a small alternating shake.");
+        Assert(WheelControl.BoundaryStretch(0)==0&&WheelControl.BoundaryStretch(1)==0,"Elastic limit feedback must begin and finish at rest.");
         var peakStretch=Enumerable.Range(0,101).Max(i=>WheelControl.BoundaryStretch(i/100d));
         Assert(peakStretch>4&&peakStretch<8&&WheelControl.BoundaryStretch(.8)<WheelControl.BoundaryStretch(.3),"The arc must stretch slightly forward and recoil without wrapping around.");
         control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=.8;
@@ -57,9 +56,12 @@ internal static class AnimationRefreshTests
         Assert(wheel.Level==.8&&control.DisplayLevel==.8&&requests==0&&control.MaximumEffectStarts==bursts&&control.BoundaryBarStretch==0,"Recoil must preserve the audio level and displayed value, without writes or fresh sparks.");
         control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(90));Render(control,Path.Combine(directory,"wheel-limit-feedback.png"));
         control.TryMuteAt(new Point(60,60));Assert(wheel.Muted&&control.TapFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Accepted wheel clicks must animate without changing the mute action.");
-        control.EffectsEnabled=false;Assert(control.ActivityAmount==0&&control.BoundaryProgress==1&&control.TapProgress==1,"Disabling animations must clear every new feedback clock.");
+        control.EffectsEnabled=false;Assert(control.ArcGlowAmount==0&&control.BoundaryProgress==1&&control.TapProgress==1,"Disabling animations must clear every new feedback clock.");
         var before=control.BoundaryFeedbackStarts;control.AdjustInput(1,false,700);Assert(control.BoundaryFeedbackStarts==before,"Disabled motion must suppress limit animation.");
-        control.EffectsEnabled=true;control.AdjustInput(1,false,1000);wheel.Available=false;Assert(control.BoundaryProgress==1&&control.ActivityAmount==0,"Disconnecting must clear active wheel feedback.");
+        control.EffectsEnabled=true;control.AdjustInput(1,false,1000);wheel.Available=false;Assert(control.BoundaryProgress==1&&control.ArcGlowAmount==0,"Disconnecting must clear active wheel feedback.");
+        wheel.Available=true;wheel.MaximumVolumePercent=100;wheel.Level=.99;wheel.Level=1;
+        control.SeekMaximumEffect(TimeSpan.FromMilliseconds(100));
+        if(SystemParameters.ClientAreaAnimation)Assert(control.ArcGlowAmount>0&&control.MaximumEffectStarts==bursts+1,"Reaching maximum must retain its existing glow and sparks.");
         var first=NumberRollLayout.Glyphs("60","61",.65,1);var snapshot=NumberRollLayout.Dominant(first);var retarget=NumberRollLayout.Tween(snapshot,"62",0,1);
         foreach(var glyph in snapshot)Assert(retarget.Any(g=>g.Value==glyph.Value&&g.X==glyph.X&&Math.Abs(g.OffsetY-glyph.OffsetY)<.0001&&Math.Abs(g.Opacity-glyph.Opacity)<.0001),"Number retargeting must retain the dominant visible glyph's pose and opacity.");
         Assert(retarget.Count<=4&&NumberRollLayout.Travel>=24,"Number rollers must stay bounded and use separated digit tracks.");
@@ -73,7 +75,7 @@ internal static class AnimationRefreshTests
         ((Button)window.FindName("EffectsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Assert(settings.Visibility==Visibility.Collapsed&&settings.Opacity==1&&((TranslateTransform)settings.RenderTransform).Y==0,"Switching pages mid-transition must reset the outgoing page.");
         vm.AnimateWheels=false;var effects=(FrameworkElement)window.FindName("EffectsPage");Assert(effects.Opacity==1&&((TranslateTransform)effects.RenderTransform).Y==0,"The app toggle must stop active navigation motion immediately.");
         vm.Dispose();
-        Console.WriteLine("PASS: page/press cancellation, stable input targets, adaptive arcs, continuous highlights, bounded limit feedback, motion suppression, and number retarget continuity.");
+        Console.WriteLine("PASS: page/press cancellation, stable input targets, adaptive arcs, maximum-only glow, elastic limit feedback, motion suppression, and number retarget continuity.");
     }
     private static void Render(WheelControl wheel,string path)
     {

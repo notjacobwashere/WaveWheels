@@ -102,25 +102,20 @@ public sealed class WheelControl : FrameworkElement
         shiftFeedbackClock?.Controller?.Remove();shiftFeedbackClock=null;BeginAnimation(ShiftFeedbackProgressProperty,null);
         SetValue(ShiftFeedbackProgressProperty,1d);shiftInitial=default;shiftStrength=0;
     }
-    private static readonly DependencyProperty ActivityAmountProperty=DependencyProperty.Register("ActivityAmount",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(0d,FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty BoundaryProgressProperty=DependencyProperty.Register("BoundaryProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty TapProgressProperty=DependencyProperty.Register("TapProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty HoverAmountProperty=DependencyProperty.Register("HoverAmount",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(0d,FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty ButtonHoverAmountProperty=DependencyProperty.Register("ButtonHoverAmount",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(0d,FrameworkPropertyMetadataOptions.AffectsRender));
-    private AnimationClock? activityClock,boundaryClock,tapClock,hoverClock,buttonHoverClock;
+    private AnimationClock? boundaryClock,tapClock,hoverClock,buttonHoverClock;
     private long lastBoundaryAt=-1000;
     private double boundaryDirection;
-    internal double ActivityAmount=>(double)GetValue(ActivityAmountProperty);
+    internal double ArcGlowAmount=>MaximumVolumeEffect.Glow(MaximumEffectProgress)*MaximumEffectOpacity*Effects.BloomPercent/100d;
     internal double BoundaryProgress=>(double)GetValue(BoundaryProgressProperty);
     internal double TapProgress=>(double)GetValue(TapProgressProperty);
     internal double HoverAmount=>(double)GetValue(HoverAmountProperty);
     internal int BoundaryFeedbackStarts {get;private set;}
     internal int TapFeedbackStarts {get;private set;}
     internal static double FeedbackPulse(double progress) {var p=Math.Clamp(progress,0,1);return Math.Sin(p*Math.PI)*Math.Pow(1-p,1.5);}
-    internal static double BoundaryShake(double progress)
-    {
-        var p=Math.Clamp(progress,0,1);return Math.Sin(p*Math.PI*10)*2.2*Math.Pow(1-p,2);
-    }
     internal static double BoundaryStretch(double progress)
     {
         var p=Math.Clamp(progress,0,1);return Math.Sin(p*Math.PI)*Math.Pow(1-p,1.4)*14;
@@ -137,14 +132,6 @@ public sealed class WheelControl : FrameworkElement
         if(!MotionEnabled) {BeginAnimation(property,null);SetValue(property,target);return null;}
         var clock=(AnimationClock)new DoubleAnimation((double)GetValue(property),target,TimeSpan.FromMilliseconds(milliseconds)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}}.CreateClock(true);ApplyAnimationClock(property,clock);return clock;
     }
-    private void StartActivityFeedback()
-    {
-        var animation=new DoubleAnimationUsingKeyFrames{Duration=TimeSpan.FromMilliseconds(340),FillBehavior=FillBehavior.Stop};
-        animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(ActivityAmount,KeyTime.FromTimeSpan(TimeSpan.Zero)));
-        animation.KeyFrames.Add(new EasingDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(45)),new CubicEase{EasingMode=EasingMode.EaseOut}));
-        animation.KeyFrames.Add(new EasingDoubleKeyFrame(0,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(340)),new CubicEase{EasingMode=EasingMode.EaseOut}));
-        activityClock=(AnimationClock)animation.CreateClock(true);ApplyAnimationClock(ActivityAmountProperty,activityClock);
-    }
     private void StartBoundary(double delta,long now)
     {
         if(!MotionEnabled||now-lastBoundaryAt<180)return;
@@ -152,16 +139,15 @@ public sealed class WheelControl : FrameworkElement
     }
     private void StopInteractionFeedback()
     {
-        foreach(var clock in new[]{activityClock,boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.Remove();
-        activityClock=boundaryClock=tapClock=hoverClock=buttonHoverClock=null;lastBoundaryAt=-1000;
+        foreach(var clock in new[]{boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.Remove();
+        boundaryClock=tapClock=hoverClock=buttonHoverClock=null;lastBoundaryAt=-1000;
         foreach(var property in new[]{BoundaryProgressProperty,TapProgressProperty}) {BeginAnimation(property,null);SetValue(property,1d);}
-        BeginAnimation(ActivityAmountProperty,null);SetValue(ActivityAmountProperty,0d);
         BeginAnimation(HoverAmountProperty,null);SetValue(HoverAmountProperty,active?1d:0d);
         BeginAnimation(ButtonHoverAmountProperty,null);SetValue(ButtonHoverAmountProperty,muteHovered?1d:0d);
     }
     internal void SeekInteractionFeedback(TimeSpan time)
     {
-        foreach(var clock in new[]{activityClock,boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+        foreach(var clock in new[]{boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     }
     private static readonly DependencyProperty NumberProgressProperty=DependencyProperty.Register("NumberProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     internal const int NumberTransitionMilliseconds=180;
@@ -254,7 +240,6 @@ public sealed class WheelControl : FrameworkElement
     {
         if (e.PropertyName == nameof(Wheel.Level))
         {
-            if(MotionEnabled&&Wheel?.Available==true)StartActivityFeedback();
             UpdateNumberDisplay();
             if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,EffectsEnabled&&SystemParameters.ClientAreaAnimation))StartMaximumEffect();
             else if(Wheel?.Level<1&&maximumClock!=null&&MaximumEffectProgress<1)StopSparkEmission();
@@ -399,7 +384,7 @@ public sealed class WheelControl : FrameworkElement
         var recovery=Math.Sin(UnmuteProgress*Math.PI)*(1-UnmuteProgress);
         var tap=1-.055*FeedbackPulse(TapProgress);
         springMatrix.ScaleAt((1+recovery*.04)*tap,(1+recovery*.04)*tap,60,60);
-        springMatrix.Translate(boundaryDirection>0?BoundaryShake(BoundaryProgress):0,-boundaryDirection*7*FeedbackPulse(BoundaryProgress));
+        springMatrix.Translate(0,-boundaryDirection*7*FeedbackPulse(BoundaryProgress));
         springMatrix.ScaleAt(1+spring.Stretch,1-spring.Stretch,60,60);
         springMatrix.RotateAt(spring.Angle,60,60);springMatrix.Translate(spring.X,spring.Y);
         dc.PushTransform(new MatrixTransform(springMatrix));
@@ -426,7 +411,7 @@ public sealed class WheelControl : FrameworkElement
         // Visual elasticity never changes DisplayLevel, channel volume, caps, or spark origins.
         var stretch=BoundaryBarStretch;
         var arc = Arc(new Point(60, 60), MaximumVolumeEffect.RingRadius+stretch*.18, MaximumVolumeEffect.ArcSweepDegrees * MaximumVolumeEffect.RenderedArcLevel(DisplayLevel)+stretch);
-        var glow=MaximumVolumeEffect.Glow(MaximumEffectProgress)*MaximumEffectOpacity*Effects.BloomPercent/100d+ActivityAmount*.35*Effects.BloomPercent/100d;
+        var glow=ArcGlowAmount;
         if (w.Available)
         {
             for(var width=56;width>=2;width-=2)
