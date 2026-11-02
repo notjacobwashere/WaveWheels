@@ -46,8 +46,8 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.10.3-beta.3 version again. Your saved wheels will be kept.", "WaveWheels 0.10.3-beta.3 update", MessageBoxButton.OK, MessageBoxImage.Information);
-            else if(e.Args.Contains("--settings")) settingsSignal.Set();
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 0.10.3-beta.4 version again. Your saved wheels will be kept.", "WaveWheels 0.10.3-beta.4 update", MessageBoxButton.OK, MessageBoxImage.Information);
+            else if(e.Args.Contains("--settings")||e.Args.Contains("--setup")) settingsSignal.Set();
             Shutdown();return;
         }
         try {Directory.CreateDirectory(data);logPath=Path.Combine(data,"app.log");}catch{ }
@@ -61,7 +61,7 @@ public partial class App : Application
         signalWait=ThreadPool.RegisterWaitForSingleObject(settingsSignal,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration),null,Timeout.Infinite,false);
         exitWait=ThreadPool.RegisterWaitForSingleObject(exitSignal,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()),null,Timeout.Infinite,false);
         model.Start();overlay.StartHook();
-        if(e.Args.Contains("--settings"))OpenConfiguration();
+        if(e.Args.Contains("--settings")||e.Args.Contains("--setup")) {OpenConfiguration();if(e.Args.Contains("--setup"))configuration?.OpenSetup();}
         if(e.Args.Contains("--show-overlay"))overlay.ShowAtCursor();
         // No StartupUri: normal and sign-in launches remain in the system tray.
         WriteLog("Started " + (isolated?"isolated profile":"normal profile"));
@@ -69,7 +69,7 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 0.10.3-beta.3",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 0.10.3-beta.4",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
         var modeItem=new Forms.ToolStripMenuItem(model!.AudioModeTitle){Enabled=false};menu.Items.Add(modeItem);
         var profilesMenu=new Forms.ToolStripMenuItem("Profiles"){Enabled=model.Connected};
@@ -89,7 +89,7 @@ public partial class App : Application
         menu.Items.Add("Check for updates",null,async(_,_)=>await model.CheckForUpdatesAsync());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 0.10.3-beta.3 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 0.10.3-beta.4 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()
@@ -101,9 +101,9 @@ public partial class App : Application
                 if(process.Id == Environment.ProcessId) continue;
                 try
                 {
-                    var version = process.MainModule?.FileVersionInfo;
-                    if(version != null && (version.FileMajorPart != 0 || version.FileMinorPart != 8 || version.FileBuildPart != 1))
-                        return $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}";
+                    var version = process.MainModule?.FileVersionInfo.ProductVersion?.Split('+')[0];
+                    if(!string.IsNullOrWhiteSpace(version)&&!string.Equals(version,ReleaseUpdates.CurrentVersion,StringComparison.OrdinalIgnoreCase))
+                        return version;
                 }
                 catch { }
             }

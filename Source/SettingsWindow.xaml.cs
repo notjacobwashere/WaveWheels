@@ -35,10 +35,10 @@ public partial class SettingsWindow : Window
         this.model = model;
         InitializeComponent();
         DataContext = model;
-        foreach(var page in new FrameworkElement[]{WheelsPage,SettingsPage,EffectsPage,ProfilesPage,PlacementPage,UpdatesPage,StartupPage,ConnectionPage})pageMotion[page]=new SurfaceMotion(page);
+        foreach(var page in new FrameworkElement[]{WheelsPage,SettingsPage,EffectsPage,ProfilesPage,PlacementPage,UpdatesPage,StartupPage,ConnectionPage,SetupPage})pageMotion[page]=new SurfaceMotion(page);
         modeMotion=new SurfaceMotion(AudioModeBanner);
         var previousConnection=model.Connected;
-        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.Connected)&&previousConnection!=model.Connected) {previousConnection=model.Connected;modeMotion.Enter(-1,MotionEnabled);}};
+        model.PropertyChanged+=(_,e)=> {if(e.PropertyName==nameof(model.Connected)&&previousConnection!=model.Connected) {previousConnection=model.Connected;modeMotion.Enter(-1,MotionEnabled);if(!model.Connected&&currentSection=="Profiles")ShowSection("Wheels");}};
         model.AppearanceChanged+=()=> {if(!MotionEnabled) {foreach(var motion in pageMotion.Values)motion.Reset();modeMotion.Reset();}};
         model.SelectionChanged+=QueueEditorBindings;
         model.Channels.CollectionChanged+=(_,_)=>QueueEditorBindings();
@@ -53,8 +53,12 @@ public partial class SettingsWindow : Window
         EffectsDemo.Wheel=new Wheel{Name="Preview",Color="#DA5DAD",Available=true,Level=.68};
         EffectsDemo.VolumeRequested+=(wheel,value)=>wheel.Level=value;
         EffectsDemo.MuteRequested+=wheel=>wheel.Muted=!wheel.Muted;
+        SetupDemo.Wheel=new Wheel{Name="Sample",Color="#73DCC8",Available=true,Level=.5};
+        SetupDemo.VolumeRequested+=(wheel,value)=>wheel.Level=Math.Clamp(value,0,1);
+        SetupDemo.MuteRequested+=wheel=>wheel.Muted=!wheel.Muted;
         void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ShiftStepPercent=model.ShiftStepPercent;SelectedPreview.ShowShiftMarkers=model.ShowShiftMarkers;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
         PreviewInputSettings();model.InputSettingsChanged+=PreviewInputSettings;
+        RefreshNavigation();
         Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); } };
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
@@ -70,6 +74,7 @@ public partial class SettingsWindow : Window
             if(!ChannelBox.IsDropDownOpen)ChannelBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
             if(!MixBox.IsDropDownOpen)MixBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
             if(!MonitorBox.IsDropDownOpen)MonitorBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
+            if(!SetupMonitorBox.IsDropDownOpen)SetupMonitorBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
         }));
     }
     internal static bool IsHeaderDragSource(DependencyObject? source,DependencyObject header)
@@ -100,9 +105,12 @@ public partial class SettingsWindow : Window
     {
         var section=(sender as Button)?.Tag as string;
         if(section==null)return;
-        if(FindName(section+"Nav") is DependencyObject nav)for(var ancestor=LogicalTreeHelper.GetParent(nav);ancestor!=null;ancestor=LogicalTreeHelper.GetParent(ancestor))if(ancestor is Expander group)group.IsExpanded=true;
+        ShowSection(section);
+    }
+    private void ShowSection(string section)
+    {
         if(section==currentSection)return;
-        var order=new[]{"Wheels","Settings","Effects","Profiles","Placement","Startup","Updates","Connection"};
+        var order=new[]{"Wheels","Profiles","Effects","Placement","Settings","Startup","Connection","Updates","Setup"};
         var direction=Array.IndexOf(order,section)>=Array.IndexOf(order,currentSection)?1:-1;
         foreach(var motion in pageMotion.Values)motion.Reset();
         currentSection=section;
@@ -114,8 +122,53 @@ public partial class SettingsWindow : Window
         PlacementPage.Visibility=section=="Placement"?Visibility.Visible:Visibility.Collapsed;
         UpdatesPage.Visibility=section=="Updates"?Visibility.Visible:Visibility.Collapsed;
         EffectsPage.Visibility=section=="Effects"?Visibility.Visible:Visibility.Collapsed;
+        SetupPage.Visibility=section=="Setup"?Visibility.Visible:Visibility.Collapsed;
         var activePage=pageMotion.Keys.FirstOrDefault(p=>p.Name==section+"Page");if(activePage!=null)pageMotion[activePage].Enter(direction,MotionEnabled);
-        foreach(var button in new[]{WheelsNav,SettingsNav,EffectsNav,ProfilesNav,PlacementNav,UpdatesNav,StartupNav,ConnectionNav}) { var active=(string)button.Tag==section;button.Background=new SolidColorBrush(active?Color.FromRgb(28,54,55):Colors.Transparent);button.Foreground=new SolidColorBrush(active?Color.FromRgb(163,230,217):Color.FromRgb(151,138,167)); }
+        RefreshNavigation();
+    }
+    private void RefreshNavigation()
+    {
+        var group=currentSection switch {"Profiles"=>"Wheels","Placement"=>"Effects","Startup" or "Connection"=>"Settings",_=>currentSection};
+        SectionTabs.Visibility=group is "Updates" or "Setup"?Visibility.Collapsed:Visibility.Visible;
+        WheelTabs.Visibility=group=="Wheels"?Visibility.Visible:Visibility.Collapsed;
+        AppearanceTabs.Visibility=group=="Effects"?Visibility.Visible:Visibility.Collapsed;
+        PreferenceTabs.Visibility=group=="Settings"?Visibility.Visible:Visibility.Collapsed;
+        foreach(var button in new[]{WheelsNav,EffectsNav,SettingsNav,UpdatesNav,WheelEditorTab,ProfilesNav,EffectsTab,PlacementNav,ControlsTab,StartupNav,ConnectionNav})
+        {
+            var primary=button==WheelsNav||button==EffectsNav||button==SettingsNav||button==UpdatesNav;
+            var active=(string)button.Tag==(primary?group:currentSection);
+            button.Background=new SolidColorBrush(active?Color.FromRgb(32,53,57):Colors.Transparent);
+            button.Foreground=new SolidColorBrush(active?Color.FromRgb(163,230,217):Color.FromRgb(152,170,188));
+            button.FontWeight=active?FontWeights.SemiBold:FontWeights.Normal;
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button,active?"Selected":"");
+        }
+    }
+    internal int SetupStep {get;private set;}
+    internal void OpenSetup()
+    {
+        if(model.IsPreviewing)model.Preview();
+        SetupStep=0;UpdateSetupStep();ShowSection("Setup");
+        App.WriteLog("Opened setup guide");
+    }
+    private void OpenSetup(object sender,RoutedEventArgs e)=>OpenSetup();
+    private void SetupNext(object sender,RoutedEventArgs e) {if(SetupStep==2)FinishSetup(sender,e);else {SetupStep++;UpdateSetupStep();}}
+    private void SetupBack(object sender,RoutedEventArgs e) {SetupStep=Math.Max(0,SetupStep-1);UpdateSetupStep();}
+    private void FinishSetup(object sender,RoutedEventArgs e) {model.Save();ShowSection("Wheels");}
+    private void UpdateSetupStep()
+    {
+        SetupAudioStep.Visibility=SetupStep==0?Visibility.Visible:Visibility.Collapsed;
+        SetupPlacementStep.Visibility=SetupStep==1?Visibility.Visible:Visibility.Collapsed;
+        SetupTryStep.Visibility=SetupStep==2?Visibility.Visible:Visibility.Collapsed;
+        SetupStepLabel.Text=$"{SetupStep+1} of 3 · "+new[]{"Audio","Placement","Try it"}[SetupStep];
+        SetupBackButton.Visibility=SetupStep>0?Visibility.Visible:Visibility.Collapsed;
+        SetupNextButton.Content=SetupStep==2?"Finish setup":"Continue";
+    }
+    private void SetupMonitorClosed(object? sender,EventArgs e)
+        =>ApplySetupMonitor();
+    internal void ApplySetupMonitor()
+    {
+        if(SetupMonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;
+        QueueEditorBindings();
     }
     private bool MotionEnabled=>model.AnimateWheels&&SystemParameters.ClientAreaAnimation;
     internal void SeekInterfaceMotion(TimeSpan time) {foreach(var motion in pageMotion.Values)motion.Seek(time);modeMotion?.Seek(time);}

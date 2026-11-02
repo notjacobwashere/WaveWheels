@@ -22,7 +22,7 @@ internal static class RedesignTests
         var slider=(Slider)window.FindName("ScrollStepSlider");slider.SetCurrentValue(Slider.ValueProperty,4d);if(model.ScrollStepPercent!=4)throw new Exception("Grouped input settings must still update the actual model.");model.ScrollStepPercent=1;
         ((Button)window.FindName("UpdatesNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
         if(((Button)window.FindName("CancelUpdateButton")).Visibility!=Visibility.Collapsed||((ProgressBar)window.FindName("UpdateDownloadProgress")).Visibility!=Visibility.Collapsed)throw new Exception("Idle updates must hide download-only controls.");
-        var versions=Children((FrameworkElement)window.FindName("UpdatesPage")).OfType<Expander>().Single(e=>e.Header.ToString()=="Versions and recovery");versions.IsExpanded=true;root.UpdateLayout();
+        var versions=(Expander)window.FindName("VersionHistory");versions.IsExpanded=true;root.UpdateLayout();
         if(window.FindName("InstallStableButton") is not Button||window.FindName("BetaBuildList") is not ListBox)throw new Exception("Version recovery must retain stable rollback and beta archive controls.");
         Console.WriteLine("PASS: profile action-menu commands, grouped input settings, hidden idle download controls, and version recovery access.");
     }

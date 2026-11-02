@@ -9,7 +9,7 @@ try {
     $setup = Join-Path $PSScriptRoot "artifacts/WaveWheels-$version-Setup.exe"
     $installDir = Join-Path $env:RUNNER_TEMP 'WaveWheels Installer Smoke'
     $profile = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'WaveWheels'
-    # Exercise the real first-install pages only on this disposable runner, then cancel before installation.
+    # Exercise the real first-install introduction only on this disposable runner, then cancel before installation.
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -61,24 +61,23 @@ public static class IntroWizardSmoke {
         try{$graphics=[System.Drawing.Graphics]::FromImage($bitmap);try{$dc=$graphics.GetHdc();try{if(-not [IntroWizardSmoke]::Print($window,$dc)){throw 'Intro capture failed.'}}finally{$graphics.ReleaseHdc($dc)}}finally{$graphics.Dispose()};$bitmap.Save($path,[System.Drawing.Imaging.ImageFormat]::Png)}finally{$bitmap.Dispose()}
     }
     $introDeadline=[DateTime]::UtcNow.AddSeconds(20)
-    do{$introIds=Intro-Processes;$introSkip=[IntroWizardSmoke]::Button($introIds,'Skip intro');if($introSkip -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 250}}while($introSkip -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $introDeadline)
-    if($introSkip -eq [IntPtr]::Zero){throw 'The first-install intro and skip button did not appear.'}
-    Capture-Intro $introIds (Join-Path $PSScriptRoot 'artifacts/previews/setup-intro-controls.png')
+    do{$introIds=Intro-Processes;$introHeading=[IntroWizardSmoke]::Button($introIds,'Audio controls at the screen edge');if($introHeading -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 250}}while($introHeading -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $introDeadline)
+    if($introHeading -eq [IntPtr]::Zero){throw 'The first-install introduction did not appear.'}
+    Capture-Intro $introIds (Join-Path $PSScriptRoot 'artifacts/previews/setup-introduction.png')
     $introNext=[IntroWizardSmoke]::Button($introIds,'Next')
     if($introNext -eq [IntPtr]::Zero){$introNext=[IntroWizardSmoke]::Button($introIds,'Next >')}
-    if($introNext -eq [IntPtr]::Zero){throw 'The intro Next button is missing.'}
+    if($introNext -eq [IntPtr]::Zero){throw 'The introduction Next button is missing.'}
     [IntroWizardSmoke]::Click($introNext)
     Start-Sleep -Milliseconds 300
-    Capture-Intro $introIds (Join-Path $PSScriptRoot 'artifacts/previews/setup-intro-settings.png')
-    [IntroWizardSmoke]::Click([IntroWizardSmoke]::Button($introIds,'Skip intro'))
+    Capture-Intro $introIds (Join-Path $PSScriptRoot 'artifacts/previews/setup-install-options.png')
     [IntroWizardSmoke]::Close($introIds)
     $introDeadline=[DateTime]::UtcNow.AddSeconds(15)
     while(-not $introSetup.HasExited -and [DateTime]::UtcNow -lt $introDeadline){$introYes=[IntroWizardSmoke]::Button((Intro-Processes),'Yes');if($introYes -ne [IntPtr]::Zero){[IntroWizardSmoke]::Click($introYes)};Start-Sleep -Milliseconds 200}
-    if(-not $introSetup.HasExited){throw 'The intro smoke check did not cancel Setup.'}
+    if(-not $introSetup.HasExited){throw 'The introduction smoke check did not cancel Setup.'}
     $introTrace=Get-Content -LiteralPath $introLog -Raw
-    foreach($expected in @('WaveWheels intro: first install','WaveWheels intro: controls page shown','WaveWheels intro: settings page shown','WaveWheels intro: skipped by user')){if(-not $introTrace.Contains($expected)){throw "Intro behavior missing: $expected"}}
-    if((Test-Path -LiteralPath (Join-Path $installDir 'WaveWheels.exe')) -or (Test-Path -LiteralPath (Join-Path $profile 'settings.json'))){throw 'The intro smoke check changed app files or settings before installation.'}
-    Write-Output 'PASS: first-install controls/settings pages, screenshots, Next, Skip intro, and cancellation before installation.'
+    foreach($expected in @('WaveWheels setup: first install','WaveWheels setup: introduction shown')){if(-not $introTrace.Contains($expected)){throw "Introduction behavior missing: $expected"}}
+    if((Test-Path -LiteralPath (Join-Path $installDir 'WaveWheels.exe')) -or (Test-Path -LiteralPath (Join-Path $profile 'settings.json'))){throw 'The introduction changed app files or settings before installation.'}
+    Write-Output 'PASS: concise first-install introduction, screenshots, Next, and cancellation before installation.'
     New-Item -ItemType Directory -Path $profile -Force | Out-Null
     $settingsFile = Join-Path $profile 'settings.json'
     $fixture = @{ SchemaVersion=1;EdgeEnabled=$false;CheckUpdatesAutomatically=$false;PortOverride=65535;WheelSizePercent=125;AnimateWheels=$true;ScrollStepPercent=3;ShiftStepPercent=35;ShowShiftMarkers=$true;ApplicationBlacklistEnabled=$true;BlacklistedApplications=@('fixture-game.exe');ScrollAccelerationEnabled=$false;IdleMilliseconds=2500;Wheels=@(@{Id='installer-fixture';Name='Kept through upgrades';Color='#36BBD3';ChannelId='fake-input';MixId='';MaximumVolumePercent=65}) }
@@ -103,7 +102,7 @@ public static class IntroWizardSmoke {
     }
     Run-Setup 'installer-install.log'
     $installTrace=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'artifacts/installer-install.log') -Raw
-    if(-not $installTrace.Contains('WaveWheels intro: existing install or settings') -or $installTrace.Contains('WaveWheels intro: controls page shown')){throw 'Existing settings did not bypass onboarding.'}
+    if(-not $installTrace.Contains('WaveWheels setup: existing install or settings') -or $installTrace.Contains('WaveWheels setup: introduction shown')){throw 'Existing settings did not bypass onboarding.'}
     $exe = Join-Path $installDir 'WaveWheels.exe'
     foreach ($name in @('WaveWheels.exe','hostfxr.dll','coreclr.dll','PresentationFramework.dll','LICENSE','NOTICE','unins000.exe')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installDir $name))) { throw "Installer payload missing $name." }
@@ -116,9 +115,23 @@ public static class IntroWizardSmoke {
     if ($app.WaitForExit(2000)) { throw 'The installed self-contained app exited unexpectedly.' }
     $app.Refresh()
     if ($app.MainWindowHandle -ne 0) { throw 'Normal launch unexpectedly opened configuration.' }
+    $configure=Start-Process -FilePath $exe -ArgumentList '--settings' -WindowStyle Hidden -PassThru
+    if(-not $configure.WaitForExit(10000)){throw 'Opening configuration for the same installed version was blocked.'}
+    $deadline=[DateTime]::UtcNow.AddSeconds(10)
+    do{$app.Refresh();if($app.MainWindowHandle -eq 0){Start-Sleep -Milliseconds 200}}while($app.MainWindowHandle -eq 0 -and [DateTime]::UtcNow -lt $deadline)
+    if($app.MainWindowHandle -eq 0){throw 'The configuration shortcut did not open the already-running app.'}
+    $shutdown=Start-Process -FilePath $exe -ArgumentList '--shutdown' -WindowStyle Hidden -PassThru
+    if(-not $shutdown.WaitForExit(10000) -or -not $app.WaitForExit(10000)){throw 'Could not close quiet launch before setup-guide validation.'}
+    $app=Start-Process -FilePath $exe -ArgumentList '--setup' -WindowStyle Hidden -PassThru
+    $deadline=[DateTime]::UtcNow.AddSeconds(20)
+    do{$app.Refresh();if($app.MainWindowHandle -eq 0){Start-Sleep -Milliseconds 250}}while($app.MainWindowHandle -eq 0 -and -not $app.HasExited -and [DateTime]::UtcNow -lt $deadline)
+    if($app.HasExited -or $app.MainWindowHandle -eq 0){throw 'The setup launch did not open its guide window.'}
+    $appTrace=Get-Content -LiteralPath (Join-Path $profile 'app.log') -Raw
+    if(-not $appTrace.Contains('Opened setup guide')){throw 'The setup launch opened ordinary configuration instead of the guide.'}
+    Assert-Settings
     Run-Setup 'installer-upgrade.log' $true
     $upgradeTrace=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'artifacts/installer-upgrade.log') -Raw
-    if($upgradeTrace.Contains('WaveWheels intro: controls page shown') -or $upgradeTrace.Contains('WaveWheels intro: settings page shown')){throw 'An in-app upgrade unexpectedly showed onboarding.'}
+    if($upgradeTrace.Contains('WaveWheels setup: introduction shown')){throw 'An in-app upgrade unexpectedly showed onboarding.'}
     if (-not $app.WaitForExit(10000)) { throw 'Upgrade did not close the running app gracefully.' }
     Assert-Settings
     $deadline=[DateTime]::UtcNow.AddSeconds(20)

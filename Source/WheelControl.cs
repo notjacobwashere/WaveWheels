@@ -103,6 +103,24 @@ public sealed class WheelControl : FrameworkElement
         SetValue(ShiftFeedbackProgressProperty,1d);shiftInitial=default;shiftStrength=0;
     }
     private static readonly DependencyProperty BoundaryProgressProperty=DependencyProperty.Register("BoundaryProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    private static readonly DependencyProperty VolumeBobProgressProperty=DependencyProperty.Register("VolumeBobProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
+    private AnimationClock? volumeBobClock;
+    private double bobInitial,bobDirection;
+    internal int VolumeBobStarts {get;private set;}
+    internal double VolumeBobOffset=>VolumeBob((double)GetValue(VolumeBobProgressProperty),bobDirection,bobInitial);
+    internal static double VolumeBob(double progress,double direction,double initial=0)
+    {
+        var p=Math.Clamp(progress,0,1);
+        return initial*Math.Exp(-12*p)*(1-p)-direction*3.2*Math.Sin(p*Math.PI*2)*Math.Pow(1-p,2);
+    }
+    private void RequestVolumeWithBob(double value)
+    {
+        if(Wheel==null)return;
+        var before=Wheel.Level;VolumeRequested?.Invoke(Wheel,value);var change=Wheel.Level-before;
+        if(!MotionEnabled||Math.Abs(change)<1e-7)return;
+        bobInitial=VolumeBobOffset;bobDirection=Math.Sign(change);VolumeBobStarts++;
+        volumeBobClock=FeedbackClock(VolumeBobProgressProperty,320);
+    }
     private static readonly DependencyProperty TapProgressProperty=DependencyProperty.Register("TapProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty HoverAmountProperty=DependencyProperty.Register("HoverAmount",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(0d,FrameworkPropertyMetadataOptions.AffectsRender));
     private static readonly DependencyProperty ButtonHoverAmountProperty=DependencyProperty.Register("ButtonHoverAmount",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(0d,FrameworkPropertyMetadataOptions.AffectsRender));
@@ -139,6 +157,7 @@ public sealed class WheelControl : FrameworkElement
     }
     private void StopInteractionFeedback()
     {
+        volumeBobClock?.Controller?.Remove();volumeBobClock=null;BeginAnimation(VolumeBobProgressProperty,null);SetValue(VolumeBobProgressProperty,1d);bobInitial=0;
         foreach(var clock in new[]{boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.Remove();
         boundaryClock=tapClock=hoverClock=buttonHoverClock=null;lastBoundaryAt=-1000;
         foreach(var property in new[]{BoundaryProgressProperty,TapProgressProperty}) {BeginAnimation(property,null);SetValue(property,1d);}
@@ -147,7 +166,7 @@ public sealed class WheelControl : FrameworkElement
     }
     internal void SeekInteractionFeedback(TimeSpan time)
     {
-        foreach(var clock in new[]{boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
+        foreach(var clock in new[]{volumeBobClock,boundaryClock,tapClock,hoverClock,buttonHoverClock})clock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     }
     private static readonly DependencyProperty NumberProgressProperty=DependencyProperty.Register("NumberProgress",typeof(double),typeof(WheelControl),new FrameworkPropertyMetadata(1d,FrameworkPropertyMetadataOptions.AffectsRender));
     internal const int NumberTransitionMilliseconds=180;
@@ -219,7 +238,7 @@ public sealed class WheelControl : FrameworkElement
         Unloaded += (_, _) => { active=false;Effects.PropertyChanged-=EffectsChanged;hoverExitTimer.Stop();precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();StopMuteFeedback();StopShiftFeedback();StopUnmuteFeedback();StopInteractionFeedback();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
         Loaded += (_, _) => {Effects.PropertyChanged-=EffectsChanged;Effects.PropertyChanged+=EffectsChanged; if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; maximumTransition.Reset(Wheel.Available,Wheel.Level);ResetNumberDisplay();AnimateLevel(); } };
         MouseLeftButtonDown += Down;
-        MouseMove += (_, e) => {SetMuteHovered(UseMuteButton&&HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) VolumeRequested?.Invoke(Wheel, dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
+        MouseMove += (_, e) => {SetMuteHovered(UseMuteButton&&HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) RequestVolumeWithBob(dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
         MouseLeftButtonUp += (_, e) => { if (dragging) { dragging = false; ReleaseMouseCapture(); e.Handled = true; } };
         LostMouseCapture += (_, _) => dragging = false;
         MouseWheel += (_, e) => { if (Wheel?.Available == true) { Adjust(e.Delta / 120d); e.Handled = true; } };
@@ -351,7 +370,7 @@ public sealed class WheelControl : FrameworkElement
         var steps=scroll.Adjust(delta,ScrollStepPercent,ScrollAccelerationEnabled,now);
         if (steps == 0) return;
         var requested=Wheel.Level+steps*.01;
-        VolumeRequested?.Invoke(Wheel,requested);
+        RequestVolumeWithBob(requested);
         if(Math.Abs(Wheel.Level-requested)>1e-7)StartBoundary(delta,now);
         // Discard acceleration and fractions consumed by a boundary (including a shared target's stricter cap).
         if(Wheel.Level<=0||Wheel.Level>=Wheel.MaximumVolumePercent/100d||Math.Abs(Wheel.Level-requested)>1e-7)scroll.Reset();
@@ -384,7 +403,7 @@ public sealed class WheelControl : FrameworkElement
         var recovery=Math.Sin(UnmuteProgress*Math.PI)*(1-UnmuteProgress);
         var tap=1-.055*FeedbackPulse(TapProgress);
         springMatrix.ScaleAt((1+recovery*.04)*tap,(1+recovery*.04)*tap,60,60);
-        springMatrix.Translate(0,-boundaryDirection*7*FeedbackPulse(BoundaryProgress));
+        springMatrix.Translate(0,VolumeBobOffset-boundaryDirection*7*FeedbackPulse(BoundaryProgress));
         springMatrix.ScaleAt(1+spring.Stretch,1-spring.Stretch,60,60);
         springMatrix.RotateAt(spring.Angle,60,60);springMatrix.Translate(spring.X,spring.Y);
         dc.PushTransform(new MatrixTransform(springMatrix));

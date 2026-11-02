@@ -27,8 +27,14 @@ UninstallDisplayIcon={app}\WaveWheels.exe
 UninstallDisplayName=WaveWheels
 Compression=lzma2
 SolidCompression=yes
+#if Ver >= EncodeVer(6,6,0)
+WizardStyle=modern dark
+#else
 WizardStyle=modern
-LicenseFile=..\LICENSE
+#endif
+WizardSizePercent=120
+DisableWelcomePage=yes
+DisableReadyPage=yes
 CloseApplications=yes
 CloseApplicationsFilter=WaveWheels.exe,WaveWheels.dll
 RestartApplications=no
@@ -49,10 +55,15 @@ Name: "{autodesktop}\WaveWheels"; Filename: "{app}\WaveWheels.exe"; Tasks: deskt
 
 [Run]
 Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Flags: nowait; Check: IsAppUpdate
-Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Description: "Open WaveWheels configuration"; Flags: nowait postinstall skipifsilent; Check: IsManualInstall
+Filename: "{app}\WaveWheels.exe"; Parameters: "--setup"; Description: "Set up WaveWheels"; Flags: nowait postinstall skipifsilent; Check: IsFirstManualInstall
+Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Description: "Open WaveWheels"; Flags: nowait postinstall skipifsilent; Check: IsExistingManualInstall
+
+[LangOptions]
+DialogFontName=Segoe UI
+DialogFontSize=10
 
 [Messages]
-FinishedLabel=WaveWheels is installed. Use the system tray icon near the Windows clock to configure your wheels. Your settings are kept when upgrading or uninstalling.
+FinishedLabel=WaveWheels is ready. The setup guide will help you choose placement and try the controls. Open configuration later from the system tray. Your settings are preserved when updating or uninstalling.
 
 [Code]
 const
@@ -60,9 +71,8 @@ const
   UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{62CDFDE0-5349-4AB2-B7DE-95359B68E73F}_is1';
 
 var
-  IntroControlsPage, IntroSettingsPage: TOutputMsgWizardPage;
-  SkipIntroButton: TNewButton;
-  IntroEligible, IntroSkipped: Boolean;
+  IntroPage: TWizardPage;
+  IntroEligible: Boolean;
 
 function IsAppUpdate(): Boolean;
 begin
@@ -80,65 +90,62 @@ begin
     FileExists(ExpandConstant('{localappdata}\WaveWheels\settings.json'));
 end;
 
-procedure SkipIntroClick(Sender: TObject);
+function IsFirstManualInstall(): Boolean;
 begin
-  IntroSkipped := True;
-  Log('WaveWheels intro: skipped by user');
-  WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  Result := IsManualInstall() and IntroEligible;
+end;
+
+function IsExistingManualInstall(): Boolean;
+begin
+  Result := IsManualInstall() and not IntroEligible;
+end;
+
+procedure IntroText(Top, Height, Size: Integer; Caption: String; Accent: Boolean);
+var
+  LabelControl: TNewStaticText;
+begin
+  LabelControl := TNewStaticText.Create(WizardForm);
+  LabelControl.Parent := IntroPage.Surface;
+  LabelControl.SetBounds(ScaleX(22), ScaleY(Top), IntroPage.SurfaceWidth - ScaleX(44), ScaleY(Height));
+  LabelControl.AutoSize := False;
+  LabelControl.WordWrap := True;
+  LabelControl.Caption := Caption;
+  LabelControl.Font.Name := 'Segoe UI';
+  LabelControl.Font.Size := Size;
+  LabelControl.Font.Color := $00C2AD98;
+  if Accent then begin
+    LabelControl.Font.Color := $00D9E6A3;
+    LabelControl.Font.Style := [fsBold];
+  end;
 end;
 
 procedure InitializeWizard();
 begin
-  // Read existing installation/settings state only. Onboarding never writes user preferences.
+  // Existing installations and in-app updates bypass the first-run introduction.
   IntroEligible := not IsAppUpdate() and not HasExistingWaveWheels();
-  if IntroEligible then Log('WaveWheels intro: first install')
-    else Log('WaveWheels intro: existing install or settings');
-  if WizardSilent() then Log('WaveWheels intro: silent skip');
-
-  IntroControlsPage := CreateOutputMsgPage(wpWelcome, 'WaveWheels setup',
-    'Audio controls',
-    'WaveWheels runs quietly in the system tray. Without Wave Link, one wheel controls your Windows output volume. Connect Wave Link to use multiple channel wheels.' + #13#10#13#10 +
-    'REVEAL AND ADJUST' + #13#10 +
-    'Scroll at the left screen edge to bring out your wheels. The opening scroll does not change volume. Pause briefly, move over a wheel, then scroll again to adjust it.' + #13#10#13#10 +
-    'Click a wheel to mute or unmute; scroll to adjust volume. Settings can enable a dedicated speaker button and drag adjustment instead. Scrolling at the very edge only opens the wheels.' + #13#10#13#10 +
-    'Configuration opens after Setup. Closing it keeps WaveWheels running; use the tray icon near the clock to open it again.');
-
-  IntroSettingsPage := CreateOutputMsgPage(IntroControlsPage.ID, 'Configuration',
-    'Configuration options',
-    '1. Customize the Windows volume wheel, or open Wave Link and bind multiple wheels to its input channels and mixes. Wave Link wheels return automatically when connected.' + #13#10 +
-    '2. Choose Preview wheels and try scrolling over a wheel.' + #13#10#13#10 +
-    'Profiles - save layouts and optionally switch for focused apps.' + #13#10 +
-    'Blacklist - pause wheels while selected apps are focused.' + #13#10 +
-    'Scroll - tune normal steps, acceleration, and hide delay.' + #13#10 +
-    'Shift - snap in larger increments (20% default); optional dots.' + #13#10 +
-    'Style - choose names, colors, and size. Wave Link also unlocks multiple wheels and reordering.' + #13#10 +
-    'Limits - cap wheel volume; external mixer controls can exceed it.' + #13#10 +
-    'Placement - choose screen edge, display, position, and spacing.' + #13#10 +
-    'Updates - check, download, and install from the app.' + #13#10#13#10 +
-    'Changes save automatically. Sign-in startup is optional.');
-
-  SkipIntroButton := TNewButton.Create(WizardForm);
-  SkipIntroButton.Parent := WizardForm;
-  SkipIntroButton.Caption := 'Skip intro';
-  SkipIntroButton.Left := ScaleX(16);
-  SkipIntroButton.Top := WizardForm.NextButton.Top;
-  SkipIntroButton.Width := ScaleX(90);
-  SkipIntroButton.Height := WizardForm.NextButton.Height;
-  SkipIntroButton.Visible := False;
-  SkipIntroButton.OnClick := @SkipIntroClick;
+  if IntroEligible then Log('WaveWheels setup: first install')
+    else Log('WaveWheels setup: existing install or settings');
+  if WizardSilent() then Log('WaveWheels setup: silent skip');
+  IntroPage := CreateCustomPage(wpWelcome, 'Install WaveWheels', 'Windows audio and Wave Link controls');
+  IntroPage.Surface.Color := $00201810;
+  IntroText(20, 34, 20, 'Audio controls at the screen edge', True);
+  IntroText(70, 42, 11, 'Control Windows Audio immediately. Connect Wave Link to use multiple channel wheels.', False);
+  IntroText(136, 25, 12, '1   Install', True);
+  IntroText(166, 28, 10, 'Installs for your Windows account. No administrator access required.', False);
+  IntroText(212, 25, 12, '2   Choose your placement', True);
+  IntroText(242, 28, 10, 'A short guide opens after installation. Pick an edge and try a sample wheel.', False);
+  IntroText(288, 25, 12, '3   Use the wheels', True);
+  IntroText(318, 38, 10, 'Scroll at the screen edge to reveal them. Configuration stays in the system tray.', False);
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
-  Result := ((PageID = IntroControlsPage.ID) or (PageID = IntroSettingsPage.ID)) and
-    (not IntroEligible or IntroSkipped or WizardSilent());
+  Result := (PageID = IntroPage.ID) and (not IntroEligible or WizardSilent());
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
 begin
-  SkipIntroButton.Visible := (CurPageID = IntroControlsPage.ID) or (CurPageID = IntroSettingsPage.ID);
-  if CurPageID = IntroControlsPage.ID then Log('WaveWheels intro: controls page shown');
-  if CurPageID = IntroSettingsPage.ID then Log('WaveWheels intro: settings page shown');
+  if CurPageID = IntroPage.ID then Log('WaveWheels setup: introduction shown');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
