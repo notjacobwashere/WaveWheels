@@ -106,7 +106,9 @@ var
 begin
   LabelControl := TNewStaticText.Create(WizardForm);
   LabelControl.Parent := IntroPage.Surface;
-  LabelControl.SetBounds(ScaleX(22), ScaleY(Top), IntroPage.SurfaceWidth - ScaleX(44), ScaleY(Height));
+  // Size against the actual page surface, including font and DPI scaling.
+  LabelControl.SetBounds(ScaleX(22), IntroPage.SurfaceHeight * Top div 100,
+    IntroPage.SurfaceWidth - ScaleX(44), IntroPage.SurfaceHeight * Height div 100);
   LabelControl.AutoSize := False;
   LabelControl.WordWrap := True;
   LabelControl.Caption := Caption;
@@ -128,14 +130,14 @@ begin
   if WizardSilent() then Log('WaveWheels setup: silent skip');
   IntroPage := CreateCustomPage(wpWelcome, 'Install WaveWheels', 'Windows audio and Wave Link controls');
   IntroPage.Surface.Color := $00201810;
-  IntroText(20, 34, 20, 'Audio controls at the screen edge', True);
-  IntroText(70, 42, 11, 'Control Windows Audio immediately. Connect Wave Link to use multiple channel wheels.', False);
-  IntroText(136, 25, 12, '1   Install', True);
-  IntroText(166, 28, 10, 'Installs for your Windows account. No administrator access required.', False);
-  IntroText(212, 25, 12, '2   Choose your placement', True);
-  IntroText(242, 28, 10, 'A short guide opens after installation. Pick an edge and try a sample wheel.', False);
-  IntroText(288, 25, 12, '3   Use the wheels', True);
-  IntroText(318, 38, 10, 'Scroll at the screen edge to reveal them. Configuration stays in the system tray.', False);
+  IntroText(4, 12, 20, 'Audio controls at the screen edge', True);
+  IntroText(19, 13, 11, 'Control Windows Audio immediately. Connect Wave Link to use multiple channel wheels.', False);
+  IntroText(36, 7, 12, '1   Install', True);
+  IntroText(44, 8, 10, 'Installs for your Windows account. No administrator access required.', False);
+  IntroText(58, 7, 12, '2   Choose your placement', True);
+  IntroText(66, 9, 10, 'A short guide opens after installation. Pick an edge and try a sample wheel.', False);
+  IntroText(80, 7, 12, '3   Use the wheels', True);
+  IntroText(88, 10, 10, 'Scroll at the edge. Reopen configuration from the system tray.', False);
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;

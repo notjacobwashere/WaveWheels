@@ -27,6 +27,7 @@ public static class IntroWizardSmoke {
     [DllImport("user32.dll")] static extern bool PostMessage(IntPtr window,int message,IntPtr wParam,IntPtr lParam);
     [StructLayout(LayoutKind.Sequential)] struct Rect {public int Left,Top,Right,Bottom;}
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window,out Rect rect);
+    [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr window);
     [DllImport("user32.dll")] static extern bool PrintWindow(IntPtr window,IntPtr dc,uint flags);
     public static IntPtr Main(int[] processes) {
         IntPtr result=IntPtr.Zero;
@@ -45,6 +46,10 @@ public static class IntroWizardSmoke {
     public static void Close(int[] processes) {var window=Main(processes);if(window!=IntPtr.Zero)PostMessage(window,0x10,IntPtr.Zero,IntPtr.Zero);}
     public static int[] Bounds(IntPtr window) {if(!GetWindowRect(window,out var rect))throw new Exception("Intro window missing.");return new[]{rect.Right-rect.Left,rect.Bottom-rect.Top};}
     public static bool Print(IntPtr window,IntPtr dc) {return PrintWindow(window,dc,0);}
+    public static bool FitsParent(IntPtr window) {
+        if(window==IntPtr.Zero||!GetWindowRect(window,out var child)||!GetWindowRect(GetParent(window),out var parent))return false;
+        return child.Left>=parent.Left&&child.Top>=parent.Top&&child.Right<=parent.Right&&child.Bottom<=parent.Bottom;
+    }
 }
 '@
     $introLog=Join-Path $PSScriptRoot 'artifacts/installer-intro.log'
@@ -63,6 +68,8 @@ public static class IntroWizardSmoke {
     $introDeadline=[DateTime]::UtcNow.AddSeconds(20)
     do{$introIds=Intro-Processes;$introHeading=[IntroWizardSmoke]::Button($introIds,'Audio controls at the screen edge');if($introHeading -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 250}}while($introHeading -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $introDeadline)
     if($introHeading -eq [IntPtr]::Zero){throw 'The first-install introduction did not appear.'}
+    $lastHint=[IntroWizardSmoke]::Button($introIds,'Scroll at the edge. Reopen configuration from the system tray.')
+    if(-not [IntroWizardSmoke]::FitsParent($lastHint)){throw 'The introduction content is clipped by its page.'}
     Capture-Intro $introIds (Join-Path $PSScriptRoot 'artifacts/previews/setup-introduction.png')
     $introNext=[IntroWizardSmoke]::Button($introIds,'Next')
     if($introNext -eq [IntPtr]::Zero){$introNext=[IntroWizardSmoke]::Button($introIds,'Next >')}
