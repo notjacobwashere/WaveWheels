@@ -61,7 +61,8 @@ public partial class App : Application
         signalWait=ThreadPool.RegisterWaitForSingleObject(settingsSignal,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration),null,Timeout.Infinite,false);
         exitWait=ThreadPool.RegisterWaitForSingleObject(exitSignal,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()),null,Timeout.Infinite,false);
         model.Start();overlay.StartHook();
-        if(e.Args.Contains("--settings")||e.Args.Contains("--setup")) {OpenConfiguration();if(e.Args.Contains("--setup"))configuration?.OpenSetup();}
+        if(e.Args.Contains("--setup"))OpenSetup();
+        else if(e.Args.Contains("--settings"))OpenConfiguration();
         if(e.Args.Contains("--show-overlay"))overlay.ShowAtCursor();
         // No StartupUri: normal and sign-in launches remain in the system tray.
         WriteLog("Started " + (isolated?"isolated profile":"normal profile"));
@@ -120,6 +121,13 @@ public partial class App : Application
         if(model==null)return;
         configuration??=new SettingsWindow(model);
         configuration.Show();configuration.WindowState=WindowState.Normal;configuration.Activate();
+    }
+    private void OpenSetup()
+    {
+        if(model==null)return;
+        configuration??=new SettingsWindow(model);
+        configuration.OpenSetup();
+        OpenConfiguration();
     }
     public static void WriteLog(string line)
     {
