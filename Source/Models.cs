@@ -77,6 +77,8 @@ public sealed class Preferences
     public int WheelSpacing { get; set; }
     public int EdgeDistance { get; set; } = 32;
     public bool CheckUpdatesAutomatically { get; set; } = true;
+    public bool AutoInstallUpdates {get;set;}
+    public bool UseWindowsAudio {get;set;}
     public string UpdateChannel { get; set; } = "Stable";
     public string LastNotifiedUpdate { get; set; } = "";
     public string ActiveProfileId { get; set; } = "";

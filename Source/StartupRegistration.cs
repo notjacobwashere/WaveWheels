@@ -29,7 +29,7 @@ public sealed class StartupRegistration
         {
             var exe = Environment.ProcessPath ?? throw new IOException("The executable path could not be resolved.");
             if (!exe.EndsWith("WaveWheels.exe", StringComparison.OrdinalIgnoreCase)) throw new IOException("Launch WaveWheels.exe before registering startup.");
-            var command = "\"" + exe + "\"";
+            var command = "\"" + exe + "\" --startup";
             if (command.Length > 260) throw new IOException("Move the app to a shorter folder path before enabling startup.");
             key.SetValue(EntryName, command, RegistryValueKind.String);
         }

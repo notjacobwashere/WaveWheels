@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.1.0-beta.1 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.1.0-beta.2 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="14" GlassFrameThickness="0" />
   </shell:WindowChrome.WindowChrome>
@@ -26,8 +26,8 @@
           <Image x:Name="HeaderAppIcon" Source="/WaveWheels;component/Assets/WaveWheels.ico" Width="26" Height="26" HorizontalAlignment="Left" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
           <TextBlock Grid.Column="1" Text="WaveWheels" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Content="−" Width="34" Padding="0,5" Background="Transparent" Click="Minimize" AutomationProperties.Name="Minimize" />
-            <Button Content="×" Width="34" Padding="0,5" Background="Transparent" Click="HideConfig" ToolTip="Close configuration" AutomationProperties.Name="Close configuration" />
+            <Button Content="−" Width="44" Height="38" FontSize="20" Padding="0" Margin="0,0,4,0" Background="Transparent" Click="Minimize" AutomationProperties.Name="Minimize" />
+            <Button Content="×" Width="44" Height="38" FontSize="22" Padding="0" Margin="0" Background="Transparent" Click="HideConfig" ToolTip="Close configuration" AutomationProperties.Name="Close configuration" />
           </StackPanel>
         </Grid>
       </Border>
@@ -107,7 +107,33 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                   <TextBlock Text="Count" FontSize="9" Foreground="#8596A6" VerticalAlignment="Center" Margin="0,0,10,0" TextWrapping="Wrap" />
-                  <ComboBox x:Name="CountBox" Width="66" SelectedItem="{Binding DisplayWheelCount, Mode=TwoWay}" IsEnabled="{Binding Connected}" AutomationProperties.Name="Number of wheels" />
+                  <Border x:Name="CountBox" IsEnabled="{Binding Connected}" Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="8" Padding="3" AutomationProperties.Name="Number of wheels">
+                    <StackPanel Orientation="Horizontal">
+                      <Button x:Name="DecreaseWheelCountButton" Content="−" Click="DecreaseWheelCount" Width="32" Height="32" Padding="0" Margin="0" FontSize="18" AutomationProperties.Name="Fewer wheels">
+                        <Button.Style>
+                          <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding DisplayWheelCount}" Value="1">
+                                <Setter Property="IsEnabled" Value="False" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Button.Style>
+                      </Button>
+                      <TextBlock Text="{Binding DisplayWheelCount}" Width="38" FontSize="14" FontWeight="SemiBold" TextAlignment="Center" VerticalAlignment="Center" />
+                      <Button x:Name="IncreaseWheelCountButton" Content="+" Click="IncreaseWheelCount" Width="32" Height="32" Padding="0" Margin="0" FontSize="18" AutomationProperties.Name="More wheels">
+                        <Button.Style>
+                          <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding DisplayWheelCount}" Value="12">
+                                <Setter Property="IsEnabled" Value="False" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Button.Style>
+                      </Button>
+                    </StackPanel>
+                  </Border>
                 </StackPanel>
               </Grid>
               <Grid Grid.Row="1" Margin="0,0,0,16">
@@ -225,7 +251,10 @@
                             <Button Tag="#F4B16F" Background="#F4B16F" Padding="0" Click="SetColor" AutomationProperties.Name="Amber accent" />
                             <Button Tag="#F18D93" Background="#F18D93" Padding="0" Margin="0" Click="SetColor" AutomationProperties.Name="Coral accent" />
                           </UniformGrid>
-                          <TextBox Grid.Column="1" x:Name="ColorBox" Text="{Binding EditorWheel.Color,Mode=OneWay}" MaxLength="7" LostFocus="ApplyHex" KeyDown="ColorKey" FontSize="11" Padding="8,10" AutomationProperties.Name="Custom hex color" />
+                          <DockPanel Grid.Column="1">
+                            <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose custom hex color" Tag="Wheel" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding EditorWheel.Color}" BorderBrush="#587A89" BorderThickness="1" />
+                            <TextBox x:Name="ColorBox" Text="{Binding EditorWheel.Color,Mode=OneWay}" MaxLength="7" LostFocus="ApplyHex" KeyDown="ColorKey" FontSize="11" Padding="8,10" AutomationProperties.Name="Custom hex color" />
+                          </DockPanel>
                         </Grid>
                       </StackPanel>
                     </Expander>
@@ -255,7 +284,7 @@
                     </Expander>
                     <WrapPanel Margin="0,6,0,12">
                       <Button Content="Restore defaults" Tag="Wheels" Click="RestoreDefaults" HorizontalAlignment="Left" Margin="0,0,8,0" Background="Transparent" Foreground="#98AABC" />
-                      <Button Grid.Column="1" Content="Remove wheel" IsEnabled="{Binding Connected}" Click="Remove" Background="Transparent" Foreground="#D09AA5" Padding="12,10" Margin="0" FontSize="10" />
+                      <Button Content="Remove wheel" IsEnabled="{Binding Connected}" Click="Remove" Background="#36232C" Foreground="#F1B8C4" Padding="16,10" MinHeight="38" Margin="0" FontSize="12" />
                     </WrapPanel>
                   </StackPanel>
                 </ScrollViewer>
@@ -348,7 +377,7 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                   <StackPanel>
-                    <Expander Header="Animations" IsExpanded="True" Margin="0,0,0,12">
+                    <Expander Header="Animations" IsExpanded="False" Margin="0,0,0,12">
                       <StackPanel x:Name="AnimationOptionsPanel" IsEnabled="{Binding AnimationControlsEnabled}" Margin="16,4,16,16">
                         <CheckBox Style="{StaticResource Switch}" Content="Opening and closing" IsChecked="{Binding AnimateOverlay}" Margin="0,0,0,14" />
                         <CheckBox Style="{StaticResource Switch}" Content="Page and button transitions" IsChecked="{Binding AnimateInterface}" Margin="0,0,0,14" />
@@ -394,11 +423,20 @@
                     <Expander Header="Colors" IsExpanded="False" Margin="0,0,0,12">
                       <StackPanel Margin="16,4,16,16">
                         <TextBlock Text="Wheel surface" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
-                        <TextBox Text="{Binding Effects.NormalColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Wheel surface color" />
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose wheel surface color" Tag="NormalColor" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding Effects.NormalColor}" BorderBrush="#587A89" BorderThickness="1" />
+                          <TextBox Text="{Binding Effects.NormalColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Wheel surface color" />
+                        </DockPanel>
                         <TextBlock Text="Muted wheel and label" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
-                        <TextBox Text="{Binding Effects.MutedColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Muted wheel and label color" />
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose muted wheel and label color" Tag="MutedColor" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding Effects.MutedColor}" BorderBrush="#587A89" BorderThickness="1" />
+                          <TextBox Text="{Binding Effects.MutedColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Muted wheel and label color" />
+                        </DockPanel>
                         <TextBlock Text="Muted speaker button" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
-                        <TextBox Text="{Binding Effects.MutedButtonColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Muted speaker button color" />
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose muted speaker button color" Tag="MutedButtonColor" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding Effects.MutedButtonColor}" BorderBrush="#587A89" BorderThickness="1" />
+                          <TextBox Text="{Binding Effects.MutedButtonColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Muted speaker button color" />
+                        </DockPanel>
                         <TextBlock Text="{Binding EffectColorStatus}" Foreground="#98AABC" TextWrapping="Wrap" Margin="0,12,0,12" />
                         <TextBlock Text="Requires animations enabled in Settings. Respects Windows motion settings." Foreground="#98AABC" TextWrapping="Wrap" />
                       </StackPanel>
@@ -565,7 +603,14 @@
                       <ComboBox Grid.Column="1" x:Name="UpdateChannelPicker" ItemsSource="{Binding UpdateChannels}" SelectedItem="{Binding UpdateChannel}" IsEnabled="{Binding CanCheckUpdates}" VerticalAlignment="Center" AutomationProperties.Name="Release channel" />
                     </Grid>
                     <Border BorderBrush="#293A49" BorderThickness="0,1,0,0" Margin="0,20,0,0" Padding="0,18,0,0">
-                      <CheckBox Content="Notify me about updates" Style="{StaticResource Switch}" IsChecked="{Binding CheckUpdatesAutomatically}" />
+                      <StackPanel>
+                        <DockPanel>
+                          <Button Content="Repair app" Click="RepairApp" IsEnabled="{Binding CanCheckUpdates}" DockPanel.Dock="Right" Margin="12,0,0,0" ToolTip="Reinstall the latest stable release and keep your settings" />
+                          <CheckBox Content="Notify me about updates" Style="{StaticResource Switch}" IsChecked="{Binding CheckUpdatesAutomatically}" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <CheckBox Content="Automatic updates" Style="{StaticResource Switch}" IsChecked="{Binding AutoInstallUpdates}" Margin="0,18,0,0" />
+                        <TextBlock Text="Check and install newer releases from your selected channel at Windows sign-in." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="58,8,0,0" />
+                      </StackPanel>
                     </Border>
                   </StackPanel>
                 </Border>
@@ -618,6 +663,12 @@
               <StackPanel>
                 <TextBlock Text="Connection" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <TextBlock Text="Manage the local Wave Link connection." Foreground="#98AABC" Margin="0,10,0,30" TextWrapping="Wrap" />
+                <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="18" Margin="0,0,0,12">
+                  <StackPanel>
+                    <CheckBox Content="Use Windows Audio" IsChecked="{Binding UseWindowsAudio}" Style="{StaticResource Switch}" />
+                    <TextBlock Text="Use the Windows wheel manually. Turn off to use Wave Link when available." Foreground="#98AABC" TextWrapping="Wrap" FontSize="12" Margin="58,8,0,0" />
+                  </StackPanel>
+                </Border>
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="14" Padding="18">
                   <StackPanel>
                     <TextBlock Text="{Binding Status}" FontWeight="SemiBold" FontSize="17" TextWrapping="Wrap" />
@@ -631,7 +682,7 @@
                     <Button Content="Reconnect Wave Link" HorizontalAlignment="Left" Click="Reconnect" Background="#73DCC8" Foreground="#10231F" />
                   </StackPanel>
                 </Border>
-                <Expander Header="Advanced connection settings" IsExpanded="False" Margin="0,0,0,12">
+                <Expander Header="Advanced connection settings" IsExpanded="False" Margin="0,12,0,12">
                   <StackPanel Margin="16,4,16,16">
                     <TextBlock Text="Local port override" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                     <TextBox Text="{Binding PortText,UpdateSourceTrigger=PropertyChanged}" MaxLength="5" AutomationProperties.Name="Local port override" />

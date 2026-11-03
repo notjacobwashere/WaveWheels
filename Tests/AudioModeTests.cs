@@ -46,7 +46,7 @@ internal static class AudioModeTests
         System.Windows.Documents.TextElement.SetForeground(root,new SolidColorBrush(Color.FromRgb(243,240,250)));
         System.Windows.Documents.TextElement.SetFontFamily(root,new FontFamily("Segoe UI"));System.Windows.Documents.TextElement.SetFontSize(root,14);
         Flush();var list=(ListBox)window.FindName("WheelList");
-        Assert(list.Items.Count==1&&ReferenceEquals(list.Items[0],fallback)&&!((ComboBox)window.FindName("CountBox")).IsEnabled&&!((ComboBox)window.FindName("ChannelBox")).IsEnabled,"Offline UI must show one fallback wheel with Wave Link-only controls disabled.");
+        Assert(list.Items.Count==1&&ReferenceEquals(list.Items[0],fallback)&&!((FrameworkElement)window.FindName("CountBox")).IsEnabled&&!((ComboBox)window.FindName("ChannelBox")).IsEnabled,"Offline UI must show one fallback wheel with Wave Link-only controls disabled.");
         Assert(((WheelControl)window.FindName("SelectedPreview")).Wheel==fallback,"The editor preview must show the Windows wheel while offline.");
         Assert(((FrameworkElement)window.FindName("WaveLinkBindingFields")).Visibility==Visibility.Collapsed,"Windows audio must not show input-channel or mix-scope fields.");
         ((Button)window.FindName("SettingsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();
@@ -59,7 +59,7 @@ internal static class AudioModeTests
         var preview=(WheelControl)window.FindName("SelectedPreview");preview.BeginAnimation(WheelControl.DisplayLevelProperty,null);preview.DisplayLevel=fallback.Level;root.UpdateLayout();
         Save(root,Path.Combine(Path.GetDirectoryName(directory)!,"windows-audio-mode.png"));
         ((Button)window.FindName("ConnectionNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();Assert(window.FindName("StartWaveLinkButton") is Button,"Connection must provide an installed-app launch/locate control.");Save(root,Path.Combine(Path.GetDirectoryName(directory)!,"windows-audio-connection.png"));
-        vm.Update(connected);Flush();Assert(list.Items.Count==original.Length&&((ComboBox)window.FindName("CountBox")).IsEnabled&&((FrameworkElement)window.FindName("WaveLinkBindingFields")).Visibility==Visibility.Visible,"Reconnecting must restore the actual editor wheel list and controls.");
+        vm.Update(connected);Flush();Assert(list.Items.Count==original.Length&&((FrameworkElement)window.FindName("CountBox")).IsEnabled&&((FrameworkElement)window.FindName("WaveLinkBindingFields")).Visibility==Visibility.Visible,"Reconnecting must restore the actual editor wheel list and controls.");
         vm.Dispose();Console.WriteLine("PASS: Windows fallback backend, caps/mute, stale-write guards, disconnect/reconnect, separate settings, device loss/recovery and mode UI.");
     }
     private static void Save(FrameworkElement root,string path)

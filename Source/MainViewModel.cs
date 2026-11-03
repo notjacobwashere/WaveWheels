@@ -32,10 +32,11 @@ public sealed class MainViewModel : Observable
     public int DisplayWheelCount {get=>Connected?Wheels.Count:1;set {if(Connected)WheelCount=value;}}
     public Wheel? EditorWheel {get=>Connected?SelectedWheel:WindowsWheel;set {if(Connected)SelectedWheel=value;}}
     public string AudioModeTitle=>Connected?"WAVE LINK CONNECTED":"WINDOWS AUDIO MODE";
-    public string AudioModeDescription=>Connected?"Wave Link channels are active. Windows Audio is used automatically if the connection is lost.":"Wave Link is disconnected. Windows Audio controls the default output. Connect Wave Link to restore your saved channel wheels.";
+    public string AudioModeDescription=>Connected?"Wave Link channels are active. Windows Audio is used automatically if the connection is lost.":UseWindowsAudio?"Windows Audio is selected manually. Turn off Use Windows Audio to return to Wave Link when connected.":"Wave Link is disconnected. Windows Audio controls the default output. Connect Wave Link to restore your saved channel wheels.";
+    public bool UseWindowsAudio {get=>Preferences.UseWindowsAudio;set {if(Preferences.UseWindowsAudio==value)return;Preferences.UseWindowsAudio=value;Changed();Update(snapshot);if(!Connected&&!isolated)RefreshWindowsAudio();SelectionChanged?.Invoke();LayoutChanged?.Invoke();ScheduleSave();}}
     public string ModeAccent=>Connected?"#8ED7BB":"#F4B16F";
     public string WindowsAudioStatus=>Connected?"Wave Link controls are active. Your Windows wheel is saved for automatic fallback.":WindowsWheel.Detail;
-    public string WheelArrangementHint=>Connected?"Drag the handle · Alt + ↑ / ↓ to move selection":"One Windows volume wheel · connect Wave Link to add more";
+    public string WheelArrangementHint=>Connected?"Drag the handle · Alt + ↑ / ↓ to move selection":UseWindowsAudio?"Windows Audio selected · switch modes in Settings → Connection":"One Windows volume wheel · connect Wave Link to add more";
     internal void RefreshWindowsAudio() {if(!Connected)ApplyWindowsAudio(windowsAudio.Read());}
     private void ApplyWindowsAudio(WindowsAudioState state)
     {
@@ -62,8 +63,8 @@ public sealed class MainViewModel : Observable
             case "Wheels":if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
             case "Startup":StartupEnabled=false;break;
-            case "Connection":PortText="";Reconnect();break;
-            case "Updates":CheckUpdatesAutomatically=true;UpdateChannel="Stable";break;
+            case "Connection":UseWindowsAudio=false;PortText="";Reconnect();break;
+            case "Updates":CheckUpdatesAutomatically=true;AutoInstallUpdates=false;UpdateChannel="Stable";break;
         }
         ScheduleSave();
     }
@@ -155,6 +156,25 @@ public sealed class MainViewModel : Observable
     public event Action? UpdateInstallationStarted;
     private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
+    public bool AutoInstallUpdates {get=>Preferences.AutoInstallUpdates;set {if(Preferences.AutoInstallUpdates==value)return;Preferences.AutoInstallUpdates=value;Changed();ScheduleSave();}}
+    public Task RepairAppAsync()=>RepairAppCoreAsync(()=>ReleaseUpdates.CheckAsync(false,updateLifetime.Token),DownloadUpdate,UpdateInstaller.Launch);
+    internal async Task RepairAppCoreAsync(Func<Task<ReleaseCatalog>> check,Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
+    {
+        if(isolated||!CanCheckUpdates)return;
+        CheckingUpdates=true;UpdateStatus="Finding the latest stable installer…";
+        ReleaseUpdate? repair=null;
+        try {var catalog=await check();repair=catalog.Stable??catalog.Latest;if(repair?.IsBeta==true||repair?.Installer==null)throw new InvalidOperationException("A verified stable installer is unavailable.");ApplyCatalog(catalog);}
+        catch(Exception ex) when(ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException) {UpdateStatus="Repair unavailable: "+ex.Message;return;}
+        finally {CheckingUpdates=false;}
+        Preferences.UpdateChannel="Stable";Changed(nameof(UpdateChannel));Changed(nameof(BetaChannelEnabled));ScheduleSave();ApplyRelease(repair);
+        await InstallUpdateCoreAsync(download,launch);
+    }
+    internal Task RunStartupUpdateAsync(bool windowsStartup)=>RunStartupUpdateCoreAsync(windowsStartup,CheckForUpdatesAsync,InstallUpdateAsync);
+    internal async Task RunStartupUpdateCoreAsync(bool windowsStartup,Func<Task> check,Func<Task> install)
+    {
+        if(!windowsStartup||!AutoInstallUpdates||isolated)return;
+        await check();if(CanInstallUpdate)await install();
+    }
     public event Action<string>? UpdateAvailable;
     private string notifiedVersion="";
     public ObservableCollection<Choice> Channels { get; } = new();
@@ -164,9 +184,9 @@ public sealed class MainViewModel : Observable
     public string SaveStatus { get => saveStatus; private set => Set(ref saveStatus, value); }
     public string Message { get => message; set => Set(ref message, value); }
     public string Status => snapshot.Status;
-    public string ConnectionLabel => snapshot.Connected ? "WAVE LINK" : "WINDOWS AUDIO";
-    public bool Connected => snapshot.Connected;
-    public string ChannelCount => snapshot.Connected ? $"{snapshot.Channels.Count} input channels available" : "1 Windows volume wheel active · Wave Link layouts are saved";
+    public string ConnectionLabel => Connected ? "WAVE LINK" : "WINDOWS AUDIO";
+    public bool Connected => snapshot.Connected&&!UseWindowsAudio;
+    public string ChannelCount => Connected ? $"{snapshot.Channels.Count} input channels available" : UseWindowsAudio&&snapshot.Connected?"Windows Audio selected · Wave Link is connected":"1 Windows volume wheel active · Wave Link layouts are saved";
     public string SettingsPath => store.FilePath;
     public bool Isolated => isolated;
     public string PortText { get => portText; set => Set(ref portText, value); }
@@ -268,7 +288,7 @@ public sealed class MainViewModel : Observable
         updateTimer.Tick+=async(_,_)=> { if(CheckUpdatesAutomatically)await CheckForUpdatesAsync(); };
         foregroundTimer.Tick+=(_,_)=>RefreshForeground();
     }
-    public void Start() {if(!isolated) {RefreshWindowsAudio();windowsAudioTimer.Start();} Client.Start(Preferences.PortOverride);if(!isolated) {foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
+    public void Start(bool windowsStartup=false) {if(!isolated) {RefreshWindowsAudio();windowsAudioTimer.Start();} Client.Start(Preferences.PortOverride);if(!isolated) {foregroundMonitor=new(()=>dispatcher.BeginInvoke(RefreshForeground));RefreshForeground();foregroundTimer.Start();updateTimer.Start();if(windowsStartup&&AutoInstallUpdates)_=RunStartupUpdateAsync(true);else if(CheckUpdatesAutomatically)_=CheckForUpdatesAsync();} }
     private void RefreshForeground()
     {
         if(AutomaticProfilesEnabled||ApplicationBlacklistEnabled&&BlacklistedApplications.Count>0)ApplyForegroundProcess(ProfileAutomation.ForegroundProcess(),Environment.TickCount64);
@@ -432,8 +452,9 @@ public sealed class MainViewModel : Observable
     }
     internal void Update(MixerSnapshot data)
     {
-        var modeChanged=snapshot.Connected!=data.Connected;
+        var wasConnected=Connected;
         snapshot = data;
+        var modeChanged=wasConnected!=Connected;
         var choices = data.Channels.Select(c => new Choice(c.Id, c.Name)).ToList();
         choices.Insert(0, new("", "None"));
         foreach (var w in Wheels.Where(w => w.ChannelId.Length > 0)) if (!choices.Any(c => c.Id == w.ChannelId)) choices.Add(new(w.ChannelId, "Saved channel · currently unavailable"));
@@ -450,7 +471,7 @@ public sealed class MainViewModel : Observable
         {
             var channel = snapshot.Channels.FirstOrDefault(c => c.Id == w.ChannelId);
             var mix = channel?.Mixes.FirstOrDefault(m => m.Id == w.MixId);
-            w.Available = snapshot.Connected && channel?.Available == true && (w.MixId.Length > 0 ? mix != null : channel.HasOverallLevel);
+            w.Available = Connected && channel?.Available == true && (w.MixId.Length > 0 ? mix != null : channel.HasOverallLevel);
             if (w.Available) { w.Level = mix?.Level ?? channel!.Level; w.Muted = mix?.Muted ?? channel!.Muted; }
             var scope = w.MixId.Length == 0 ? "Whole channel" : snapshot.Mixes.FirstOrDefault(m => m.Id == w.MixId)?.Name ?? "Saved mix";
             w.Detail = channel == null ? (w.ChannelId.Length == 0 ? "Not bound yet" : "Saved channel · unavailable") : channel.Name + " · " + scope;

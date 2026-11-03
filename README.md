@@ -152,3 +152,11 @@ The number display now rolls over a full digit height in 180 ms. Increases trave
 ## Configuration redesign preview
 
 0.10.3 Beta 1 introduces grouped workspace navigation, collapsible task sections across configuration pages, a profile action menu, and a reorganized wheel editor. Advanced channel, connection, automation, and color settings remain available without occupying the default view. Updates now separates checking/installing, preferences, and version recovery; download controls appear only during downloads. Existing settings and audio bindings carry over.
+
+### Audio selection and updates
+
+In **Settings → Connection**, enable **Use Windows Audio** to keep the Windows wheel active even while Wave Link is connected. Disable it to use Wave Link when available. Both layouts keep their settings.
+
+Color swatches beside the hex fields open an opaque RGB/HSV picker. The wheel-count control uses minus and plus buttons.
+
+**Updates → Repair app** reinstalls the latest stable release, including the current version, and preserves settings. **Automatic updates** is off by default; when enabled, Windows sign-in launches check and install newer versions from the selected channel using the verified installer flow. It requires launch at Windows sign-in to be enabled. Manual launches do not auto-install.

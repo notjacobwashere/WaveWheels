@@ -116,7 +116,7 @@ public static class IntroWizardSmoke {
     }
     $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'WaveWheels/Configure WaveWheels.lnk'
     if (-not (Test-Path -LiteralPath $shortcut)) { throw 'The configuration Start menu shortcut is missing.' }
-    if ((Get-ItemPropertyValue -Path $runKey -Name WaveWheels) -ne ('"' + $exe + '"')) { throw 'Upgrade did not update the existing startup registration.' }
+    if ((Get-ItemPropertyValue -Path $runKey -Name WaveWheels) -ne ('"' + $exe + '" --startup')) { throw 'Upgrade did not update the existing startup registration.' }
     Assert-Settings
     $app = Start-Process -FilePath $exe -WindowStyle Hidden -PassThru
     if ($app.WaitForExit(2000)) { throw 'The installed self-contained app exited unexpectedly.' }

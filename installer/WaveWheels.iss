@@ -168,7 +168,7 @@ begin
   if CurStep = ssPostInstall then begin
     // Preserve the user's opt-in while updating an existing registration to this location.
     if RegQueryStringValue(HKCU, RunKey, 'WaveWheels', ExistingStartup) then
-      RegWriteStringValue(HKCU, RunKey, 'WaveWheels', '"' + ExpandConstant('{app}\WaveWheels.exe') + '"');
+      RegWriteStringValue(HKCU, RunKey, 'WaveWheels', '"' + ExpandConstant('{app}\WaveWheels.exe') + '" --startup');
   end;
 end;
 
@@ -186,7 +186,8 @@ var
 begin
   if CurUninstallStep = usUninstall then begin
     if RegQueryStringValue(HKCU, RunKey, 'WaveWheels', ExistingStartup) then
-      if CompareText(ExistingStartup, '"' + ExpandConstant('{app}\WaveWheels.exe') + '"') = 0 then
+      if (CompareText(ExistingStartup, '"' + ExpandConstant('{app}\WaveWheels.exe') + '"') = 0) or
+        (CompareText(ExistingStartup, '"' + ExpandConstant('{app}\WaveWheels.exe') + '" --startup') = 0) then
         RegDeleteValue(HKCU, RunKey, 'WaveWheels');
   end;
   // AppData settings live outside {app} and are deliberately preserved.

@@ -47,7 +47,6 @@ public partial class SettingsWindow : Window
         Loaded+=(_,_)=>QueueEditorBindings();
         IsVisibleChanged+=(_,_)=> {if(IsVisible)QueueEditorBindings();};
         QueueEditorBindings();
-        CountBox.ItemsSource = Enumerable.Range(1,12);
         SelectedPreview.VolumeRequested += model.SetLevel;
         SelectedPreview.MuteRequested += model.ToggleMute;
         EffectsDemo.Wheel=new Wheel{Name="Preview",Color="#DA5DAD",Available=true,Level=.68};
@@ -214,6 +213,7 @@ public partial class SettingsWindow : Window
         try {model.ImportProfiles(dialog.FileName);}catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException or InvalidOperationException) {model.Message="Import failed: "+ex.Message;}
     }
     private async void CheckUpdates(object sender,RoutedEventArgs e)=>await model.CheckForUpdatesAsync();
+    private async void RepairApp(object sender,RoutedEventArgs e)=>await model.RepairAppAsync();
     private async void InstallUpdate(object sender,RoutedEventArgs e)=>await model.InstallUpdateAsync();
     private void CancelUpdate(object sender,RoutedEventArgs e)=>model.CancelUpdate();
     private async void InstallBeta(object sender,RoutedEventArgs e)=>await model.InstallBetaAsync();
@@ -221,6 +221,8 @@ public partial class SettingsWindow : Window
     private async void InstallStable(object sender,RoutedEventArgs e)=>await model.InstallStableAsync();
     private void OpenRelease(object sender,RoutedEventArgs e)=>model.OpenReleasePage();
     private void Add(object sender,RoutedEventArgs e) => model.AddWheel();
+    private void IncreaseWheelCount(object sender,RoutedEventArgs e)=>model.DisplayWheelCount=Math.Min(12,model.DisplayWheelCount+1);
+    private void DecreaseWheelCount(object sender,RoutedEventArgs e)=>model.DisplayWheelCount=Math.Max(1,model.DisplayWheelCount-1);
     private void Remove(object sender,RoutedEventArgs e) => model.RemoveWheel();
     private void RowUp(object sender,RoutedEventArgs e) { if(sender is Button {Tag:Wheel wheel}) { model.SelectedWheel=wheel; AnimateReorder(()=>model.Move(-1)); } }
     private void RowDown(object sender,RoutedEventArgs e) { if(sender is Button {Tag:Wheel wheel}) { model.SelectedWheel=wheel; AnimateReorder(()=>model.Move(1)); } }
@@ -239,6 +241,14 @@ public partial class SettingsWindow : Window
         if(dialog.ShowDialog(this)==true)model.StartWaveLink(new(dialog.FileName));
     }
     private void SetColor(object sender,RoutedEventArgs e) { if(model.EditorWheel!=null && sender is Button b && b.Tag is string color)model.EditorWheel.Color=color; }
+    private void PickColor(object sender,RoutedEventArgs e)
+    {
+        var target=(sender as FrameworkElement)?.Tag as string;var wheel=model.EditorWheel;
+        var initial=target switch {"NormalColor"=>model.Effects.NormalColor,"MutedColor"=>model.Effects.MutedColor,"MutedButtonColor"=>model.Effects.MutedButtonColor,_=>wheel?.Color??"#FFFFFF"};
+        var picker=new ColorPickerWindow(initial){Owner=this};
+        if(picker.ShowDialog()!=true)return;
+        switch(target) {case "NormalColor":model.Effects.NormalColor=picker.SelectedHex;break;case "MutedColor":model.Effects.MutedColor=picker.SelectedHex;break;case "MutedButtonColor":model.Effects.MutedButtonColor=picker.SelectedHex;break;default:if(wheel!=null)wheel.Color=picker.SelectedHex;break;}
+    }
     private void ApplyHex(object sender,RoutedEventArgs e)
     {
         var text=ColorBox.Text.Trim();
