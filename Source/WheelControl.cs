@@ -55,7 +55,7 @@ public sealed class WheelControl : FrameworkElement
     internal void SeekMuteFeedback(TimeSpan time)=>muteFeedbackClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     internal void StartMuteFeedback()
     {
-        if(!MotionEnabled||!Effects.MuteEnabled)return;
+        if(!EffectsEnabled||Effects.PerformanceMode||!Effects.MuteEnabled)return;
         StopMuteFeedback();MuteFeedbackStarts++;
         muteFeedbackClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MuteFeedbackMilliseconds*100d/Effects.MuteSpeedPercent)){FillBehavior=FillBehavior.Stop}.CreateClock(true);ApplyAnimationClock(MuteFeedbackProgressProperty,muteFeedbackClock);
     }
@@ -281,7 +281,7 @@ public sealed class WheelControl : FrameworkElement
     }
     internal void StartMaximumEffect()
     {
-        if(!MotionEnabled||!Effects.MaximumEnabled)return;
+        if(!EffectsEnabled||Effects.PerformanceMode||!Effects.MaximumEnabled)return;
         StopMaximumEffect();Array.Fill(sparkArcLevels,double.NaN);MaximumEffectStarts++;
         maximumClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MaximumVolumeEffect.DurationMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
         ApplyAnimationClock(MaximumEffectProgressProperty,maximumClock);
