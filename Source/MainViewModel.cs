@@ -199,10 +199,26 @@ public sealed class MainViewModel : Observable
     public double PreviewWidth => PreviewCanvasWidth*WheelSizePercent/100d;
     private void RefreshPreviewSize() {Changed(nameof(PreviewCanvasWidth));Changed(nameof(PreviewWidth));}
     public double PreviewHeight=>Math.Clamp(216*WheelSizePercent/100d,150,248);
+    public bool AnimationControlsEnabled=>!Effects.PerformanceMode;
+    public bool InterfaceAnimationsEnabled=>AnimateWheels&&Effects.InterfaceEnabled;
+    public bool OverlayAnimationsEnabled=>AnimateWheels&&Effects.OverlayEnabled;
+    public bool AnimateOverlay {get=>AnimateWheels&&Effects.OverlayEnabled;set {if(!AnimationControlsEnabled)return;Effects.OverlayEnabled=value;}}
+    public bool AnimateInterface {get=>AnimateWheels&&Effects.InterfaceEnabled;set {if(!AnimationControlsEnabled)return;Effects.InterfaceEnabled=value;}}
+    public bool AnimateHover {get=>AnimateWheels&&Effects.HoverEnabled;set {if(!AnimationControlsEnabled)return;Effects.HoverEnabled=value;}}
+    public bool AnimateArc {get=>AnimateWheels&&Effects.ArcEnabled;set {if(!AnimationControlsEnabled)return;Effects.ArcEnabled=value;}}
+    public bool AnimateNumbers {get=>AnimateWheels&&Effects.NumbersEnabled;set {if(!AnimationControlsEnabled)return;Effects.NumbersEnabled=value;}}
+    public bool AnimateVolumeBob {get=>AnimateWheels&&Effects.VolumeBobEnabled;set {if(!AnimationControlsEnabled)return;Effects.VolumeBobEnabled=value;}}
+    public bool AnimateShift {get=>AnimateWheels&&Effects.ShiftEnabled;set {if(!AnimationControlsEnabled)return;Effects.ShiftEnabled=value;}}
+    public bool AnimateMute {get=>AnimateWheels&&Effects.MuteEnabled;set {if(!AnimationControlsEnabled)return;Effects.MuteEnabled=value;}}
+    public bool AnimateUnmute {get=>AnimateWheels&&Effects.UnmuteEnabled;set {if(!AnimationControlsEnabled)return;Effects.UnmuteEnabled=value;}}
+    public bool AnimateLimit {get=>AnimateWheels&&Effects.LimitEnabled;set {if(!AnimationControlsEnabled)return;Effects.LimitEnabled=value;}}
+    public bool AnimateClick {get=>AnimateWheels&&Effects.ClickEnabled;set {if(!AnimationControlsEnabled)return;Effects.ClickEnabled=value;}}
+    public bool AnimateMaximum {get=>AnimateWheels&&Effects.MaximumEnabled;set {if(!AnimationControlsEnabled)return;Effects.MaximumEnabled=value;}}
+    private void RefreshAnimationOptions() {Changed(nameof(AnimateOverlay));Changed(nameof(AnimateInterface));Changed(nameof(AnimateHover));Changed(nameof(AnimateArc));Changed(nameof(AnimateNumbers));Changed(nameof(AnimateVolumeBob));Changed(nameof(AnimateShift));Changed(nameof(AnimateMute));Changed(nameof(AnimateUnmute));Changed(nameof(AnimateLimit));Changed(nameof(AnimateClick));Changed(nameof(AnimateMaximum));Changed(nameof(AnimateWheels));Changed(nameof(AnimationControlsEnabled));Changed(nameof(InterfaceAnimationsEnabled));Changed(nameof(OverlayAnimationsEnabled));}
     public bool AnimateWheels
     {
-        get => Preferences.AnimateWheels;
-        set { if (value == Preferences.AnimateWheels) return; Preferences.AnimateWheels = value; Changed(); ScheduleSave(); AppearanceChanged?.Invoke(); }
+        get => Preferences.AnimateWheels&&!Effects.PerformanceMode;
+        set { if (value == Preferences.AnimateWheels) return; Preferences.AnimateWheels = value; Changed();RefreshAnimationOptions(); ScheduleSave(); AppearanceChanged?.Invoke(); }
     }
     public int WheelCount { get => Wheels.Count; set { if(!Connected)return;value = Math.Clamp(value, 1, 12); while (Wheels.Count < value) AddWheel(); while (Wheels.Count > value) RemoveWheel(Wheels[^1]); } }
     public Wheel? SelectedWheel
@@ -222,7 +238,7 @@ public sealed class MainViewModel : Observable
         windowsAudio=audio??new WindowsMasterAudio();canWriteWindowsAudio=!isolated||audio!=null;
         this.store = store; this.isolated = isolated;
         Preferences = store.Load();
-        Effects.PropertyChanged+=(_,_)=> {ScheduleSave();Changed(nameof(EffectColorStatus));AppearanceChanged?.Invoke();};
+        Effects.PropertyChanged+=(_,_)=> {RefreshAnimationOptions();ScheduleSave();Changed(nameof(EffectColorStatus));AppearanceChanged?.Invoke();};
         BlacklistedApplications=new(Preferences.BlacklistedApplications);
         notifiedVersion=Preferences.LastNotifiedUpdate;
         if(Preferences.Profiles.Count==0)Preferences.Profiles.Add(new WheelProfile { Wheels=Preferences.Wheels });

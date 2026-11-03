@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.0.0 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.1.0-beta.1 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="14" GlassFrameThickness="0" />
   </shell:WindowChrome.WindowChrome>
@@ -9,7 +9,7 @@
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Window.Resources>
-  <Border local:InterfaceMotion.Enabled="{Binding AnimateWheels}" BorderBrush="#293A49" BorderThickness="1" CornerRadius="14" Background="#101820">
+  <Border local:InterfaceMotion.Enabled="{Binding InterfaceAnimationsEnabled}" BorderBrush="#293A49" BorderThickness="1" CornerRadius="14" Background="#101820">
     <Grid>
       <Grid.RowDefinitions>
         <RowDefinition Height="56" />
@@ -280,7 +280,7 @@
                 </Expander>
                 <Expander Header="Animations" IsExpanded="False" Margin="0,0,0,12">
                   <StackPanel Margin="16,4,16,16">
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AnimateWheels}" Content="Toggle animations" AutomationProperties.Name="Animate wheels" />
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AnimateWheels}" IsEnabled="{Binding AnimationControlsEnabled}" Content="Toggle animations" AutomationProperties.Name="Animate wheels" />
                     <TextBlock Text="Enable app and wheel animations. Respects Windows motion settings." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
                   </StackPanel>
                 </Expander>
@@ -334,6 +334,12 @@
               <StackPanel>
                 <TextBlock Text="Effects" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <TextBlock Text="Adjust glow, particles, motion, and colors." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,7,0,20" />
+                <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                  <StackPanel>
+                    <CheckBox x:Name="PerformanceModeToggle" Style="{StaticResource Switch}" Content="Performance mode" IsChecked="{Binding Effects.PerformanceMode}" />
+                    <TextBlock Text="Disables all animations. Your animation choices are restored when turned off." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="58,8,0,0" />
+                  </StackPanel>
+                </Border>
               </StackPanel>
               <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
@@ -342,7 +348,23 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                   <StackPanel>
-                    <Expander Header="Glow" IsExpanded="True" Margin="0,0,0,12">
+                    <Expander Header="Animations" IsExpanded="True" Margin="0,0,0,12">
+                      <StackPanel x:Name="AnimationOptionsPanel" IsEnabled="{Binding AnimationControlsEnabled}" Margin="16,4,16,16">
+                        <CheckBox Style="{StaticResource Switch}" Content="Opening and closing" IsChecked="{Binding AnimateOverlay}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Page and button transitions" IsChecked="{Binding AnimateInterface}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Hover feedback" IsChecked="{Binding AnimateHover}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Smooth volume bar" IsChecked="{Binding AnimateArc}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Sliding numbers" IsChecked="{Binding AnimateNumbers}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Volume bob" IsChecked="{Binding AnimateVolumeBob}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Shift spring" IsChecked="{Binding AnimateShift}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Mute shake and slash" IsChecked="{Binding AnimateMute}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Unmute recovery" IsChecked="{Binding AnimateUnmute}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Volume-limit recoil" IsChecked="{Binding AnimateLimit}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Click feedback" IsChecked="{Binding AnimateClick}" Margin="0,0,0,14" />
+                        <CheckBox Style="{StaticResource Switch}" Content="Maximum glow and sparks" IsChecked="{Binding AnimateMaximum}" Margin="0,0,0,14" />
+                      </StackPanel>
+                    </Expander>
+                    <Expander Header="Glow" IsExpanded="False" Margin="0,0,0,12">
                       <StackPanel Margin="16,4,16,16">
                         <TextBlock Text="Bloom intensity" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                         <Slider Minimum="0" Maximum="200" TickFrequency="10" IsSnapToTickEnabled="True" Value="{Binding Effects.BloomPercent}" AutomationProperties.Name="Bloom intensity" />

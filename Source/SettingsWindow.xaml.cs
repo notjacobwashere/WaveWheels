@@ -170,7 +170,7 @@ public partial class SettingsWindow : Window
         if(SetupMonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;
         QueueEditorBindings();
     }
-    private bool MotionEnabled=>model.AnimateWheels&&SystemParameters.ClientAreaAnimation;
+    private bool MotionEnabled=>model.InterfaceAnimationsEnabled&&SystemParameters.ClientAreaAnimation;
     internal void SeekInterfaceMotion(TimeSpan time) {foreach(var motion in pageMotion.Values)motion.Seek(time);modeMotion?.Seek(time);}
     private void OpenActions(object sender,RoutedEventArgs e) {if(sender is Button {ContextMenu: {} menu} button) {menu.PlacementTarget=button;menu.IsOpen=true;}}
     private void RestoreDefaults(object sender,RoutedEventArgs e)=>model.RestoreDefaults((string)((FrameworkElement)sender).Tag);
@@ -340,7 +340,7 @@ public partial class SettingsWindow : Window
         foreach(var wheel in model.Wheels)if(WheelList.ItemContainerGenerator.ContainerFromItem(wheel) is ListBoxItem item)before[wheel.Id]=item.TranslatePoint(new Point(0,0),WheelList).Y;
         change();WheelList.UpdateLayout();
         foreach(var wheel in model.Wheels)if(WheelList.ItemContainerGenerator.ContainerFromItem(wheel) is ListBoxItem item)item.RenderTransform=Transform.Identity;
-        if(!model.AnimateWheels||!SystemParameters.ClientAreaAnimation)return;
+        if(!MotionEnabled)return;
         foreach(var wheel in model.Wheels)
         {
             if(!before.TryGetValue(wheel.Id,out var old)||WheelList.ItemContainerGenerator.ContainerFromItem(wheel) is not ListBoxItem item)continue;

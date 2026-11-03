@@ -145,6 +145,7 @@ internal static class UiRendering
                 RedesignTests.Run(vm,window,root);
                 Beta4PolishTests.Run(vm,window,root,Path.Combine(Path.GetDirectoryName(path)!,"beta4"));
                 AnimationRefreshTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"animation-refresh"));
+                AnimationOptionsTests.Run(vm,window,root,Path.GetDirectoryName(path)!);
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}

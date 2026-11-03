@@ -48,7 +48,7 @@ Settings save automatically in `%LOCALAPPDATA%\WaveWheels\settings.json`. They a
 
 ## Effects
 
-**Appearance → Effects** provides a live preview and controls for bloom, sparks, mute movement/timing, and surface colors. **Restore defaults** returns every effect to its original value. Each customization page has its own scoped reset; wheel resets retain channel bindings, and profile resets retain saved layouts.
+**Appearance → Effects** includes individual animation switches and **Performance mode**, which locks animations off while preserving your choices. It also provides a live preview and controls for bloom, sparks, mute movement/timing, and surface colors. **Restore defaults** returns every effect to its original value. Each customization page has its own scoped reset; wheel resets retain channel bindings, and profile resets retain saved layouts.
 
 
 ## Profiles, placement, and updates

@@ -30,7 +30,12 @@ public sealed class WheelControl : FrameworkElement
     }));
     private readonly EffectSettings defaultEffects=new();
     public EffectSettings Effects {get=>(EffectSettings?)GetValue(EffectsProperty)??defaultEffects;set=>SetValue(EffectsProperty,value);}
-    private void EffectsChanged(object? sender,PropertyChangedEventArgs e)=>InvalidateVisual();
+    private void EffectsChanged(object? sender,PropertyChangedEventArgs e)
+    {
+        if(e.PropertyName==nameof(EffectSettings.PerformanceMode)||e.PropertyName?.EndsWith("Enabled")==true)
+        {StopMaximumEffect();ResetNumberDisplay();StopMuteFeedback();StopShiftFeedback();StopUnmuteFeedback();StopInteractionFeedback();AnimateLevel();AnimateScale(active?1.04:1);}
+        InvalidateVisual();
+    }
     private readonly MaximumVolumeTransition maximumTransition=new();
     private AnimationClock? maximumClock;
     private readonly double[] sparkArcLevels=new double[400];
@@ -50,6 +55,7 @@ public sealed class WheelControl : FrameworkElement
     internal void SeekMuteFeedback(TimeSpan time)=>muteFeedbackClock?.Controller?.SeekAlignedToLastTick(time,TimeSeekOrigin.BeginTime);
     internal void StartMuteFeedback()
     {
+        if(!MotionEnabled||!Effects.MuteEnabled)return;
         StopMuteFeedback();MuteFeedbackStarts++;
         muteFeedbackClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MuteFeedbackMilliseconds*100d/Effects.MuteSpeedPercent)){FillBehavior=FillBehavior.Stop}.CreateClock(true);ApplyAnimationClock(MuteFeedbackProgressProperty,muteFeedbackClock);
     }
@@ -90,7 +96,7 @@ public sealed class WheelControl : FrameworkElement
     }
     private void StartShiftFeedback(double change)
     {
-        if(Math.Abs(change)<1e-7||!EffectsEnabled||!SystemParameters.ClientAreaAnimation)return;
+        if(Math.Abs(change)<1e-7||!MotionEnabled||!Effects.ShiftEnabled)return;
         var pose=CurrentShiftPose;StopShiftFeedback();shiftInitial=pose;
         shiftStrength=Math.Clamp(Math.Abs(change)/.2,.35,1.5);shiftDirection=Math.Sign(change);ShiftFeedbackStarts++;
         shiftFeedbackClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(ShiftFeedbackMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
@@ -117,7 +123,7 @@ public sealed class WheelControl : FrameworkElement
     {
         if(Wheel==null)return;
         var before=Wheel.Level;VolumeRequested?.Invoke(Wheel,value);var change=Wheel.Level-before;
-        if(!MotionEnabled||Math.Abs(change)<1e-7)return;
+        if(!MotionEnabled||!Effects.VolumeBobEnabled||Math.Abs(change)<1e-7)return;
         bobInitial=VolumeBobOffset;bobDirection=Math.Sign(change);VolumeBobStarts++;
         volumeBobClock=FeedbackClock(VolumeBobProgressProperty,320);
     }
@@ -140,19 +146,19 @@ public sealed class WheelControl : FrameworkElement
     }
     internal double BoundaryBarStretch=>boundaryDirection>0&&Wheel?.Available==true&&Wheel.Level>=Wheel.MaximumVolumePercent/100d-1e-7?BoundaryStretch(BoundaryProgress):0;
     internal static int ArcMilliseconds(double distance)=>(int)Math.Round(130+Math.Min(1,Math.Abs(distance))*170);
-    private bool MotionEnabled=>EffectsEnabled&&SystemParameters.ClientAreaAnimation;
+    private bool MotionEnabled=>EffectsEnabled&&!Effects.PerformanceMode&&SystemParameters.ClientAreaAnimation;
     private AnimationClock FeedbackClock(DependencyProperty property,int milliseconds)
     {
         var clock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(milliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);ApplyAnimationClock(property,clock);return clock;
     }
     private AnimationClock? HoverClock(DependencyProperty property,double target,int milliseconds)
     {
-        if(!MotionEnabled) {BeginAnimation(property,null);SetValue(property,target);return null;}
+        if(!MotionEnabled||!Effects.HoverEnabled) {BeginAnimation(property,null);SetValue(property,target);return null;}
         var clock=(AnimationClock)new DoubleAnimation((double)GetValue(property),target,TimeSpan.FromMilliseconds(milliseconds)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}}.CreateClock(true);ApplyAnimationClock(property,clock);return clock;
     }
     private void StartBoundary(double delta,long now)
     {
-        if(!MotionEnabled||now-lastBoundaryAt<180)return;
+        if(!MotionEnabled||!Effects.LimitEnabled||now-lastBoundaryAt<180)return;
         lastBoundaryAt=now;boundaryDirection=Math.Sign(delta);BoundaryFeedbackStarts++;boundaryClock=FeedbackClock(BoundaryProgressProperty,300);
     }
     private void StopInteractionFeedback()
@@ -260,7 +266,7 @@ public sealed class WheelControl : FrameworkElement
         if (e.PropertyName == nameof(Wheel.Level))
         {
             UpdateNumberDisplay();
-            if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,EffectsEnabled&&SystemParameters.ClientAreaAnimation))StartMaximumEffect();
+            if(maximumTransition.Observe(Wheel?.Available==true,Wheel?.Level??0,MotionEnabled&&Effects.MaximumEnabled))StartMaximumEffect();
             else if(Wheel?.Level<1&&maximumClock!=null&&MaximumEffectProgress<1)StopSparkEmission();
             AnimateLevel();
         }
@@ -268,13 +274,14 @@ public sealed class WheelControl : FrameworkElement
         else if(e.PropertyName==nameof(Wheel.Muted))
         {
             StopMuteFeedback();StopUnmuteFeedback();
-            if(Wheel?.Available==true&&EffectsEnabled&&SystemParameters.ClientAreaAnimation) {if(Wheel.Muted)StartMuteFeedback();else StartUnmuteFeedback();}
+            if(Wheel?.Available==true&&MotionEnabled) {if(Wheel.Muted&&Effects.MuteEnabled)StartMuteFeedback();else if(!Wheel.Muted&&Effects.UnmuteEnabled)StartUnmuteFeedback();}
         }
         InvalidateVisual();
         if (Wheel != null) System.Windows.Automation.AutomationProperties.SetName(this, Wheel.Name + ", " + Wheel.VolumeLabel);
     }
     internal void StartMaximumEffect()
     {
+        if(!MotionEnabled||!Effects.MaximumEnabled)return;
         StopMaximumEffect();Array.Fill(sparkArcLevels,double.NaN);MaximumEffectStarts++;
         maximumClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(MaximumVolumeEffect.DurationMilliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);
         ApplyAnimationClock(MaximumEffectProgressProperty,maximumClock);
@@ -307,7 +314,7 @@ public sealed class WheelControl : FrameworkElement
             ?NumberRollLayout.Dominant(NumberRollLayout.Tween(numberStartGlyphs,NumberText,NumberProgress,NumberDirection))
             :NumberRollLayout.CanSplit(previous,previous)?NumberRollLayout.Glyphs(previous,previous,1):null;
         StopNumberTransition();OutgoingNumberText=previous;NumberText=target;NumberDirection=direction;numberStartGlyphs=snapshot;
-        if(Wheel?.Available!=true||previous=="—"||!EffectsEnabled||!SystemParameters.ClientAreaAnimation)return;
+        if(Wheel?.Available!=true||previous=="—"||!MotionEnabled||!Effects.NumbersEnabled)return;
         // Replace the current transition rather than queueing numbers during rapid scrolling.
         NumberTransitionStarts++;
         numberClock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(NumberTransitionMilliseconds)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop}.CreateClock(true);
@@ -342,7 +349,7 @@ public sealed class WheelControl : FrameworkElement
     private void AnimateLevel()
     {
         var target = Wheel?.Level ?? 0;
-        if (!EffectsEnabled||!SystemParameters.ClientAreaAnimation) {levelClock=null;BeginAnimation(DisplayLevelProperty, null); DisplayLevel = target; return; }
+        if (!MotionEnabled||!Effects.ArcEnabled) {levelClock=null;BeginAnimation(DisplayLevelProperty, null); DisplayLevel = target; return; }
         var current = DisplayLevel;
         levelClock=(AnimationClock)new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(ArcMilliseconds(target-current))) { EasingFunction = new PowerEase { Power = 3, EasingMode = EasingMode.EaseOut } }.CreateClock(true);
         ApplyAnimationClock(DisplayLevelProperty,levelClock);
@@ -351,7 +358,7 @@ public sealed class WheelControl : FrameworkElement
     {
         var scale = RenderTransform as ScaleTransform;
         if (scale == null) { RenderTransformOrigin = new Point(0, .5); RenderTransform = scale = new ScaleTransform(1, 1); }
-        var animation = new DoubleAnimation(scale.ScaleX,target, TimeSpan.FromMilliseconds(EffectsEnabled&&SystemParameters.ClientAreaAnimation ? 240 : 0)) { EasingFunction = new ExponentialEase { Exponent = 6, EasingMode = EasingMode.EaseOut } };
+        var animation = new DoubleAnimation(scale.ScaleX,target, TimeSpan.FromMilliseconds(MotionEnabled&&Effects.HoverEnabled ? 240 : 0)) { EasingFunction = new ExponentialEase { Exponent = 6, EasingMode = EasingMode.EaseOut } };
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, animation); scale.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
     }
     public void Adjust(double delta)=>AdjustInput(delta,Native.ShiftDown,Environment.TickCount64);
@@ -381,7 +388,7 @@ public sealed class WheelControl : FrameworkElement
         if(Wheel==null)return false;
         var hit=UseMuteButton?HitsMute(point):WheelSilhouette(LabelBounds).FillContains(point);
         if(!hit)return false;
-        var wasMuted=Wheel.Muted;MuteRequested?.Invoke(Wheel);if(Wheel.Muted!=wasMuted&&MotionEnabled) {TapFeedbackStarts++;tapClock=FeedbackClock(TapProgressProperty,240);}return true;
+        var wasMuted=Wheel.Muted;MuteRequested?.Invoke(Wheel);if(Wheel.Muted!=wasMuted&&MotionEnabled&&Effects.ClickEnabled) {TapFeedbackStarts++;tapClock=FeedbackClock(TapProgressProperty,240);}return true;
     }
     private void Down(object sender, MouseButtonEventArgs e)
     {
