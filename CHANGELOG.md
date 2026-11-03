@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1-beta.5
+
+- Simplified stable-channel status text and kept the older-beta warning limited to installed stable builds.
+- Renamed the configuration window to Wave Wheels, without version or configuration suffixes.
+
 ## 1.2.1-beta.4
 
 - Show the latest beta in the normal Updates panel instead of a separate section.

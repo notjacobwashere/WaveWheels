@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.2.1-beta.3 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="Wave Wheels" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="14" GlassFrameThickness="0" />
   </shell:WindowChrome.WindowChrome>
@@ -24,7 +24,7 @@
             <ColumnDefinition Width="Auto" />
           </Grid.ColumnDefinitions>
           <Image x:Name="HeaderAppIcon" Source="/WaveWheels;component/Assets/WaveWheels.ico" Width="26" Height="26" HorizontalAlignment="Left" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-          <TextBlock Grid.Column="1" Text="WaveWheels" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Text="Wave Wheels" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
           <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
             <Button Content="−" Width="44" Height="38" FontSize="20" Padding="0" Margin="0,0,4,0" Background="Transparent" Click="Minimize" AutomationProperties.Name="Minimize" />
             <Button Content="×" Width="44" Height="38" FontSize="22" Padding="0" Margin="0" Background="Transparent" Click="HideConfig" ToolTip="Close configuration" AutomationProperties.Name="Close configuration" />

@@ -18,8 +18,8 @@ internal static class StableChannelSwitchTests
         var stable=UpdateTests.Fixture(new byte[]{1,2,3}) with {Version="1.1.0",IsBeta=false};
         var catalog=new ReleaseCatalog(null,new[]{new ReleaseUpdate("1.2.1-beta.1","",null,true)},stable);
         model.ApplyCatalog(catalog);
-        Assert(model.ShowStableSwitch&&model.CanInstallStable&&!model.CanInstallUpdate&&model.StableSwitchLabel.Contains("1.1.0")&&model.UpdateStatus.Contains("1.1.0")&&!model.UpdateStatus.Contains("up to date"),"Stable channel must offer an older stable version directly without claiming the beta is up to date.");
-        var window=new SettingsWindow(model);var button=(Button)window.FindName("StableSwitchButton");button.DataContext=model;
+        Assert(model.ShowStableSwitch&&model.CanInstallStable&&!model.CanInstallUpdate&&model.StableSwitchLabel.Contains("1.1.0")&&model.UpdateStatus.Contains("1.1.0")&&model.UpdateStatus=="Latest stable · 1.1.0"&&!model.ShowBetaVersionWarning,"Stable channel must offer an older stable version directly without claiming the beta is up to date.");
+        var window=new SettingsWindow(model);Assert(window.Title=="Wave Wheels","The configuration window title must contain only the app name.");var button=(Button)window.FindName("StableSwitchButton");button.DataContext=model;
         var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
         Assert(button.Visibility==Visibility.Visible&&button.IsEnabled,"The stable switch must be visible and actionable outside Version history.");
         var checks=0;var installs=0;model.Preferences.AutoInstallUpdates=true;

@@ -417,7 +417,7 @@ public sealed class MainViewModel : Observable
         var release=BetaChannelEnabled?LatestBetaBuild:catalog.Latest;
         ApplyRelease(release?.Version==AppVersion?null:release);
         if(BetaChannelEnabled)UpdateStatus=release==null?"No beta releases found.":release.Version==AppVersion?$"You're up to date · {AppVersion}":$"Version {release.Version} is available"+(release.Installer==null?" · use the release page to download":"");
-        if(ShowStableSwitch)UpdateStatus=$"Latest stable is {stableRelease!.Version}. Your installed version is {AppVersion}. Choose Install stable to switch, keeping your settings.";
+        if(ShowStableSwitch)UpdateStatus=$"Latest stable · {stableRelease!.Version}";
     }
     private static Task<string> DownloadUpdate(ReleaseUpdate update,IProgress<DownloadProgress> progress,CancellationToken token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token);
     public Task InstallUpdateAsync()=>InstallUpdateCoreAsync(DownloadUpdate,UpdateInstaller.Launch);
