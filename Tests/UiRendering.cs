@@ -148,6 +148,7 @@ internal static class UiRendering
                 AnimationOptionsTests.Run(vm,window,root,Path.GetDirectoryName(path)!);
                 PickerAndUpdateOptionsTests.Run(vm,window,root,Path.GetDirectoryName(path)!);
                 UndoWheelTests.Run(Path.GetDirectoryName(path)!);
+                BetaDiscoveryTests.Run(Path.GetDirectoryName(path)!);
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}

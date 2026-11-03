@@ -46,7 +46,7 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 1.2.1-beta.1 version again. Your saved wheels will be kept.", "WaveWheels 1.2.1-beta.1 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 1.2.1-beta.2 version again. Your saved wheels will be kept.", "WaveWheels 1.2.1-beta.2 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")||e.Args.Contains("--setup")) settingsSignal.Set();
             Shutdown();return;
         }
@@ -70,7 +70,7 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 1.2.1-beta.1",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 1.2.1-beta.2",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
         var modeItem=new Forms.ToolStripMenuItem(model!.AudioModeTitle){Enabled=false};menu.Items.Add(modeItem);
         var profilesMenu=new Forms.ToolStripMenuItem("Profiles"){Enabled=model.Connected};
@@ -90,7 +90,7 @@ public partial class App : Application
         menu.Items.Add("Check for updates",null,async(_,_)=>await model.CheckForUpdatesAsync());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 1.2.1-beta.1 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 1.2.1-beta.2 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()
@@ -120,6 +120,7 @@ public partial class App : Application
     {
         if(model==null)return;
         configuration??=new SettingsWindow(model);
+        configuration.SelectFirstWheelForPreview();
         configuration.Show();configuration.WindowState=WindowState.Normal;configuration.Activate();
     }
     private void OpenSetup()
