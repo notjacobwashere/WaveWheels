@@ -11,7 +11,10 @@ using System.Text.RegularExpressions;
 namespace WaveWheels;
 
 public sealed record InstallerAsset(string Name,string Url,long Size,string Sha256);
-public sealed record ReleaseUpdate(string Version, string Url,InstallerAsset? Installer=null,bool IsBeta=false);
+public sealed record ReleaseUpdate(string Version, string Url,InstallerAsset? Installer=null,bool IsBeta=false)
+{
+    public string DisplayVersion=>ReleaseUpdates.FormatVersion(Version);
+}
 internal sealed record ReleaseCatalog(ReleaseUpdate? Latest,IReadOnlyList<ReleaseUpdate> Betas,ReleaseUpdate? Stable=null);
 internal sealed record ReleaseVersion(Version Core,string Suffix):IComparable<ReleaseVersion>
 {
@@ -37,6 +40,11 @@ internal sealed record ReleaseVersion(Version Core,string Suffix):IComparable<Re
 }
 internal static class ReleaseUpdates
 {
+    internal static string FormatVersion(string version)
+    {
+        var text=version.Split('+')[0];
+        return Regex.Replace(text,@"^(\d+\.\d+\.\d+)-beta\.(\d+)$","$1 Beta $2",RegexOptions.IgnoreCase);
+    }
     public const string ReleasesUrl="https://github.com/notjacobwashere/WaveWheels/releases/latest";
     public static string CurrentVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]??typeof(App).Assembly.GetName().Version?.ToString(3)??"1.0.0";
     public static ReleaseUpdate? Parse(string json,Version current)

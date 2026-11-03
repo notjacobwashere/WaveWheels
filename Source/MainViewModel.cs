@@ -120,6 +120,7 @@ public sealed class MainViewModel : Observable
     private double updateProgress;
     private CancellationTokenSource? installCancellation;
     public string AppVersion=>ReleaseUpdates.CurrentVersion;
+    public string AppVersionLabel=>ReleaseUpdates.FormatVersion(AppVersion);
     public string[] UpdateChannels {get;}={"Stable","Beta"};
     public string UpdateChannel
     {
@@ -407,7 +408,7 @@ public sealed class MainViewModel : Observable
     internal void ApplyRelease(ReleaseUpdate? update)
     {
         availableUpdate=update;updateUrl=update?.Url??ReleaseUpdates.ReleasesUrl;
-        UpdateStatus=update==null?$"You're up to date · {AppVersion}":$"Version {update.Version} is available"+(update.Installer==null?" · use the release page to download":"");
+        UpdateStatus=update==null?$"You're up to date · {AppVersionLabel}":$"Version {update.DisplayVersion} is available"+(update.Installer==null?" · use the release page to download":"");
         UpdateActionsChanged();
     }
     internal void ApplyCatalog(ReleaseCatalog catalog)
@@ -416,7 +417,7 @@ public sealed class MainViewModel : Observable
         SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();
         var release=BetaChannelEnabled?LatestBetaBuild:catalog.Latest;
         ApplyRelease(release?.Version==AppVersion?null:release);
-        if(BetaChannelEnabled)UpdateStatus=release==null?"No beta releases found.":release.Version==AppVersion?$"You're up to date · {AppVersion}":$"Version {release.Version} is available"+(release.Installer==null?" · use the release page to download":"");
+        if(BetaChannelEnabled)UpdateStatus=release==null?"No beta releases found.":release.Version==AppVersion?$"You're up to date · {AppVersionLabel}":$"Version {release.DisplayVersion} is available"+(release.Installer==null?" · use the release page to download":"");
         if(ShowStableSwitch)UpdateStatus=$"Latest stable · {stableRelease!.Version}";
     }
     private static Task<string> DownloadUpdate(ReleaseUpdate update,IProgress<DownloadProgress> progress,CancellationToken token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token);

@@ -61,7 +61,7 @@
                 </Button.Style>
               </Button>
               <Button Content="Setup guide" Click="OpenSetup" Background="Transparent" Foreground="#98AABC" Padding="10,8" Margin="0" />
-              <TextBlock Text="{Binding AppVersion}" Foreground="#667B8B" FontSize="10" Margin="12,14,0,0" />
+              <TextBlock Text="{Binding AppVersionLabel}" Foreground="#667B8B" FontSize="10" Margin="12,14,0,0" />
             </StackPanel>
             <StackPanel x:Name="PrimaryNavigation">
               <Button x:Name="WheelsNav" Content="Wheels" Tag="Wheels" Style="{StaticResource NavButton}" Click="Navigate" />
@@ -561,7 +561,7 @@
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="24">
                   <StackPanel>
                     <TextBlock Text="Installed version" Foreground="#98AABC" FontSize="12" />
-                    <TextBlock Text="{Binding AppVersion}" FontSize="28" FontWeight="SemiBold" Margin="0,6,0,18" />
+                    <TextBlock Text="{Binding AppVersionLabel}" FontSize="28" FontWeight="SemiBold" Margin="0,6,0,18" />
                     <TextBlock Text="{Binding UpdateStatus}" Foreground="#BBCAD4" TextWrapping="Wrap" FontSize="14" />
                     <TextBlock x:Name="BetaVersionWarning" Text="{Binding LatestBetaWarning}" Foreground="#F4B16F" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0">
                       <TextBlock.Style>
@@ -659,7 +659,7 @@
                               <ColumnDefinition Width="*" />
                               <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding Version}" />
+                            <TextBlock Text="{Binding DisplayVersion}" />
                             <TextBlock Grid.Column="1" Text="Beta" Foreground="#8596A6" FontSize="11" Margin="20,0,0,0" />
                           </Grid>
                         </DataTemplate>

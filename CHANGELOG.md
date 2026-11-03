@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- Promoted the 1.2.1 beta improvements to stable, including wheel deletion undo, update recovery, window placement, and explicit color application.
+- Beta version labels now use a readable format such as 1.2.1 Beta 5 in the app, update history, and notifications.
+- Simplified update status text and the Wave Wheels window title.
+
 ## 1.2.1-beta.5
 
 - Simplified stable-channel status text and kept the older-beta warning limited to installed stable builds.
