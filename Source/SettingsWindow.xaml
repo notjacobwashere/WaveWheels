@@ -558,39 +558,21 @@
               <StackPanel>
                 <TextBlock Text="Updates" FontSize="26" FontWeight="SemiBold" />
                 <TextBlock Text="Keep WaveWheels up to date." Foreground="#98AABC" Margin="0,7,0,24" />
-                <Border x:Name="LatestBetaCard" Background="#151E29" BorderBrush="#3F706A" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
-                  <Border.Style>
-                    <Style TargetType="Border">
-                      <Setter Property="Visibility" Value="Collapsed" />
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding ShowLatestBeta}" Value="True">
-                          <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                      </Style.Triggers>
-                    </Style>
-                  </Border.Style>
-                  <StackPanel>
-                    <TextBlock Text="{Binding LatestBetaLabel}" FontWeight="SemiBold" FontSize="17" />
-                    <TextBlock Text="{Binding LatestBetaWarning}" Foreground="#F4B16F" TextWrapping="Wrap" Margin="0,8,0,0">
-                      <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                          <Setter Property="Visibility" Value="Collapsed" />
-                          <Style.Triggers>
-                            <DataTrigger Binding="{Binding BetaOlderThanStable}" Value="True">
-                              <Setter Property="Visibility" Value="Visible" />
-                            </DataTrigger>
-                          </Style.Triggers>
-                        </Style>
-                      </TextBlock.Style>
-                    </TextBlock>
-                    <Button Content="Install latest beta" Click="InstallLatestBeta" IsEnabled="{Binding CanInstallLatestBeta}" HorizontalAlignment="Left" Margin="0,14,0,0" />
-                  </StackPanel>
-                </Border>
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="24">
                   <StackPanel>
                     <TextBlock Text="Installed version" Foreground="#98AABC" FontSize="12" />
                     <TextBlock Text="{Binding AppVersion}" FontSize="28" FontWeight="SemiBold" Margin="0,6,0,18" />
                     <TextBlock Text="{Binding UpdateStatus}" Foreground="#BBCAD4" TextWrapping="Wrap" FontSize="14" />
+                    <TextBlock x:Name="BetaVersionWarning" Text="{Binding LatestBetaWarning}" Foreground="#F4B16F" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowBetaVersionWarning}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
                     <ProgressBar x:Name="UpdateDownloadProgress" Value="{Binding UpdateProgress,Mode=OneWay}" Maximum="100" Height="5" Margin="0,20,0,0">
                       <ProgressBar.Style>
                         <Style TargetType="ProgressBar">

@@ -32,7 +32,7 @@ internal static class PickerAndUpdateOptionsTests
         vm.RepairAppCoreAsync(()=>Task.FromResult(new ReleaseCatalog(null,Array.Empty<ReleaseUpdate>(),release)),(r,p,c)=>{downloads++;Assert(r==release,"Repair must choose the stable installer even when already current.");return Task.FromResult("fixture-never-execute.exe");},_=>launches++).GetAwaiter().GetResult();
         Assert(downloads==1&&launches==1&&vm.UpdateChannel=="Stable","Repair must use the existing verified install handoff for same-version reinstalls.");
         vm.RepairAppCoreAsync(()=>Task.FromException<ReleaseCatalog>(new InvalidOperationException("Unavailable")),(r,p,c)=>{downloads++;return Task.FromResult("");},_=>launches++).GetAwaiter().GetResult();Assert(downloads==1&&launches==1,"A failed repair check must not use an old cached installer.");
-        var checks=0;var installs=0;vm.ApplyRelease(release);vm.Preferences.AutoInstallUpdates=true;
+        var checks=0;var installs=0;vm.ApplyRelease(release with {Version="99.0.0"});vm.Preferences.AutoInstallUpdates=true;
         Task Check(){checks++;return Task.CompletedTask;}Task Install(){installs++;return Task.CompletedTask;}
         vm.RunStartupUpdateCoreAsync(false,Check,Install).GetAwaiter().GetResult();Assert(checks==0&&installs==0,"Manual launches must never auto-install.");
         vm.RunStartupUpdateCoreAsync(true,Check,Install).GetAwaiter().GetResult();Assert(checks==1&&installs==1,"Opted-in sign-in launches must check and install an available update.");

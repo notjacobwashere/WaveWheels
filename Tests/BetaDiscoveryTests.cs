@@ -18,13 +18,21 @@ internal static class BetaDiscoveryTests
         model.UseWindowsAudio=true;window.SelectFirstWheelForPreview();Assert(model.EditorWheel==model.WindowsWheel,"Opening Windows mode must preview the Windows wheel.");
         var catalog=ReleaseUpdates.ParseCatalog("""[{"tag_name":"v2.0.0","prerelease":false},{"tag_name":"v1.0.0-beta.3","prerelease":true},{"tag_name":"v1.0.0-beta.2","prerelease":true},{"tag_name":"v3.0.0-beta.1","draft":true,"prerelease":true}]""","2.0.0",true);
         Assert(catalog.Latest==null,"Automatic updates must not offer an older beta as a newer release.");
-        model.ApplyCatalog(catalog);Assert(model.ShowLatestBeta&&model.LatestBetaBuild?.Version=="1.0.0-beta.3"&&model.BetaOlderThanStable&&model.LatestBetaWarning.Contains("2.0.0"),"The latest beta must remain visible with a stable-version warning even if both installed and stable versions are newer.");
-        var card=(Border)window.FindName("LatestBetaCard");card.DataContext=model;var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
-        Assert(card.Visibility==Visibility.Visible&&!model.CanInstallLatestBeta,"Beta discovery UI must be visible while isolated profiles retain installation protection.");
-        model.ApplyCatalog(new ReleaseCatalog(null,Array.Empty<ReleaseUpdate>(),catalog.Stable));Assert(!model.ShowLatestBeta&&!model.BetaOlderThanStable,"Missing beta releases must clear the card and stale warning.");model.Dispose();
+        model.ApplyCatalog(catalog);
+        Assert(model.LatestBetaBuild?.Version=="1.0.0-beta.3"&&model.UpdateStatus.Contains("1.0.0-beta.3"),"The normal update panel must show the latest beta even when stable is newer.");
+        Assert(window.FindName("LatestBetaCard")==null,"Latest beta must not have a separate section.");
+        Assert(MainViewModel.BetaWarningFor(model.LatestBetaBuild,"2.0.0").Contains("installed stable version (2.0.0)"),"An older beta must warn about the installed stable build.");
+        Assert(MainViewModel.BetaWarningFor(model.LatestBetaBuild,"0.9.0")==""&&MainViewModel.BetaWarningFor(model.LatestBetaBuild,"2.0.0-beta.1")=="","Newer betas and installed beta builds must not show the stable-build warning.");
+        var warning=(TextBlock)window.FindName("BetaVersionWarning");warning.DataContext=model;
+        var frame=new DispatcherFrame();Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,new Action(()=>frame.Continue=false));Dispatcher.PushFrame(frame);
+        Assert(warning.Visibility==Visibility.Collapsed,"An installed beta must not show a stable-build warning.");
+        model.ApplyCatalog(new ReleaseCatalog(null,Array.Empty<ReleaseUpdate>(),catalog.Stable));Assert(!model.ShowBetaVersionWarning&&model.UpdateStatus=="No beta releases found.","Missing beta releases must clear stale details.");model.Dispose();
         var live=new MainViewModel(store,false);var oldBeta=UpdateTests.Fixture(new byte[]{1,2,3}) with {Version="1.0.0-beta.3",IsBeta=true};
-        live.ApplyCatalog(new ReleaseCatalog(null,new[]{oldBeta},catalog.Stable));Assert(live.CanInstallLatestBeta,"An older beta must remain explicitly installable from the Beta channel.");
-        live.ApplyCatalog(new ReleaseCatalog(null,new[]{oldBeta},new ReleaseUpdate("0.9.0","",null,false)));Assert(!live.BetaOlderThanStable,"A beta newer than stable must not show an old-version warning.");live.Dispose();
-        Console.WriteLine("PASS: first-wheel configuration selection, Windows preview, latest-beta visibility below stable/current versions, warning lifecycle, draft exclusion, explicit older-beta installation, and no automatic downgrade.");
+        live.ApplyCatalog(new ReleaseCatalog(null,new[]{oldBeta},catalog.Stable));Assert(live.CanInstallUpdate,"An older beta must be explicitly installable through the normal update action.");
+        live.Preferences.AutoInstallUpdates=true;var installs=0;
+        live.RunStartupUpdateCoreAsync(true,()=>System.Threading.Tasks.Task.CompletedTask,()=>{installs++;return System.Threading.Tasks.Task.CompletedTask;}).GetAwaiter().GetResult();
+        Assert(installs==0,"Automatic updates must never install an older beta.");
+        live.ApplyCatalog(new ReleaseCatalog(null,new[]{oldBeta with {Version=live.AppVersion}},catalog.Stable));Assert(!live.CanInstallUpdate&&live.UpdateStatus.Contains("up to date"),"The installed beta must not be offered for reinstallation.");live.Dispose();
+        Console.WriteLine("PASS: first-wheel preview, integrated beta discovery, installed-stable warning, no duplicate section, explicit older-beta action, and no automatic downgrade.");
     }
 }

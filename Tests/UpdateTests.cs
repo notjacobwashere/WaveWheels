@@ -98,7 +98,7 @@ internal static class UpdateTests
         vm.ApplyRelease(update with{Installer=null});Assert(!vm.CanInstallUpdate,"A release without a verified installer must only offer browser fallback.");
         vm.Preferences.UpdateChannel="Beta";
         vm.ApplyCatalog(new(null,new[]{update with{IsBeta=true}}));
-        Assert(vm.CanInstallBeta&&!vm.CanInstallUpdate,"Older archived betas must have an explicit install action independent of automatic upgrades.");
+        Assert(vm.CanInstallBeta&&vm.CanInstallUpdate,"The latest beta must use the normal install action, including an intentional older-beta install.");
         vm.Save();Assert(store.Load().UpdateChannel=="Beta","The selected update channel must survive reload.");
         vm.ApplyCatalog(new(null,Array.Empty<ReleaseUpdate>(),update));
         Assert(vm.CanInstallStable,"An older stable installer must be offered as an explicit rollback.");

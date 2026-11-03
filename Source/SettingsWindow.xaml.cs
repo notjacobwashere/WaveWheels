@@ -262,7 +262,6 @@ public partial class SettingsWindow : Window
     private async void InstallUpdate(object sender,RoutedEventArgs e)=>await model.InstallUpdateAsync();
     private void CancelUpdate(object sender,RoutedEventArgs e)=>model.CancelUpdate();
     private async void InstallBeta(object sender,RoutedEventArgs e)=>await model.InstallBetaAsync();
-    private async void InstallLatestBeta(object sender,RoutedEventArgs e)=>await model.InstallLatestBetaAsync();
     internal void SelectFirstWheelForPreview()=>model.EditorWheel=model.DisplayWheels.FirstOrDefault();
     private void OpenBetaRelease(object sender,RoutedEventArgs e)=>model.OpenBetaReleasePage();
     private async void InstallStable(object sender,RoutedEventArgs e)=>await model.InstallStableAsync();

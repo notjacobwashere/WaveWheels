@@ -128,12 +128,13 @@ public sealed class MainViewModel : Observable
     }
     public bool BetaChannelEnabled=>UpdateChannel=="Beta";
     public ReleaseUpdate? LatestBetaBuild=>BetaBuilds.FirstOrDefault();
-    public bool ShowLatestBeta=>BetaChannelEnabled&&LatestBetaBuild!=null;
-    public string LatestBetaLabel=>LatestBetaBuild==null?"No beta releases found.":"Latest beta · "+LatestBetaBuild.Version;
-    public bool BetaOlderThanStable=>LatestBetaBuild!=null&&stableRelease!=null&&ReleaseVersion.Parse(LatestBetaBuild.Version)!.CompareTo(ReleaseVersion.Parse(stableRelease.Version))<0;
-    public string LatestBetaWarning=>BetaOlderThanStable?$"Older than the latest stable release ({stableRelease!.Version}).":"";
-    public bool CanInstallLatestBeta=>!isolated&&CanCheckUpdates&&ShowLatestBeta&&LatestBetaBuild?.Installer!=null&&LatestBetaBuild.Version!=AppVersion;
-    public async Task InstallLatestBetaAsync() {if(!CanInstallLatestBeta)return;ApplyRelease(LatestBetaBuild);await InstallUpdateAsync();}
+    internal static string BetaWarningFor(ReleaseUpdate? beta,string installed)
+    {
+        var current=ReleaseVersion.Parse(installed);var candidate=beta==null?null:ReleaseVersion.Parse(beta.Version);
+        return current?.Suffix.Length==0&&candidate!=null&&candidate.CompareTo(current)<0?$"Older than your installed stable version ({installed}).":"";
+    }
+    public string LatestBetaWarning=>BetaChannelEnabled?BetaWarningFor(LatestBetaBuild,AppVersion):"";
+    public bool ShowBetaVersionWarning=>LatestBetaWarning.Length>0;
     private ReleaseUpdate? stableRelease;
     public string StableReleaseLabel=>stableRelease==null?"Check for updates to find the latest stable release.":$"Latest stable · {stableRelease.Version}";
     public bool ShowStableSwitch=>!BetaChannelEnabled&&availableUpdate==null&&stableRelease!=null&&stableRelease.Version!=AppVersion;
@@ -163,7 +164,7 @@ public sealed class MainViewModel : Observable
     public bool CanCheckUpdates=>!CheckingUpdates&&!InstallingUpdate;
     public bool CanInstallUpdate=>!isolated&&!CheckingUpdates&&!InstallingUpdate&&availableUpdate?.Installer!=null;
     public event Action? UpdateInstallationStarted;
-    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));Changed(nameof(ShowStableSwitch));Changed(nameof(StableSwitchLabel));Changed(nameof(CanInstallLatestBeta));Changed(nameof(ShowLatestBeta));Changed(nameof(LatestBetaLabel));Changed(nameof(BetaOlderThanStable));Changed(nameof(LatestBetaWarning));}
+    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));Changed(nameof(ShowStableSwitch));Changed(nameof(StableSwitchLabel));Changed(nameof(ShowBetaVersionWarning));Changed(nameof(LatestBetaWarning));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
     public bool AutoInstallUpdates {get=>Preferences.AutoInstallUpdates;set {if(Preferences.AutoInstallUpdates==value)return;Preferences.AutoInstallUpdates=value;Changed();ScheduleSave();}}
     public Task RepairAppAsync()=>RepairAppCoreAsync(()=>ReleaseUpdates.CheckAsync(false,updateLifetime.Token),DownloadUpdate,UpdateInstaller.Launch);
@@ -182,7 +183,7 @@ public sealed class MainViewModel : Observable
     internal async Task RunStartupUpdateCoreAsync(bool windowsStartup,Func<Task> check,Func<Task> install)
     {
         if(!windowsStartup||!AutoInstallUpdates||isolated)return;
-        await check();if(CanInstallUpdate)await install();
+        await check();if(CanInstallUpdate&&ReleaseVersion.Parse(availableUpdate!.Version)!.CompareTo(ReleaseVersion.Parse(AppVersion))>0)await install();
     }
     public event Action<string>? UpdateAvailable;
     private string notifiedVersion="";
@@ -399,7 +400,7 @@ public sealed class MainViewModel : Observable
     public async Task CheckForUpdatesAsync()
     {
         if(!CanCheckUpdates)return;CheckingUpdates=true;UpdateStatus="Checking GitHub…";
-        try { var catalog=await ReleaseUpdates.CheckAsync(BetaChannelEnabled,updateLifetime.Token);ApplyCatalog(catalog);var update=catalog.Latest;if(update!=null&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
+        try { var catalog=await ReleaseUpdates.CheckAsync(BetaChannelEnabled,updateLifetime.Token);ApplyCatalog(catalog);var update=availableUpdate;if(update!=null&&ReleaseVersion.Parse(update.Version)!.CompareTo(ReleaseVersion.Parse(AppVersion))>0&&notifiedVersion!=update.Version) {notifiedVersion=update.Version;Preferences.LastNotifiedUpdate=update.Version;ScheduleSave();UpdateAvailable?.Invoke(update.Version);} }
         catch(Exception ex) when(ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException or System.Collections.Generic.KeyNotFoundException) {UpdateStatus="Couldn't check GitHub. Try again later.";}
         finally {CheckingUpdates=false;}
     }
@@ -412,7 +413,10 @@ public sealed class MainViewModel : Observable
     internal void ApplyCatalog(ReleaseCatalog catalog)
     {
         stableRelease=catalog.Stable;Changed(nameof(StableReleaseLabel));
-        SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();ApplyRelease(catalog.Latest);
+        SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();
+        var release=BetaChannelEnabled?LatestBetaBuild:catalog.Latest;
+        ApplyRelease(release?.Version==AppVersion?null:release);
+        if(BetaChannelEnabled)UpdateStatus=release==null?"No beta releases found.":release.Version==AppVersion?$"You're up to date · {AppVersion}":$"Version {release.Version} is available"+(release.Installer==null?" · use the release page to download":"");
         if(ShowStableSwitch)UpdateStatus=$"Latest stable is {stableRelease!.Version}. Your installed version is {AppVersion}. Choose Install stable to switch, keeping your settings.";
     }
     private static Task<string> DownloadUpdate(ReleaseUpdate update,IProgress<DownloadProgress> progress,CancellationToken token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token);

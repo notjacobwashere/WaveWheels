@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1-beta.4
+
+- Show the latest beta in the normal Updates panel instead of a separate section.
+- Display a small warning when the latest beta is older than the installed stable build.
+- Allow intentional older-beta installs while preventing automatic downgrades.
+
 ## 0.10.0-beta.1
 
 - Added a live Effects editor for bloom, spark density/speed, mute shake/timing, and wheel/muted colors. Original visuals remain the defaults.
