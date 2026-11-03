@@ -147,6 +147,7 @@ internal static class UiRendering
                 AnimationRefreshTests.Run(Path.Combine(Path.GetDirectoryName(path)!,"animation-refresh"));
                 AnimationOptionsTests.Run(vm,window,root,Path.GetDirectoryName(path)!);
                 PickerAndUpdateOptionsTests.Run(vm,window,root,Path.GetDirectoryName(path)!);
+                UndoWheelTests.Run(Path.GetDirectoryName(path)!);
                 vm.Dispose();
             }
             catch(Exception ex){error=ex;}

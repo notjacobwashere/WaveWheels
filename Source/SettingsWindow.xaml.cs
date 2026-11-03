@@ -224,6 +224,7 @@ public partial class SettingsWindow : Window
     private void IncreaseWheelCount(object sender,RoutedEventArgs e)=>model.DisplayWheelCount=Math.Min(12,model.DisplayWheelCount+1);
     private void DecreaseWheelCount(object sender,RoutedEventArgs e)=>model.DisplayWheelCount=Math.Max(1,model.DisplayWheelCount-1);
     private void Remove(object sender,RoutedEventArgs e) => model.RemoveWheel();
+    private void UndoWheelDeletion(object sender,RoutedEventArgs e)=>model.UndoWheelDeletion();
     private void RowUp(object sender,RoutedEventArgs e) { if(sender is Button {Tag:Wheel wheel}) { model.SelectedWheel=wheel; AnimateReorder(()=>model.Move(-1)); } }
     private void RowDown(object sender,RoutedEventArgs e) { if(sender is Button {Tag:Wheel wheel}) { model.SelectedWheel=wheel; AnimateReorder(()=>model.Move(1)); } }
     private void Preview(object sender,RoutedEventArgs e) => model.Preview();

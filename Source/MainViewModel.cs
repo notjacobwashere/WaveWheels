@@ -363,7 +363,7 @@ public sealed class MainViewModel : Observable
     public void RemoveProfile()
     {
         if(Profiles.Count<2||activeProfile==null) {Message="Keep at least one profile.";return;}
-        var old=activeProfile;ActiveProfile=Profiles.First(p=>p!=old);old.PropertyChanged-=ProfileChanged;Profiles.Remove(old);ScheduleSave();
+        var old=activeProfile;ActiveProfile=Profiles.First(p=>p!=old);old.PropertyChanged-=ProfileChanged;Profiles.Remove(old);deletedWheels.Remove(old.Id);ScheduleSave();
     }
     public void ExportProfiles(string path,bool all)
     {
@@ -460,7 +460,7 @@ public sealed class MainViewModel : Observable
         foreach (var w in Wheels.Where(w => w.ChannelId.Length > 0)) if (!choices.Any(c => c.Id == w.ChannelId)) choices.Add(new(w.ChannelId, "Saved channel · currently unavailable"));
         ReplaceChoices(Channels, choices.ToArray());
         UpdateMixChoices(); SyncWheels();
-        Changed(nameof(Status)); Changed(nameof(Connected)); Changed(nameof(ConnectionLabel)); Changed(nameof(ChannelCount));
+        Changed(nameof(CanUndoWheelDeletion));Changed(nameof(Status)); Changed(nameof(Connected)); Changed(nameof(ConnectionLabel)); Changed(nameof(ChannelCount));
         Changed(nameof(DisplayWheels));Changed(nameof(DisplayWheelCount));Changed(nameof(EditorWheel));RefreshPreviewSize();Changed(nameof(AudioModeTitle));Changed(nameof(AudioModeDescription));Changed(nameof(ModeAccent));Changed(nameof(WindowsAudioStatus));Changed(nameof(WheelArrangementHint));
         if(modeChanged) {if(!Connected&&!isolated)RefreshWindowsAudio();SelectionChanged?.Invoke();LayoutChanged?.Invoke();Message=Connected?"Wave Link reconnected. Your saved Wave Link wheels are active.":"Wave Link disconnected. Switched to your saved Windows audio wheel.";}
         StateChanged?.Invoke();
@@ -499,12 +499,24 @@ public sealed class MainViewModel : Observable
         var w = new Wheel { Name = "Wheel " + (Wheels.Count + 1), Color = colors[Wheels.Count % colors.Length] };
         Wheels.Add(w); SelectedWheel = w;
     }
+    private readonly Dictionary<string,List<(Wheel Wheel,int Index)>> deletedWheels=new();
+    public bool CanUndoWheelDeletion=>Connected&&Wheels.Count<12&&ActiveProfile!=null&&deletedWheels.TryGetValue(ActiveProfile.Id,out var history)&&history.Count>0;
+    public void UndoWheelDeletion()
+    {
+        if(!CanUndoWheelDeletion)return;
+        var history=deletedWheels[ActiveProfile!.Id];var entry=history[^1];history.RemoveAt(history.Count-1);
+        Wheels.Insert(Math.Clamp(entry.Index,0,Wheels.Count),entry.Wheel);SelectedWheel=entry.Wheel;
+        Changed(nameof(CanUndoWheelDeletion));Message="Restored "+entry.Wheel.Name+".";
+    }
     public void RemoveWheel(Wheel? wheel = null)
     {
         if(!Connected)return;
         wheel ??= SelectedWheel;
         if (wheel == null || Wheels.Count <= 1) { Message = "Keep at least one wheel in your layout."; return; }
-        var i = Wheels.IndexOf(wheel); Wheels.Remove(wheel); SelectedWheel = Wheels[Math.Min(i, Wheels.Count - 1)];
+        var i = Wheels.IndexOf(wheel);if(i<0||ActiveProfile==null)return;
+        if(!deletedWheels.TryGetValue(ActiveProfile.Id,out var history))deletedWheels[ActiveProfile.Id]=history=new();
+        history.Add((wheel,i));if(history.Count>32)history.RemoveAt(0);
+        Wheels.Remove(wheel); SelectedWheel = Wheels[Math.Min(i, Wheels.Count - 1)];Changed(nameof(CanUndoWheelDeletion));
     }
     public void Move(int delta) { if (SelectedWheel != null) MoveTo(SelectedWheel, Wheels.IndexOf(SelectedWheel) + delta); }
     public void MoveTo(Wheel wheel, int index)

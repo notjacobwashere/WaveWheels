@@ -160,3 +160,5 @@ In **Settings → Connection**, enable **Use Windows Audio** to keep the Windows
 Color swatches beside the hex fields open an opaque RGB/HSV picker. The wheel-count control uses minus and plus buttons.
 
 **Updates → Repair app** reinstalls the latest stable release, including the current version, and preserves settings. **Automatic updates** is off by default; when enabled, Windows sign-in launches check and install newer versions from the selected channel using the verified installer flow. It requires launch at Windows sign-in to be enabled. Manual launches do not auto-install.
+
+**Undo deletion** at the top of Wheels restores recently deleted wheels in their original positions, including their appearance, bindings, and limits. History is separate per profile and lasts for the current session. It includes deletions through the count controls and respects the twelve-wheel limit.
