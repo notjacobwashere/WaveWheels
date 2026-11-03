@@ -46,7 +46,7 @@ public partial class App : Application
             // Older releases otherwise swallow a launch of the new executable silently.
             var older = FindDifferentRunningVersion();
             if (older != null)
-                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 1.2.1-beta.1 version again. Your saved wheels will be kept.", "WaveWheels 1.2.1-beta.1 update", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"WaveWheels {older} is still running. Quit WaveWheels from its system tray menu, then open this 1.2.1-beta.3 version again. Your saved wheels will be kept.", "WaveWheels 1.2.1-beta.3 update", MessageBoxButton.OK, MessageBoxImage.Information);
             else if(e.Args.Contains("--settings")||e.Args.Contains("--setup")) settingsSignal.Set();
             Shutdown();return;
         }
@@ -63,6 +63,7 @@ public partial class App : Application
         model.Start(e.Args.Contains("--startup"));overlay.StartHook();
         if(e.Args.Contains("--setup"))OpenSetup();
         else if(e.Args.Contains("--settings"))OpenConfiguration();
+        if(e.Args.Contains("--after-update"))configuration?.RaiseAfterUpdate();
         if(e.Args.Contains("--show-overlay"))overlay.ShowAtCursor();
         // No StartupUri: normal and sign-in launches remain in the system tray.
         WriteLog("Started " + (isolated?"isolated profile":"normal profile"));
@@ -70,7 +71,7 @@ public partial class App : Application
     private void CreateTray()
     {
         var menu=new Forms.ContextMenuStrip();
-        menu.Items.Add("Open configuration · 1.2.1-beta.1",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
+        menu.Items.Add("Open configuration · 1.2.1-beta.3",null,(_,_)=>Dispatcher.BeginInvoke(OpenConfiguration));
         menu.Items.Add("Show wheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>overlay?.ShowAtCursor()));
         var modeItem=new Forms.ToolStripMenuItem(model!.AudioModeTitle){Enabled=false};menu.Items.Add(modeItem);
         var profilesMenu=new Forms.ToolStripMenuItem("Profiles"){Enabled=model.Connected};
@@ -90,7 +91,7 @@ public partial class App : Application
         menu.Items.Add("Check for updates",null,async(_,_)=>await model.CheckForUpdatesAsync());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit WaveWheels",null,(_,_)=>Dispatcher.BeginInvoke(()=>Shutdown()));
-        tray=new Forms.NotifyIcon {Text="WaveWheels 1.2.1-beta.1 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
+        tray=new Forms.NotifyIcon {Text="WaveWheels 1.2.1-beta.3 · scroll at the left screen edge",Icon=CreateIcon(),ContextMenuStrip=menu,Visible=true};
         tray.MouseClick+=(_,e)=>{if(e.Button==Forms.MouseButtons.Left)Dispatcher.BeginInvoke(OpenConfiguration);};
     }
     private static string? FindDifferentRunningVersion()
@@ -120,7 +121,8 @@ public partial class App : Application
     {
         if(model==null)return;
         configuration??=new SettingsWindow(model);
-        configuration.Show();configuration.WindowState=WindowState.Normal;configuration.Activate();
+        configuration.SelectFirstWheelForPreview();
+        configuration.Show();if(configuration.WindowState==WindowState.Minimized)configuration.WindowState=model.Preferences.ConfigurationPlacement?.Maximized==true?WindowState.Maximized:WindowState.Normal;configuration.Activate();
     }
     private void OpenSetup()
     {

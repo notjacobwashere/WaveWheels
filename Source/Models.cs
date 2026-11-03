@@ -79,6 +79,7 @@ public sealed class Preferences
     public bool CheckUpdatesAutomatically { get; set; } = true;
     public bool AutoInstallUpdates {get;set;}
     public bool UseWindowsAudio {get;set;}
+    public ConfigurationPlacement? ConfigurationPlacement {get;set;}
     public string UpdateChannel { get; set; } = "Stable";
     public string LastNotifiedUpdate { get; set; } = "";
     public string ActiveProfileId { get; set; } = "";

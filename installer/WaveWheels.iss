@@ -54,7 +54,7 @@ Name: "{group}\Configure WaveWheels"; Filename: "{app}\WaveWheels.exe"; Paramete
 Name: "{autodesktop}\WaveWheels"; Filename: "{app}\WaveWheels.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Flags: nowait; Check: IsAppUpdate
+Filename: "{app}\WaveWheels.exe"; Parameters: "--settings --after-update"; Flags: nowait; Check: IsAppUpdate
 Filename: "{app}\WaveWheels.exe"; Parameters: "--setup"; Description: "Set up WaveWheels"; Flags: nowait postinstall skipifsilent; Check: IsFirstManualInstall
 Filename: "{app}\WaveWheels.exe"; Parameters: "--settings"; Description: "Open WaveWheels"; Flags: nowait postinstall skipifsilent; Check: IsExistingManualInstall
 

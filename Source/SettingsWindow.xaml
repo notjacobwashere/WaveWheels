@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.2.1-beta.1 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:local="clr-namespace:WaveWheels" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="WaveWheels.SettingsWindow" Icon="/WaveWheels;component/Assets/WaveWheels.ico" Title="WaveWheels 1.2.1-beta.3 · Configuration" Width="1160" Height="860" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" Background="#0D141C" Foreground="#E9F0F5" FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="14" GlassFrameThickness="0" />
   </shell:WindowChrome.WindowChrome>
@@ -107,7 +107,16 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                   <Button x:Name="UndoWheelDeletionButton" Content="↶  Undo deletion" Click="UndoWheelDeletion" IsEnabled="{Binding CanUndoWheelDeletion}" Padding="12,9" Margin="0,0,16,0" FontSize="12" ToolTip="Restore the most recently deleted wheel in this profile">
-                    <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Style.Triggers><DataTrigger Binding="{Binding CanUndoWheelDeletion}" Value="True"><Setter Property="Background" Value="#73DCC8"/><Setter Property="Foreground" Value="#10231F"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                    <Button.Style>
+                      <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding CanUndoWheelDeletion}" Value="True">
+                            <Setter Property="Background" Value="#73DCC8" />
+                            <Setter Property="Foreground" Value="#10231F" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Button.Style>
                   </Button>
                   <TextBlock Text="Count" FontSize="9" Foreground="#8596A6" VerticalAlignment="Center" Margin="0,0,10,0" TextWrapping="Wrap" />
                   <Border x:Name="CountBox" IsEnabled="{Binding Connected}" Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="8" Padding="3" AutomationProperties.Name="Number of wheels">
@@ -256,9 +265,10 @@
                           </UniformGrid>
                           <DockPanel Grid.Column="1">
                             <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose custom hex color" Tag="Wheel" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding EditorWheel.Color}" BorderBrush="#587A89" BorderThickness="1" />
-                            <TextBox x:Name="ColorBox" Text="{Binding EditorWheel.Color,Mode=OneWay}" MaxLength="7" LostFocus="ApplyHex" KeyDown="ColorKey" FontSize="11" Padding="8,10" AutomationProperties.Name="Custom hex color" />
+                            <TextBox x:Name="ColorBox" Text="{Binding EditorWheel.Color,Mode=OneWay}" MaxLength="7" FontSize="11" Padding="8,10" AutomationProperties.Name="Custom hex color" />
                           </DockPanel>
                         </Grid>
+                        <Button Content="Apply color" Click="ApplyHex" HorizontalAlignment="Left" Margin="0,12,0,0" />
                       </StackPanel>
                     </Expander>
                     <Expander Header="Audio controls" IsExpanded="False" Margin="0,0,0,12">
@@ -428,20 +438,23 @@
                         <TextBlock Text="Wheel surface" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                         <DockPanel>
                           <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose wheel surface color" Tag="NormalColor" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding Effects.NormalColor}" BorderBrush="#587A89" BorderThickness="1" />
-                          <TextBox Text="{Binding Effects.NormalColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Wheel surface color" />
+                          <TextBox Text="{Binding Effects.NormalColor,Mode=OneWay}" MaxLength="7" AutomationProperties.Name="Wheel surface color" x:Name="NormalColorBox" />
                         </DockPanel>
+                        <Button Content="Apply color" Tag="NormalColor" Click="ApplyEffectColor" HorizontalAlignment="Left" Margin="0,8,0,0" />
                         <TextBlock Text="Muted wheel and label" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                         <DockPanel>
                           <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose muted wheel and label color" Tag="MutedColor" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding Effects.MutedColor}" BorderBrush="#587A89" BorderThickness="1" />
-                          <TextBox Text="{Binding Effects.MutedColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Muted wheel and label color" />
+                          <TextBox Text="{Binding Effects.MutedColor,Mode=OneWay}" MaxLength="7" AutomationProperties.Name="Muted wheel and label color" x:Name="MutedColorBox" />
                         </DockPanel>
+                        <Button Content="Apply color" Tag="MutedColor" Click="ApplyEffectColor" HorizontalAlignment="Left" Margin="0,8,0,0" />
                         <TextBlock Text="Muted speaker button" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                         <DockPanel>
                           <Button DockPanel.Dock="Right" Content=" " ToolTip="Choose color" AutomationProperties.Name="Choose muted speaker button color" Tag="MutedButtonColor" Click="PickColor" Width="34" Padding="0" Margin="6,0,0,0" Background="{Binding Effects.MutedButtonColor}" BorderBrush="#587A89" BorderThickness="1" />
-                          <TextBox Text="{Binding Effects.MutedButtonColor,UpdateSourceTrigger=PropertyChanged}" MaxLength="7" AutomationProperties.Name="Muted speaker button color" />
+                          <TextBox Text="{Binding Effects.MutedButtonColor,Mode=OneWay}" MaxLength="7" AutomationProperties.Name="Muted speaker button color" x:Name="MutedButtonColorBox" />
                         </DockPanel>
+                        <Button Content="Apply color" Tag="MutedButtonColor" Click="ApplyEffectColor" HorizontalAlignment="Left" Margin="0,8,0,0" />
                         <TextBlock Text="{Binding EffectColorStatus}" Foreground="#98AABC" TextWrapping="Wrap" Margin="0,12,0,12" />
-                        <TextBlock Text="Requires animations enabled in Settings. Respects Windows motion settings." Foreground="#98AABC" TextWrapping="Wrap" />
+                        <TextBlock Text="Color changes take effect only after Apply color." Foreground="#98AABC" TextWrapping="Wrap" />
                       </StackPanel>
                     </Expander>
                     <Button Content="Restore defaults" Tag="Effects" Click="RestoreDefaults" HorizontalAlignment="Left" Margin="0,24,0,8" />
@@ -545,6 +558,34 @@
               <StackPanel>
                 <TextBlock Text="Updates" FontSize="26" FontWeight="SemiBold" />
                 <TextBlock Text="Keep WaveWheels up to date." Foreground="#98AABC" Margin="0,7,0,24" />
+                <Border x:Name="LatestBetaCard" Background="#151E29" BorderBrush="#3F706A" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding ShowLatestBeta}" Value="True">
+                          <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel>
+                    <TextBlock Text="{Binding LatestBetaLabel}" FontWeight="SemiBold" FontSize="17" />
+                    <TextBlock Text="{Binding LatestBetaWarning}" Foreground="#F4B16F" TextWrapping="Wrap" Margin="0,8,0,0">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding BetaOlderThanStable}" Value="True">
+                              <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <Button Content="Install latest beta" Click="InstallLatestBeta" IsEnabled="{Binding CanInstallLatestBeta}" HorizontalAlignment="Left" Margin="0,14,0,0" />
+                  </StackPanel>
+                </Border>
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="24">
                   <StackPanel>
                     <TextBlock Text="Installed version" Foreground="#98AABC" FontSize="12" />
@@ -576,6 +617,9 @@
                         </Button.Style>
                       </Button>
                       <Button x:Name="CheckUpdatesButton" Content="Check for updates" Click="CheckUpdates" IsEnabled="{Binding CanCheckUpdates}" />
+                      <Button x:Name="StableSwitchButton" Content="{Binding StableSwitchLabel}" Click="InstallStable" IsEnabled="{Binding CanInstallStable}" Background="#73DCC8" Foreground="#10231F">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ShowStableSwitch}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                      </Button>
                       <Button x:Name="CancelUpdateButton" Content="Cancel download" Click="CancelUpdate" IsEnabled="{Binding InstallingUpdate}">
                         <Button.Style>
                           <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">

@@ -127,8 +127,17 @@ public sealed class MainViewModel : Observable
         set {if(!CanCheckUpdates||!UpdateChannels.Contains(value)||value==Preferences.UpdateChannel)return;Preferences.UpdateChannel=value;Changed();Changed(nameof(BetaChannelEnabled));ScheduleSave();ApplyRelease(null);UpdateStatus="Channel changed. Checking GitHub…";_=CheckForUpdatesAsync();}
     }
     public bool BetaChannelEnabled=>UpdateChannel=="Beta";
+    public ReleaseUpdate? LatestBetaBuild=>BetaBuilds.FirstOrDefault();
+    public bool ShowLatestBeta=>BetaChannelEnabled&&LatestBetaBuild!=null;
+    public string LatestBetaLabel=>LatestBetaBuild==null?"No beta releases found.":"Latest beta · "+LatestBetaBuild.Version;
+    public bool BetaOlderThanStable=>LatestBetaBuild!=null&&stableRelease!=null&&ReleaseVersion.Parse(LatestBetaBuild.Version)!.CompareTo(ReleaseVersion.Parse(stableRelease.Version))<0;
+    public string LatestBetaWarning=>BetaOlderThanStable?$"Older than the latest stable release ({stableRelease!.Version}).":"";
+    public bool CanInstallLatestBeta=>!isolated&&CanCheckUpdates&&ShowLatestBeta&&LatestBetaBuild?.Installer!=null&&LatestBetaBuild.Version!=AppVersion;
+    public async Task InstallLatestBetaAsync() {if(!CanInstallLatestBeta)return;ApplyRelease(LatestBetaBuild);await InstallUpdateAsync();}
     private ReleaseUpdate? stableRelease;
     public string StableReleaseLabel=>stableRelease==null?"Check for updates to find the latest stable release.":$"Latest stable · {stableRelease.Version}";
+    public bool ShowStableSwitch=>!BetaChannelEnabled&&availableUpdate==null&&stableRelease!=null&&stableRelease.Version!=AppVersion;
+    public string StableSwitchLabel=>stableRelease==null?"Install latest stable":"Install stable "+stableRelease.Version;
     public bool CanInstallStable=>!isolated&&CanCheckUpdates&&stableRelease?.Installer!=null&&stableRelease.Version!=AppVersion;
     public Task InstallStableAsync()=>InstallStableCoreAsync(DownloadUpdate,UpdateInstaller.Launch);
     internal Task InstallStableCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
@@ -154,7 +163,7 @@ public sealed class MainViewModel : Observable
     public bool CanCheckUpdates=>!CheckingUpdates&&!InstallingUpdate;
     public bool CanInstallUpdate=>!isolated&&!CheckingUpdates&&!InstallingUpdate&&availableUpdate?.Installer!=null;
     public event Action? UpdateInstallationStarted;
-    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));}
+    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));Changed(nameof(ShowStableSwitch));Changed(nameof(StableSwitchLabel));Changed(nameof(CanInstallLatestBeta));Changed(nameof(ShowLatestBeta));Changed(nameof(LatestBetaLabel));Changed(nameof(BetaOlderThanStable));Changed(nameof(LatestBetaWarning));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
     public bool AutoInstallUpdates {get=>Preferences.AutoInstallUpdates;set {if(Preferences.AutoInstallUpdates==value)return;Preferences.AutoInstallUpdates=value;Changed();ScheduleSave();}}
     public Task RepairAppAsync()=>RepairAppCoreAsync(()=>ReleaseUpdates.CheckAsync(false,updateLifetime.Token),DownloadUpdate,UpdateInstaller.Launch);
@@ -318,13 +327,15 @@ public sealed class MainViewModel : Observable
     {
         ApplyMonitorChoices(System.Windows.Forms.Screen.AllScreens.Select(MonitorDescriptor.Capture).ToArray());
     }
+    internal void RememberConfigurationPlacement(ConfigurationPlacement placement) {if(!placement.Valid||Preferences.ConfigurationPlacement==placement)return;Preferences.ConfigurationPlacement=placement;ScheduleSave();}
+    internal bool IsRefreshingMonitorChoices {get;private set;}
     internal void ApplyMonitorChoices(IReadOnlyList<MonitorDescriptor> monitors)
     {
         var selected=MonitorSelection.Resolve(MonitorId,monitors);
         var choices=monitors.Select(m=>new Choice(m.Id,m.Label)).DistinctBy(c=>c.Id,StringComparer.OrdinalIgnoreCase).ToList();
         choices.Insert(0,new("","All displays"));
         if(selected.Length>0&&!choices.Any(x=>string.Equals(x.Id,selected,StringComparison.OrdinalIgnoreCase)))choices.Add(new(selected,"Saved display · disconnected"));
-        ReplaceChoices(Monitors,choices.ToArray());
+        IsRefreshingMonitorChoices=true;try {ReplaceChoices(Monitors,choices.ToArray());}finally {IsRefreshingMonitorChoices=false;}
         if(selected!=MonitorId)
         {
             // Identity migration does not change geometry; refresh callers already update placement/hit data.
@@ -402,6 +413,7 @@ public sealed class MainViewModel : Observable
     {
         stableRelease=catalog.Stable;Changed(nameof(StableReleaseLabel));
         SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();ApplyRelease(catalog.Latest);
+        if(ShowStableSwitch)UpdateStatus=$"Latest stable is {stableRelease!.Version}. Your installed version is {AppVersion}. Choose Install stable to switch, keeping your settings.";
     }
     private static Task<string> DownloadUpdate(ReleaseUpdate update,IProgress<DownloadProgress> progress,CancellationToken token)=>UpdateInstaller.DownloadAsync(update,Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"WaveWheels","updates"),progress,token);
     public Task InstallUpdateAsync()=>InstallUpdateCoreAsync(DownloadUpdate,UpdateInstaller.Launch);

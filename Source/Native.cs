@@ -37,6 +37,10 @@ internal static class Native
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
     internal static bool ShiftDown=>(GetAsyncKeyState(0x10)&0x8000)!=0;
     [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(IntPtr hwnd);
+    [StructLayout(LayoutKind.Sequential)] internal struct WindowRect {public int Left,Top,Right,Bottom;}
+    [DllImport("user32.dll")] internal static extern bool GetWindowRect(IntPtr hwnd,out WindowRect rect);
+    [DllImport("user32.dll")] internal static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(IntPtr window,out uint processId);
     [DllImport("user32.dll")] internal static extern IntPtr MonitorFromPoint(Point point, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool EnumDisplayDevices(string? device, uint index, ref DisplayDevice display, uint flags);

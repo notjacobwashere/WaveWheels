@@ -87,7 +87,7 @@ public static class IntroWizardSmoke {
     Write-Output 'PASS: concise first-install introduction, screenshots, Next, and cancellation before installation.'
     New-Item -ItemType Directory -Path $profile -Force | Out-Null
     $settingsFile = Join-Path $profile 'settings.json'
-    $fixture = @{ SchemaVersion=1;EdgeEnabled=$false;CheckUpdatesAutomatically=$false;PortOverride=65535;WheelSizePercent=125;AnimateWheels=$true;ScrollStepPercent=3;ShiftStepPercent=35;ShowShiftMarkers=$true;ApplicationBlacklistEnabled=$true;BlacklistedApplications=@('fixture-game.exe');ScrollAccelerationEnabled=$false;IdleMilliseconds=2500;Wheels=@(@{Id='installer-fixture';Name='Kept through upgrades';Color='#36BBD3';ChannelId='fake-input';MixId='';MaximumVolumePercent=65}) }
+    $fixture = @{ SchemaVersion=1;EdgeEnabled=$false;CheckUpdatesAutomatically=$false;MonitorId='installer-saved-display';ScreenEdge='Right';PositionPercent=35;EdgeDistance=54;WheelSpacing=12;ConfigurationPlacement=@{MonitorId='installer-config-display';X=80;Y=60;Width=1080;Height=760;Dpi=96;Maximized=$false};PortOverride=65535;WheelSizePercent=125;AnimateWheels=$true;ScrollStepPercent=3;ShiftStepPercent=35;ShowShiftMarkers=$true;ApplicationBlacklistEnabled=$true;BlacklistedApplications=@('fixture-game.exe');ScrollAccelerationEnabled=$false;IdleMilliseconds=2500;Wheels=@(@{Id='installer-fixture';Name='Kept through upgrades';Color='#36BBD3';ChannelId='fake-input';MixId='';MaximumVolumePercent=65}) }
     $fixture | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $settingsFile
     $runKey = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Run'
     New-Item -Path $runKey -Force | Out-Null
@@ -102,6 +102,8 @@ public static class IntroWizardSmoke {
     }
     function Assert-Settings {
         $saved = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
+        if ($saved.MonitorId -ne 'installer-saved-display' -or $saved.ScreenEdge -ne 'Right' -or $saved.PositionPercent -ne 35 -or $saved.EdgeDistance -ne 54 -or $saved.WheelSpacing -ne 12){throw 'Update reset wheel monitor or placement.'}
+        if ($saved.ConfigurationPlacement.MonitorId -ne 'installer-config-display' -or $saved.ConfigurationPlacement.X -ne 80 -or $saved.ConfigurationPlacement.Width -ne 1080){throw 'Update reset configuration window placement.'}
         if ($saved.Wheels[0].Id -ne 'installer-fixture' -or $saved.Wheels[0].Name -ne 'Kept through upgrades' -or $saved.WheelSizePercent -ne 125) { throw 'Installation did not preserve saved wheel preferences.' }
         if ($saved.ScrollStepPercent -ne 3 -or $saved.ScrollAccelerationEnabled -or $saved.IdleMilliseconds -ne 2500 -or $saved.Wheels[0].MaximumVolumePercent -ne 65) {throw 'Update did not retain tuning and volume limits.'}
         if($saved.ShiftStepPercent -ne 35 -or -not $saved.ShowShiftMarkers){throw 'Update did not retain Shift increment and dot visibility.'}

@@ -30,10 +30,20 @@ public partial class SettingsWindow : Window
     private string currentSection="Wheels";
     private readonly Dictionary<FrameworkElement,SurfaceMotion> pageMotion=new();
     private SurfaceMotion? modeMotion;
+    private bool placementReady;
+    private bool savedDisplayMissing;
+    private string? pendingMonitor,pendingSetupMonitor;
     public SettingsWindow(MainViewModel model)
     {
         this.model = model;
         InitializeComponent();
+        MonitorBox.DropDownOpened+=(_,_)=>pendingMonitor=null;
+        SetupMonitorBox.DropDownOpened+=(_,_)=>pendingSetupMonitor=null;
+        SetupMonitorBox.SelectionChanged+=(_,_)=>{if(SetupMonitorBox.IsDropDownOpen&&!model.IsRefreshingMonitorChoices)pendingSetupMonitor=SetupMonitorBox.SelectedValue as string;};
+        var savedPlacement=model.Preferences.ConfigurationPlacement;
+        Loaded+=(_,_)=> {RestoreConfigurationPlacement(savedPlacement);placementReady=true;};
+        LocationChanged+=(_,_)=>CaptureConfigurationPlacement();SizeChanged+=(_,_)=>CaptureConfigurationPlacement();
+        StateChanged+=(_,_)=> {if(placementReady&&WindowState!=WindowState.Minimized&&model.Preferences.ConfigurationPlacement is {} saved)model.RememberConfigurationPlacement(saved with{Maximized=WindowState==WindowState.Maximized});};
         DataContext = model;
         foreach(var page in new FrameworkElement[]{WheelsPage,SettingsPage,EffectsPage,ProfilesPage,PlacementPage,UpdatesPage,StartupPage,ConnectionPage,SetupPage})pageMotion[page]=new SurfaceMotion(page);
         modeMotion=new SurfaceMotion(AudioModeBanner);
@@ -76,6 +86,37 @@ public partial class SettingsWindow : Window
             if(!SetupMonitorBox.IsDropDownOpen)SetupMonitorBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
         }));
     }
+    private void CaptureConfigurationPlacement()
+    {
+        if(!placementReady||savedDisplayMissing||!IsVisible||WindowState!=WindowState.Normal)return;
+        var hwnd=new WindowInteropHelper(this).Handle;if(hwnd==IntPtr.Zero||!Native.GetWindowRect(hwnd,out var bounds))return;
+        var screen=System.Windows.Forms.Screen.FromHandle(hwnd);var work=screen.WorkingArea;var monitor=MonitorDescriptor.Capture(screen,0);
+        model.RememberConfigurationPlacement(new(monitor.Id,bounds.Left-work.Left,bounds.Top-work.Top,bounds.Right-bounds.Left,bounds.Bottom-bounds.Top,Native.GetDpiForWindow(hwnd)));
+    }
+    private void RestoreConfigurationPlacement(ConfigurationPlacement? saved)
+    {
+        if(saved?.Valid!=true)return;
+        var screen=System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s=>MonitorSelection.Matches(saved.MonitorId,MonitorDescriptor.Capture(s,0)));
+        // If the saved display is unplugged, keep its identity and use a visible temporary location.
+        savedDisplayMissing=screen==null;screen??=System.Windows.Forms.Screen.PrimaryScreen;if(screen==null)return;
+        var work=screen.WorkingArea;var point=new Native.Point{X=work.Left+work.Width/2,Y=work.Top+work.Height/2};
+        Native.GetDpiForMonitor(Native.MonitorFromPoint(point,2),0,out var dpi,out _);if(dpi==0)dpi=96;
+        var bounds=saved.Fit(new Rect(work.X,work.Y,work.Width,work.Height),dpi);
+        MinWidth=Math.Min(MinWidth,work.Width*96d/dpi);MinHeight=Math.Min(MinHeight,work.Height*96d/dpi);
+        Native.SetWindowPos(new WindowInteropHelper(this).Handle,IntPtr.Zero,(int)Math.Round(bounds.X),(int)Math.Round(bounds.Y),(int)Math.Round(bounds.Width),(int)Math.Round(bounds.Height),0x14);
+        if(saved.Maximized)WindowState=WindowState.Maximized;
+    }
+    internal void RaiseAfterUpdate()
+    {
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(()=>
+        {
+            if(!IsVisible)return;
+            var hwnd=new WindowInteropHelper(this).Handle;
+            try {Topmost=true;Activate();Native.SetForegroundWindow(hwnd);}
+            finally {Topmost=false;}
+            Native.SetWindowPos(hwnd,IntPtr.Zero,0,0,0,0,0x43);Native.SetForegroundWindow(hwnd);
+        }));
+    }
     internal static bool IsHeaderDragSource(DependencyObject? source,DependencyObject header)
     {
         for(var element=source;element!=null;element=GetAncestorNode(element))
@@ -89,6 +130,7 @@ public partial class SettingsWindow : Window
     internal bool HandleHeaderPress(DependencyObject? source,int clickCount,Action drag)
     {
         if(!IsHeaderDragSource(source,TitleBar))return false;
+        savedDisplayMissing=false;
         if(clickCount==2)WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;
         else drag();
         return true;
@@ -163,7 +205,10 @@ public partial class SettingsWindow : Window
         SetupNextButton.Content=SetupStep==2?"Finish setup":"Continue";
     }
     private void SetupMonitorClosed(object? sender,EventArgs e)
-        =>ApplySetupMonitor();
+    {
+        if(pendingSetupMonitor is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;
+        pendingSetupMonitor=null;QueueEditorBindings();
+    }
     internal void ApplySetupMonitor()
     {
         if(SetupMonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;
@@ -217,6 +262,8 @@ public partial class SettingsWindow : Window
     private async void InstallUpdate(object sender,RoutedEventArgs e)=>await model.InstallUpdateAsync();
     private void CancelUpdate(object sender,RoutedEventArgs e)=>model.CancelUpdate();
     private async void InstallBeta(object sender,RoutedEventArgs e)=>await model.InstallBetaAsync();
+    private async void InstallLatestBeta(object sender,RoutedEventArgs e)=>await model.InstallLatestBetaAsync();
+    internal void SelectFirstWheelForPreview()=>model.EditorWheel=model.DisplayWheels.FirstOrDefault();
     private void OpenBetaRelease(object sender,RoutedEventArgs e)=>model.OpenBetaReleasePage();
     private async void InstallStable(object sender,RoutedEventArgs e)=>await model.InstallStableAsync();
     private void OpenRelease(object sender,RoutedEventArgs e)=>model.OpenReleasePage();
@@ -241,11 +288,22 @@ public partial class SettingsWindow : Window
         var dialog=new OpenFileDialog{Title="Locate Wave Link to start it",Filter="Wave Link (WaveLink.exe)|WaveLink.exe|Applications (*.exe)|*.exe",CheckFileExists=true};
         if(dialog.ShowDialog(this)==true)model.StartWaveLink(new(dialog.FileName));
     }
-    private void SetColor(object sender,RoutedEventArgs e) { if(model.EditorWheel!=null && sender is Button b && b.Tag is string color)model.EditorWheel.Color=color; }
+    private void SetColor(object sender,RoutedEventArgs e) {if(sender is Button {Tag:string color})ColorBox.Text=color;}
+    private void ApplyEffectColor(object sender,RoutedEventArgs e)
+    {
+        var target=(sender as FrameworkElement)?.Tag as string;
+        var field=target switch {"NormalColor"=>NormalColorBox,"MutedColor"=>MutedColorBox,_=>MutedButtonColorBox};
+        var text=field.Text.Trim();if(!text.StartsWith('#'))text="#"+text;
+        if(!EffectSettings.ValidColor(text)){model.Message="Use a six-digit hex color, such as #36BBD3.";return;}
+        switch(target){case "NormalColor":model.Effects.NormalColor=text.ToUpperInvariant();break;case "MutedColor":model.Effects.MutedColor=text.ToUpperInvariant();break;default:model.Effects.MutedButtonColor=text.ToUpperInvariant();break;}
+        field.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+    }
     private void PickColor(object sender,RoutedEventArgs e)
     {
         var target=(sender as FrameworkElement)?.Tag as string;var wheel=model.EditorWheel;
         var initial=target switch {"NormalColor"=>model.Effects.NormalColor,"MutedColor"=>model.Effects.MutedColor,"MutedButtonColor"=>model.Effects.MutedButtonColor,_=>wheel?.Color??"#FFFFFF"};
+        var field=target switch {"NormalColor"=>NormalColorBox,"MutedColor"=>MutedColorBox,"MutedButtonColor"=>MutedButtonColorBox,_=>ColorBox};
+        if(EffectSettings.ValidColor(field.Text.Trim()))initial=field.Text.Trim();
         var picker=new ColorPickerWindow(initial){Owner=this};
         if(picker.ShowDialog()!=true)return;
         switch(target) {case "NormalColor":model.Effects.NormalColor=picker.SelectedHex;break;case "MutedColor":model.Effects.MutedColor=picker.SelectedHex;break;case "MutedButtonColor":model.Effects.MutedButtonColor=picker.SelectedHex;break;default:if(wheel!=null)wheel.Color=picker.SelectedHex;break;}
@@ -258,14 +316,13 @@ public partial class SettingsWindow : Window
         else model.Message="Use a six-digit hex color, such as #36BBD3.";
         ColorBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
     }
-    private void ColorKey(object sender,KeyEventArgs e) { if(e.Key==Key.Enter) {ApplyHex(sender,e);e.Handled=true;} }
     private void ChannelSelected(object sender,SelectionChangedEventArgs e) { if(ChannelBox.IsDropDownOpen)ApplyChannel(); }
     private void ChannelClosed(object? sender,EventArgs e) => ApplyChannel();
     internal void ApplyChannel() { if(model.Connected&&ChannelBox.SelectedValue is string id && model.SelectedWheel!=null && id!=model.SelectedWheel.ChannelId)model.SelectedWheel.ChannelId=id; }
     private void MixSelected(object sender,SelectionChangedEventArgs e) { if(MixBox.IsDropDownOpen)ApplyMix(); }
     private void MixClosed(object? sender,EventArgs e) => ApplyMix();
-    private void MonitorSelected(object sender,SelectionChangedEventArgs e) {if(MonitorBox.IsDropDownOpen)ApplyMonitor();}
-    private void MonitorClosed(object? sender,EventArgs e) {ApplyMonitor();QueueEditorBindings();}
+    private void MonitorSelected(object sender,SelectionChangedEventArgs e) {if(MonitorBox.IsDropDownOpen&&!model.IsRefreshingMonitorChoices)pendingMonitor=MonitorBox.SelectedValue as string;}
+    private void MonitorClosed(object? sender,EventArgs e) {if(pendingMonitor is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;pendingMonitor=null;QueueEditorBindings();}
     internal void ApplyMonitor() {if(MonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;}
     private void ApplyMix() { if(model.Connected&&MixBox.SelectedValue is string id && model.SelectedWheel!=null)model.SelectedWheel.MixId=id; }
     private void DragStart(object sender,MouseButtonEventArgs e)
