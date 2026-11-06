@@ -34,7 +34,9 @@ internal static class ChannelEditorSmoke
         Assert(vm.Channels.Any(c=>c.Id==""&&c.Name=="None")&&!vm.Channels.Any(c=>c.Name.Contains("Choose an input")),"The unbound option must be explicitly named None.");
         channel.SetCurrentValue(Selector.SelectedValueProperty,"");window.ApplyChannel();Flush(root);Assert(vm.SelectedWheel!.ChannelId==""&&(string?)channel.SelectedValue==""&&Descendants(channel).OfType<TextBlock>().Any(t=>t.Text=="None"),"Selecting None must unbind and remain visibly selected.");
         Assert(vm.ShiftStepPercent==20,"Existing profiles must retain the default 20% Shift step.");
-        Assert(!vm.ShowShiftMarkers,"Shift dots must be hidden by default.");
+        Assert(vm.ShowShiftMarkers,"Shift dots must be shown by default.");
+        ((CheckBox)window.FindName("ShowShiftMarkersToggle")).SetCurrentValue(ToggleButton.IsCheckedProperty,false);Flush(root);
+        Assert(!vm.ShowShiftMarkers&&!((WheelControl)window.FindName("SelectedPreview")).ShowShiftMarkers,"Turning Shift dots off must update the live preview.");
         ((CheckBox)window.FindName("ShowShiftMarkersToggle")).SetCurrentValue(ToggleButton.IsCheckedProperty,true);Flush(root);
         Assert(vm.ShowShiftMarkers&&((WheelControl)window.FindName("SelectedPreview")).ShowShiftMarkers,"The marker toggle must update the live preview.");
         var slider=(Slider)window.FindName("ShiftStepSlider");var normal=vm.ScrollStepPercent;slider.SetCurrentValue(Slider.ValueProperty,35d);Flush(root);

@@ -63,7 +63,7 @@ internal static class Beta4PolishTests
         control.VolumeRequested+=(w,value)=>w.Level=Math.Clamp(value,0,1);
         control.AdjustInput(1,false,0);control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(70));
         var offset=control.VolumeBobOffset;
-        if(SystemParameters.ClientAreaAnimation)Assert(offset<0&&offset>-2.5&&control.VolumeBobStarts==1,"A real normal increase must produce a slight upward bob.");
+        Assert(offset<0&&offset>-2.5&&control.VolumeBobStarts==1,"A real normal increase must produce a slight upward bob.");
         control.AdjustInput(-1,false,30);control.SeekInteractionFeedback(TimeSpan.Zero);
         Assert(Math.Abs(control.VolumeBobOffset-offset)<1e-7,"Rapid reversal must retarget from the visible bob position.");
         control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(320));Assert(control.VolumeBobOffset==0,"Volume bob must return to rest.");

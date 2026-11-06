@@ -146,7 +146,8 @@ public sealed class WheelControl : FrameworkElement
     }
     internal double BoundaryBarStretch=>boundaryDirection>0&&Wheel?.Available==true&&Wheel.Level>=Wheel.MaximumVolumePercent/100d-1e-7?BoundaryStretch(BoundaryProgress):0;
     internal static int ArcMilliseconds(double distance)=>(int)Math.Round(130+Math.Min(1,Math.Abs(distance))*170);
-    private bool MotionEnabled=>EffectsEnabled&&!Effects.PerformanceMode&&SystemParameters.ClientAreaAnimation;
+    // Explicit in-app choices control motion, including when Windows animation effects are disabled.
+    private bool MotionEnabled=>EffectsEnabled&&!Effects.PerformanceMode;
     private AnimationClock FeedbackClock(DependencyProperty property,int milliseconds)
     {
         var clock=(AnimationClock)new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(milliseconds)){FillBehavior=FillBehavior.Stop}.CreateClock(true);ApplyAnimationClock(property,clock);return clock;

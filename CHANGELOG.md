@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+- Enable Shift increment dots by default for new installations and settings that omit the option. Existing saved choices are preserved.
+- Use the in-app animation controls consistently for wheels, overlay transitions, pages, and buttons. Windows animation effects no longer silently override enabled app animations.
+- Preserve performance mode, individual animation switches, and the main animation toggle as ways to disable motion.
+
 ## 1.2.1
 
 - Promoted the 1.2.1 beta improvements to stable, including wheel deletion undo, update recovery, window placement, and explicit color application.

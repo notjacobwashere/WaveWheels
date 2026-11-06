@@ -20,7 +20,6 @@ internal static class AnimationRefreshTests
         InterfaceMotion.SetPressed(button,true);InterfaceMotion.SeekPress(button,TimeSpan.FromMilliseconds(75));
         var frame=(FrameworkElement)button.Template.FindName("Frame",button);
         Assert(button.RenderTransform.Value.IsIdentity,"Button feedback must not shrink the pointer target.");
-        if(SystemParameters.ClientAreaAnimation)
         {
             Assert(Math.Abs(((ScaleTransform)frame.RenderTransform).ScaleX-.968)<.001,"Button artwork must compress on press.");
             var edgePoint=button.TranslatePoint(new Point(1,button.ActualHeight/2),root);DependencyObject? edgeHit=VisualTreeHelper.HitTest(root,edgePoint)?.VisualHit;
@@ -33,7 +32,7 @@ internal static class AnimationRefreshTests
         var wheel=new Wheel{Name="Animation preview",Available=true,Level=.6,MaximumVolumePercent=80};var control=new WheelControl{Wheel=wheel,ScrollAccelerationEnabled=false};
         control.VolumeRequested+=(w,v)=>w.Level=Math.Clamp(v,0,w.MaximumVolumePercent/100d);control.MuteRequested+=w=>w.Muted=!w.Muted;
         control.Measure(new Size(300,120));control.Arrange(new Rect(0,0,300,120));control.EnterHover();control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(80));
-        if(SystemParameters.ClientAreaAnimation)Assert(control.HoverAmount>0&&control.HoverAmount<1,"Hover outlines must blend into place.");
+        Assert(control.HoverAmount>0&&control.HoverAmount<1,"Hover outlines must blend into place.");
         foreach(var delta in new[]{1d,1d,-1d,1d,-1d})
         {
             control.AdjustInput(delta,false,0);control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(45));
@@ -42,7 +41,7 @@ internal static class AnimationRefreshTests
         wheel.Level=.7;Assert(control.ArcGlowAmount==0,"External volume changes below maximum must not trigger bar glow.");
         wheel.Level=.8;var requests=0;control.VolumeRequested+=(_,_)=>requests++;var bursts=control.MaximumEffectStarts;
         control.AdjustInput(1,false,300);control.AdjustInput(1,false,320);Assert(requests==0&&control.MaximumEffectStarts==bursts,"Limit feedback must not write audio or restart maximum sparks.");
-        Assert(control.BoundaryFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Held limit input must be rate-limited and respect reduced motion.");
+        Assert(control.BoundaryFeedbackStarts==1,"Held limit input must be rate-limited and respect the app animation controls.");
         Assert(WheelControl.BoundaryStretch(0)==0&&WheelControl.BoundaryStretch(1)==0,"Elastic limit feedback must begin and finish at rest.");
         var peakStretch=Enumerable.Range(0,101).Max(i=>WheelControl.BoundaryStretch(i/100d));
         Assert(peakStretch>4&&peakStretch<8&&WheelControl.BoundaryStretch(.8)<WheelControl.BoundaryStretch(.3),"The arc must stretch slightly forward and recoil without wrapping around.");
@@ -50,18 +49,18 @@ internal static class AnimationRefreshTests
         foreach(var ms in new[]{0,45,90,150,240,300})
         {
             control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(ms));
-            if(SystemParameters.ClientAreaAnimation&&ms==90)Assert(control.BoundaryBarStretch>4,"A capped wheel must render elastic bar feedback.");
+            if(ms==90)Assert(control.BoundaryBarStretch>4,"A capped wheel must render elastic bar feedback.");
             Render(control,Path.Combine(directory,$"elastic-limit-{ms}.png"));
         }
         Assert(wheel.Level==.8&&control.DisplayLevel==.8&&requests==0&&control.MaximumEffectStarts==bursts&&control.BoundaryBarStretch==0,"Recoil must preserve the audio level and displayed value, without writes or fresh sparks.");
         control.SeekInteractionFeedback(TimeSpan.FromMilliseconds(90));Render(control,Path.Combine(directory,"wheel-limit-feedback.png"));
-        control.TryMuteAt(new Point(60,60));Assert(wheel.Muted&&control.TapFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Accepted wheel clicks must animate without changing the mute action.");
+        control.TryMuteAt(new Point(60,60));Assert(wheel.Muted&&control.TapFeedbackStarts==1,"Accepted wheel clicks must animate without changing the mute action.");
         control.EffectsEnabled=false;Assert(control.ArcGlowAmount==0&&control.BoundaryProgress==1&&control.TapProgress==1,"Disabling animations must clear every new feedback clock.");
         var before=control.BoundaryFeedbackStarts;control.AdjustInput(1,false,700);Assert(control.BoundaryFeedbackStarts==before,"Disabled motion must suppress limit animation.");
         control.EffectsEnabled=true;control.AdjustInput(1,false,1000);wheel.Available=false;Assert(control.BoundaryProgress==1&&control.ArcGlowAmount==0,"Disconnecting must clear active wheel feedback.");
         wheel.Available=true;wheel.MaximumVolumePercent=100;wheel.Level=.99;wheel.Level=1;
         control.SeekMaximumEffect(TimeSpan.FromMilliseconds(100));
-        if(SystemParameters.ClientAreaAnimation)Assert(control.ArcGlowAmount>0&&control.MaximumEffectStarts==bursts+1,"Reaching maximum must retain its existing glow and sparks.");
+        Assert(control.ArcGlowAmount>0&&control.MaximumEffectStarts==bursts+1,"Reaching maximum must retain its existing glow and sparks.");
         var first=NumberRollLayout.Glyphs("60","61",.65,1);var snapshot=NumberRollLayout.Dominant(first);var retarget=NumberRollLayout.Tween(snapshot,"62",0,1);
         foreach(var glyph in snapshot)Assert(retarget.Any(g=>g.Value==glyph.Value&&g.X==glyph.X&&Math.Abs(g.OffsetY-glyph.OffsetY)<.0001&&Math.Abs(g.Opacity-glyph.Opacity)<.0001),"Number retargeting must retain the dominant visible glyph's pose and opacity.");
         Assert(retarget.Count<=4&&NumberRollLayout.Travel>=24,"Number rollers must stay bounded and use separated digit tracks.");
@@ -71,7 +70,7 @@ internal static class AnimationRefreshTests
         pageRoot.Measure(new Size(1160,860));pageRoot.Arrange(new Rect(0,0,1160,860));pageRoot.UpdateLayout();
         ((Button)window.FindName("SettingsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));window.SeekInterfaceMotion(TimeSpan.FromMilliseconds(70));
         var settings=(FrameworkElement)window.FindName("SettingsPage");Assert(settings.Visibility==Visibility.Visible,"Navigation must make the new page interactive immediately.");
-        if(SystemParameters.ClientAreaAnimation)Assert(((TranslateTransform)settings.RenderTransform).Y>0,"Real navigation must use page motion.");
+        Assert(((TranslateTransform)settings.RenderTransform).Y>0,"Real navigation must use page motion.");
         ((Button)window.FindName("EffectsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Assert(settings.Visibility==Visibility.Collapsed&&settings.Opacity==1&&((TranslateTransform)settings.RenderTransform).Y==0,"Switching pages mid-transition must reset the outgoing page.");
         vm.AnimateWheels=false;var effects=(FrameworkElement)window.FindName("EffectsPage");Assert(effects.Opacity==1&&((TranslateTransform)effects.RenderTransform).Y==0,"The app toggle must stop active navigation motion immediately.");
         vm.Dispose();

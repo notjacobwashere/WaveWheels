@@ -97,7 +97,7 @@ public sealed class OverlayWindow : Window
     {
         foreach(var control in controls)control.EffectsEnabled=model.AnimateWheels;
         RefreshScreens();motion.SetEdge(model.ScreenEdge);foreach(var row in rowMotions)row.SetEdge(model.ScreenEdge);
-        if(!model.OverlayAnimationsEnabled||!SystemParameters.ClientAreaAnimation)
+        if(!model.OverlayAnimationsEnabled)
         {
             foreach(var row in rowMotions)row.Enter(70,false,false,()=>{});
             if(shown)motion.Enter(MotionDistance,false,false,()=>{});
@@ -182,7 +182,7 @@ public sealed class OverlayWindow : Window
         }
         shown = true; Position(); lastActivity = Environment.TickCount64;
         foreach (var c in controls) c.ResetScroll();
-        var animate=model.OverlayAnimationsEnabled&&SystemParameters.ClientAreaAnimation;
+        var animate=model.OverlayAnimationsEnabled;
         motion.Enter(MotionDistance, wasHidden, animate, () => { });
         if(wasHidden)for(var i=0;i<rowMotions.Count;i++)rowMotions[i].Enter(70,true,animate,()=>{},OverlayMotion.StaggerDelay(i));
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateHits);
@@ -191,7 +191,7 @@ public sealed class OverlayWindow : Window
     {
         var current = ++generation;
         shown = false;model.SetPreviewActive(false); input.Close(); UpdateHits();
-        motion.Exit(MotionDistance, model.OverlayAnimationsEnabled&&SystemParameters.ClientAreaAnimation, () => { if (generation == current && !shown) Hide(); });
+        motion.Exit(MotionDistance, model.OverlayAnimationsEnabled, () => { if (generation == current && !shown) Hide(); });
     }
     private double MotionDistance=>model.ScreenEdge is "Top" or "Bottom"?Height:Width;
     private void ApplyApplicationBlock()

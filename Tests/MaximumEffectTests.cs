@@ -66,13 +66,13 @@ internal static class MaximumEffectTests
                 var wheel=new Wheel{Name="Music",Color="#36BBD3",Available=true,Level=.99};var control=new WheelControl{Wheel=wheel};var requests=0;
                 control.VolumeRequested+=(w,value)=> {requests++;w.Level=Math.Clamp(value,0,1);};
                 control.AdjustInput(1,false,0);var starts=control.MaximumEffectStarts;
-                Assert(starts==(SystemParameters.ClientAreaAnimation?1:0),"The effect must start immediately when actual volume reaches maximum, respecting reduced motion.");
-                if(SystemParameters.ClientAreaAnimation)Assert(control.DisplayLevel<1,"The effect must begin before the bar animation reaches its target.");
+                Assert(starts==1,"The effect must start immediately when actual volume reaches maximum, respecting the app animation controls.");
+                Assert(control.DisplayLevel<1,"The effect must begin before the bar animation reaches its target.");
                 control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==starts,"Bar animation completion must not retrigger the effect.");
                 for(var i=0;i<20;i++)control.AdjustInput(1,false,10+i);
                 Assert(requests==1&&control.MaximumEffectStarts==starts,"Capped input must not queue redundant writes or restart the animation.");
-                wheel.Level=.9;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==starts+(SystemParameters.ClientAreaAnimation?1:0),"A new genuine crossing must trigger again after its count-up.");
-                var prior=control.MaximumEffectStarts;wheel.Level=.8;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;wheel.Level=.7;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==prior+(SystemParameters.ClientAreaAnimation?1:0),"Every genuine maximum crossing must trigger immediately, even before the next level change.");
+                wheel.Level=.9;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==starts+1,"A new genuine crossing must trigger again after its count-up.");
+                var prior=control.MaximumEffectStarts;wheel.Level=.8;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));wheel.Level=1;wheel.Level=.7;control.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));Assert(control.MaximumEffectStarts==prior+1,"Every genuine maximum crossing must trigger immediately, even before the next level change.");
                 control.EffectsEnabled=false;wheel.Level=.9;wheel.Level=1;Assert(control.MaximumEffectProgress==1,"Disabling animation must clear the effect immediately.");
                 var count=control.MaximumEffectStarts;control.Wheel=new Wheel{Available=true,Level=1};Assert(control.MaximumEffectStarts==count,"Binding a wheel already at maximum must not burst.");
                 control.Wheel=wheel;control.EffectsEnabled=true;control.BeginAnimation(WheelControl.DisplayLevelProperty,null);control.DisplayLevel=1;
@@ -120,8 +120,7 @@ internal static class MaximumEffectTests
                 var overlapEncoder=new PngBitmapEncoder();overlapEncoder.Frames.Add(BitmapFrame.Create(overlapFrame));using(var overlapFile=File.Create(Path.Combine(directory,"label-max-hover.png")))overlapEncoder.Save(overlapFile);
                 control.CompleteHoverExit();
                 control.Wheel.Muted=false;var muteStarts=control.MuteFeedbackStarts;control.Wheel.Muted=true;
-                Assert(control.MuteFeedbackStarts==muteStarts+(SystemParameters.ClientAreaAnimation?1:0),"Muting must trigger one feedback animation, respecting reduced motion.");
-                if(!SystemParameters.ClientAreaAnimation)control.StartMuteFeedback();
+                Assert(control.MuteFeedbackStarts==muteStarts+1,"Muting must trigger one feedback animation, respecting the app animation controls.");
                 var originalTransform=control.RenderTransform.Value;
                 Assert(Math.Abs(WheelControl.MuteShake(40d/1200))>5&&WheelControl.MuteShake(520d/1200)==0,"The stronger shake must settle after approximately half a second.");
                 Assert(WheelControl.SlashSweep(350d/1200)==1&&WheelControl.SlashOpacity(350d/1200)==1&&WheelControl.SlashOpacity(850d/1200)==1&&WheelControl.SlashOpacity(1)==0,"The slash must finish its sweep, hold for 500 ms, then fade cleanly.");
@@ -144,15 +143,14 @@ internal static class MaximumEffectTests
                 Assert(Math.Abs(control.MaximumEmissionCutoff-500d/1800)<.001,"New spark emission must continue for 300 ms after volume drops.");
                 wheel.Level=.98;Assert(Math.Abs(control.MaximumEmissionCutoff-500d/1800)<.001,"Further volume updates must not move the emission cutoff or alter existing particles.");
                 var beforeFreshBurst=control.MaximumEffectStarts;wheel.Level=1;
-                Assert(control.MaximumEffectStarts==beforeFreshBurst+(SystemParameters.ClientAreaAnimation?1:0),"Fresh maximum crossings must respect Windows reduced-motion settings.");
-                if(!SystemParameters.ClientAreaAnimation)control.StartMaximumEffect();
+                Assert(control.MaximumEffectStarts==beforeFreshBurst+1,"Fresh maximum crossings must follow the app animation controls.");
                 Assert(control.MaximumEffectOpacity==1&&control.MaximumEmissionCutoff==1,"Starting a new burst must restore full opacity and emission.");
                 control.StartMaximumEffect();control.Wheel=new Wheel{Available=true,Level=.5};Assert(control.MaximumEffectProgress==1,"Profile/rebinding changes must clear old effects.");
                 var mutedColor=Color.FromRgb(38,5,13);var normalColor=Color.FromRgb(17,20,27);
                 Assert(WheelControl.RecoveryColor(mutedColor,normalColor,0)==mutedColor&&WheelControl.RecoveryColor(mutedColor,normalColor,1)==normalColor,"Unmute must smoothly restore the normal surface color, including the label.");
                 var recoveryWheel=new Wheel{Available=true,Muted=true,Level=.5};var recoveryControl=new WheelControl{Wheel=recoveryWheel};
-                recoveryWheel.Muted=false;Assert(recoveryControl.UnmuteFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"Only real unmute changes may trigger recovery, respecting reduced motion.");
-                if(SystemParameters.ClientAreaAnimation) {recoveryControl.SeekUnmuteFeedback(TimeSpan.FromMilliseconds(180));Assert(recoveryControl.UnmuteProgress>0&&recoveryControl.UnmuteProgress<1,"Unmute recovery must animate over time.");}
+                recoveryWheel.Muted=false;Assert(recoveryControl.UnmuteFeedbackStarts==1,"Only real unmute changes may trigger recovery, respecting the app animation controls.");
+                {recoveryControl.SeekUnmuteFeedback(TimeSpan.FromMilliseconds(180));Assert(recoveryControl.UnmuteProgress>0&&recoveryControl.UnmuteProgress<1,"Unmute recovery must animate over time.");}
                 recoveryControl.EffectsEnabled=false;Assert(recoveryControl.UnmuteProgress==1,"Disabling effects must clear unmute feedback.");
                 recoveryControl.EffectsEnabled=true;recoveryWheel.Muted=true;recoveryWheel.Muted=false;recoveryControl.Wheel=new Wheel{Available=true};Assert(recoveryControl.UnmuteProgress==1,"Rebinding must clear an old unmute pulse.");
                 Assert(WheelControl.ShiftSpring(0,1,1)==default(WheelControl.ShiftPose)&&WheelControl.ShiftSpring(1,1,1)==default(WheelControl.ShiftPose),"Shift bounce must start and settle exactly at rest.");
@@ -164,8 +162,7 @@ internal static class MaximumEffectTests
                 var shiftControl=new WheelControl{Wheel=shiftWheel};
                 shiftControl.VolumeRequested+=(w,v)=>w.Level=Math.Clamp(v,0,w.MaximumVolumePercent/100d);
                 shiftControl.AdjustInput(1,true,0);
-                Assert(shiftControl.ShiftFeedbackStarts==(SystemParameters.ClientAreaAnimation?1:0),"An accepted Shift volume change must trigger feedback unless motion is reduced.");
-                if(SystemParameters.ClientAreaAnimation)
+                Assert(shiftControl.ShiftFeedbackStarts==1,"An accepted Shift volume change must trigger feedback when enabled in the app.");
                 {
                     shiftControl.SeekShiftFeedback(TimeSpan.FromMilliseconds(75));var interrupted=shiftControl.CurrentShiftPose;
                     Assert(Math.Abs(interrupted.Y)>1&&shiftControl.RenderTransform.Value.IsIdentity,"Bobbles must move the drawing without changing the input or hover surface.");
@@ -216,7 +213,7 @@ internal static class MaximumEffectTests
                 numberWheel.Level=.6;Assert(number.NumberText=="60"&&number.OutgoingNumberText=="50"&&number.NumberDirection==1,"Increasing volume must bring the new live value in from above.");
                 var rolls=number.NumberTransitionStarts;numberWheel.Level=.6;Assert(number.NumberTransitionStarts==rolls,"Unchanged volume must not animate.");
                 number.SeekNumberTransition(TimeSpan.FromMilliseconds(75));
-                if(SystemParameters.ClientAreaAnimation)Assert(number.NumberProgress>0&&number.NumberProgress<1,"The number must roll/fade between its endpoints.");
+                Assert(number.NumberProgress>0&&number.NumberProgress<1,"The number must roll/fade between its endpoints.");
                 number.InvalidateVisual();number.UpdateLayout();var numberFrame=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);numberFrame.Render(number);var numberEncoder=new PngBitmapEncoder();numberEncoder.Frames.Add(BitmapFrame.Create(numberFrame));using(var numberFile=File.Create(Path.Combine(directory,"rolling-number.png")))numberEncoder.Save(numberFile);
                 number.SeekNumberTransition(TimeSpan.FromMilliseconds(WheelControl.NumberTransitionMilliseconds));Assert(number.NumberProgress==1,"Numbers must settle within 180 ms.");
                 numberWheel.Level=.4;Assert(number.NumberDirection==-1&&number.NumberText=="40","Decreases must roll in the inverse direction.");

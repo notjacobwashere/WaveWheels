@@ -64,7 +64,7 @@ public static class InterfaceMotion
     internal static void SetPressed(Button button,bool down)
     {
         if(button.Template?.FindName("Frame",button) is not FrameworkElement frame)return;
-        if(!GetEnabled(button)||!SystemParameters.ClientAreaAnimation||!button.IsEnabled) {if(presses.TryGetValue(frame,out var old))old.Reset();return;}
+        if(!GetEnabled(button)||!button.IsEnabled) {if(presses.TryGetValue(frame,out var old))old.Reset();return;}
         presses.GetValue(frame,f=>new PressState(f)).Animate(down);
     }
     internal static void SeekPress(Button button,TimeSpan time) {if(button.Template?.FindName("Frame",button) is FrameworkElement frame&&presses.TryGetValue(frame,out var state))state.Seek(time);}

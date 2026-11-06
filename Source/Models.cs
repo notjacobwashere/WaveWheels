@@ -58,7 +58,7 @@ public sealed class Preferences
     public int IdleMilliseconds { get; set; } = 1000;
     public int ScrollStepPercent { get; set; } = 1;
     public int ShiftStepPercent { get; set; } = 20;
-    public bool ShowShiftMarkers { get; set; }
+    public bool ShowShiftMarkers { get; set; } = true;
     public bool UseMuteButton {get;set;}
     public bool ApplicationBlacklistEnabled {get;set;}=true;
     public List<string> BlacklistedApplications {get;set;}=new();

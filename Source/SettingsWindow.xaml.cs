@@ -214,14 +214,14 @@ public partial class SettingsWindow : Window
         if(SetupMonitorBox.SelectedValue is string id&&model.Monitors.Any(m=>m.Id==id))model.MonitorId=id;
         QueueEditorBindings();
     }
-    private bool MotionEnabled=>model.InterfaceAnimationsEnabled&&SystemParameters.ClientAreaAnimation;
+    private bool MotionEnabled=>model.InterfaceAnimationsEnabled;
     internal void SeekInterfaceMotion(TimeSpan time) {foreach(var motion in pageMotion.Values)motion.Seek(time);modeMotion?.Seek(time);}
     private void OpenActions(object sender,RoutedEventArgs e) {if(sender is Button {ContextMenu: {} menu} button) {menu.PlacementTarget=button;menu.IsOpen=true;}}
     private void RestoreDefaults(object sender,RoutedEventArgs e)=>model.RestoreDefaults((string)((FrameworkElement)sender).Tag);
     private void PreviewMaxEffect(object sender,RoutedEventArgs e)
     {
         EffectsDemo.Wheel!.Level=1;
-        if(model.AnimateWheels&&SystemParameters.ClientAreaAnimation)EffectsDemo.StartMaximumEffect();
+        if(model.AnimateWheels)EffectsDemo.StartMaximumEffect();
     }
     private void PreviewMuteEffect(object sender,RoutedEventArgs e)=>EffectsDemo.Wheel!.Muted=!EffectsDemo.Wheel.Muted;
     private void NewProfile(object sender,RoutedEventArgs e)=>model.AddProfile(false);
