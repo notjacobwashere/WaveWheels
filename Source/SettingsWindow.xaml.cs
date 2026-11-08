@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
     {
         this.model = model;
         InitializeComponent();
+        PreviewKeyDown+=(_,e)=> {if(e.Key==Key.K&&(Keyboard.Modifiers&ModifierKeys.Control)!=0){OpenSettingsSearch(this,new RoutedEventArgs());e.Handled=true;}};
         MonitorBox.DropDownOpened+=(_,_)=>pendingMonitor=null;
         SetupMonitorBox.DropDownOpened+=(_,_)=>pendingSetupMonitor=null;
         SetupMonitorBox.SelectionChanged+=(_,_)=>{if(SetupMonitorBox.IsDropDownOpen&&!model.IsRefreshingMonitorChoices)pendingSetupMonitor=SetupMonitorBox.SelectedValue as string;};
@@ -148,7 +149,25 @@ public partial class SettingsWindow : Window
         if(section==null)return;
         ShowSection(section);
     }
-    private void ShowSection(string section)
+    private void OpenSettingsSearch(object sender,RoutedEventArgs e)
+    {
+        var dialog=new SettingsSearchWindow(){Owner=this};
+        if(dialog.ShowDialog()==true&&dialog.SelectedSetting is {} setting)NavigateToSetting(setting);
+    }
+    internal void NavigateToSetting(SettingSearchEntry setting)
+    {
+        if((setting.Section=="Profiles"||setting.Target is "ChannelBox" or "MixBox")&&!model.Connected){model.Message="Connect Wave Link to manage channel profiles.";ShowSection("Connection");return;}
+        ShowSection(setting.Section);
+        var page=pageMotion.Keys.FirstOrDefault(p=>p.Name==setting.Section+"Page");
+        var target=page==null?null:SettingsSearch.FindTarget(page,setting.Target);
+        if(target==null)return;
+        for(DependencyObject? node=target;node!=null;node=LogicalTreeHelper.GetParent(node))if(node is Expander expander)expander.IsExpanded=true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(()=> {target.BringIntoView();if(target.Focusable)target.Focus();}));
+    }
+    private void ViewReleaseNotes(object sender,RoutedEventArgs e) {ReleaseNotesPanel.IsExpanded=true;ReleaseNotesPanel.BringIntoView();}
+    private void ViewBetaNotes(object sender,RoutedEventArgs e) {if(model.SelectedBetaBuild is {} release){model.ShowReleaseNotes(release);ViewReleaseNotes(sender,e);}}
+    private void ReportProblem(object sender,RoutedEventArgs e)=>new ProblemReportWindow(model.ProblemDiagnostics){Owner=this}.ShowDialog();
+    internal void ShowSection(string section)
     {
         if(section==currentSection)return;
         var order=new[]{"Wheels","Profiles","Effects","Placement","Settings","Startup","Connection","Updates","Setup"};

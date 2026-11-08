@@ -136,6 +136,11 @@ public sealed class MainViewModel : Observable
     }
     public string LatestBetaWarning=>BetaChannelEnabled?BetaWarningFor(LatestBetaBuild,AppVersion):"";
     public bool ShowBetaVersionWarning=>LatestBetaWarning.Length>0;
+    private ReleaseUpdate? notesRelease;
+    public string ReleaseNotesTitle=>notesRelease==null?"Release notes":"Release notes · "+notesRelease.DisplayVersion;
+    public string ReleaseNotesText=>notesRelease==null?"Check for updates to load release notes.":string.IsNullOrWhiteSpace(notesRelease.Notes)?"No release notes were provided for this release.":ReleaseNotes.PlainText(notesRelease.Notes);
+    internal void ShowReleaseNotes(ReleaseUpdate? release) {notesRelease=release;Changed(nameof(ReleaseNotesTitle));Changed(nameof(ReleaseNotesText));}
+    internal string ProblemDiagnostics=>ProblemReport.Diagnostics(AppVersionLabel,UpdateChannel,UseWindowsAudio, snapshot.Connected, snapshot.Protocol,Preferences.PortOverride,Effects.PerformanceMode,AnimateWheels);
     private ReleaseUpdate? stableRelease;
     public string StableReleaseLabel=>stableRelease==null?"Check for updates to find the latest stable release.":$"Latest stable · {stableRelease.Version}";
     public bool ShowStableSwitch=>!BetaChannelEnabled&&availableUpdate==null&&stableRelease!=null&&stableRelease.Version!=AppVersion;
@@ -407,6 +412,7 @@ public sealed class MainViewModel : Observable
     }
     internal void ApplyRelease(ReleaseUpdate? update)
     {
+        ShowReleaseNotes(update);
         availableUpdate=update;updateUrl=update?.Url??ReleaseUpdates.ReleasesUrl;
         UpdateStatus=update==null?$"You're up to date · {AppVersionLabel}":$"Version {update.DisplayVersion} is available"+(update.Installer==null?" · use the release page to download":"");
         UpdateActionsChanged();
@@ -417,6 +423,7 @@ public sealed class MainViewModel : Observable
         SelectedBetaBuild=null;BetaBuilds.Clear();foreach(var build in catalog.Betas)BetaBuilds.Add(build);SelectedBetaBuild=BetaBuilds.FirstOrDefault();
         var release=BetaChannelEnabled?LatestBetaBuild:catalog.Latest;
         ApplyRelease(release?.Version==AppVersion?null:release);
+        ShowReleaseNotes(release??(BetaChannelEnabled?null:stableRelease));
         if(BetaChannelEnabled)UpdateStatus=release==null?"No beta releases found.":release.Version==AppVersion?$"You're up to date · {AppVersionLabel}":$"Version {release.DisplayVersion} is available"+(release.Installer==null?" · use the release page to download":"");
         if(ShowStableSwitch)UpdateStatus=$"Latest stable · {stableRelease!.Version}";
     }
@@ -446,7 +453,7 @@ public sealed class MainViewModel : Observable
         finally {downloading=false;installCancellation=null;InstallingUpdate=false;}
     }
     public void CancelUpdate()=>installCancellation?.Cancel();
-    public void OpenReleasePage() {try {Process.Start(new ProcessStartInfo(updateUrl) {UseShellExecute=true});}catch(Exception ex){Message="Could not open the browser: "+ex.Message;} }
+    public void OpenReleasePage() {try {Process.Start(new ProcessStartInfo(notesRelease?.Url??updateUrl) {UseShellExecute=true});}catch(Exception ex){Message="Could not open the browser: "+ex.Message;} }
     private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if(switchingProfile)return;

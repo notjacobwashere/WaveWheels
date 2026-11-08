@@ -13,6 +13,7 @@ namespace WaveWheels;
 public sealed record InstallerAsset(string Name,string Url,long Size,string Sha256);
 public sealed record ReleaseUpdate(string Version, string Url,InstallerAsset? Installer=null,bool IsBeta=false)
 {
+    public string Notes {get;init;}="";
     public string DisplayVersion=>ReleaseUpdates.FormatVersion(Version);
 }
 internal sealed record ReleaseCatalog(ReleaseUpdate? Latest,IReadOnlyList<ReleaseUpdate> Betas,ReleaseUpdate? Stable=null);
@@ -72,7 +73,8 @@ internal static class ReleaseUpdates
                 if(!System.Text.RegularExpressions.Regex.IsMatch(hash,"^sha256:[0-9a-fA-F]{64}$"))continue;
                 installer=new(name,url,length,hash[7..].ToLowerInvariant());break;
             }
-        return new(text,"https://github.com/notjacobwashere/WaveWheels/releases/tag/"+Uri.EscapeDataString(tag),installer,beta);
+        var notes=root.TryGetProperty("body",out var body)&&body.ValueKind==JsonValueKind.String?body.GetString()??"":"";
+        return new(text,"https://github.com/notjacobwashere/WaveWheels/releases/tag/"+Uri.EscapeDataString(tag),installer,beta){Notes=notes.Length>64000?notes[..64000]:notes};
     }
     internal static ReleaseCatalog ParseCatalog(string json,string current,bool beta)
     {

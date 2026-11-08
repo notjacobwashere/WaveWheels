@@ -60,9 +60,11 @@
                   </Style>
                 </Button.Style>
               </Button>
+              <Button x:Name="ReportProblemButton" Content="Report a problem" Click="ReportProblem" Background="Transparent" Foreground="#98AABC" Padding="10,8" Margin="0,0,0,4" />
               <Button Content="Setup guide" Click="OpenSetup" Background="Transparent" Foreground="#98AABC" Padding="10,8" Margin="0" />
               <TextBlock Text="{Binding AppVersionLabel}" Foreground="#667B8B" FontSize="10" Margin="12,14,0,0" />
             </StackPanel>
+              <Button DockPanel.Dock="Top" x:Name="SearchSettingsButton" Content="Search settings" Click="OpenSettingsSearch" ToolTip="Search settings (Ctrl+K)" Padding="12,10" Margin="0,0,0,18" HorizontalContentAlignment="Left" Background="#182630" Foreground="#BBCAD4" />
             <StackPanel x:Name="PrimaryNavigation">
               <Button x:Name="WheelsNav" Content="Wheels" Tag="Wheels" Style="{StaticResource NavButton}" Click="Navigate" />
               <Button x:Name="EffectsNav" Content="Appearance" Tag="Effects" Style="{StaticResource NavButton}" Click="Navigate" />
@@ -323,7 +325,7 @@
                 <Expander Header="Animations" IsExpanded="False" Margin="0,0,0,12">
                   <StackPanel Margin="16,4,16,16">
                     <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AnimateWheels}" IsEnabled="{Binding AnimationControlsEnabled}" Content="Toggle animations" AutomationProperties.Name="Animate wheels" />
-                    <TextBlock Text="Enable app and wheel animations. Respects Windows motion settings." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
+                    <TextBlock Text="Enable app and wheel animations." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
                   </StackPanel>
                 </Expander>
                 <Expander Header="Mute behavior" IsExpanded="False" Margin="0,0,0,12">
@@ -614,10 +616,16 @@
                           </Style>
                         </Button.Style>
                       </Button>
-                      <Button Content="Release notes ↗" Click="OpenRelease" Background="Transparent" Foreground="#98AABC" />
+                      <Button Content="View release notes" Click="ViewReleaseNotes" Background="Transparent" Foreground="#98AABC" />
                     </WrapPanel>
                   </StackPanel>
                 </Border>
+                <Expander x:Name="ReleaseNotesPanel" Header="{Binding ReleaseNotesTitle}" IsExpanded="False" Margin="0,16,0,0">
+                  <StackPanel Margin="20,0,20,20">
+                    <TextBox x:Name="ReleaseNotesContent" Text="{Binding ReleaseNotesText,Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" MaxHeight="300" MinHeight="100" Background="Transparent" BorderThickness="0" Padding="0,8" FontSize="13" AutomationProperties.Name="Release notes" />
+                    <Button Content="Open release on GitHub ↗" Click="OpenRelease" Background="Transparent" Foreground="#98AABC" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                  </StackPanel>
+                </Expander>
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,16,0,16">
                   <StackPanel>
                     <Grid>
@@ -666,6 +674,7 @@
                       </ListBox.ItemTemplate>
                     </ListBox>
                     <WrapPanel Margin="0,14,0,0">
+                      <Button Content="View notes" Click="ViewBetaNotes" IsEnabled="{Binding BetaChannelEnabled}" />
                       <Button x:Name="InstallBetaButton" Content="Install selected beta" Click="InstallBeta" IsEnabled="{Binding CanInstallBeta}" />
                       <Button Content="Release details ↗" Click="OpenBetaRelease" Background="Transparent" Foreground="#98AABC" />
                     </WrapPanel>

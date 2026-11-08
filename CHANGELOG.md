@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0-beta.1
+
+- Search settings by name or keyword with Ctrl+K, with direct navigation to the matching control.
+- Read release notes inside Updates, including notes for selected archived beta builds.
+- Prepare an editable problem report with app and connection details, then open a GitHub draft or copy the report. Reports are reviewed before submission.
+
 ## 1.2.2
 
 - Enable Shift increment dots by default for new installations and settings that omit the option. Existing saved choices are preserved.
