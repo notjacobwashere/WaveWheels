@@ -60,7 +60,7 @@ public sealed class MainViewModel : Observable
             case "Effects":Effects.Reset();break;
             case "Placement":ScreenEdge=d.ScreenEdge;MonitorId=d.MonitorId;PositionPercent=d.PositionPercent;WheelSpacing=d.WheelSpacing;EdgeDistance=d.EdgeDistance;break;
             case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;UseMuteButton=d.UseMuteButton;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
-            case "Wheels":if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
+            case "Wheels":EditorWheel?.ResetClicks();if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
             case "Startup":StartupEnabled=false;break;
             case "Connection":UseWindowsAudio=false;PortText="";Reconnect();break;
@@ -194,6 +194,8 @@ public sealed class MainViewModel : Observable
     public event Action<string>? UpdateAvailable;
     private string notifiedVersion="";
     public ObservableCollection<Choice> Channels { get; } = new();
+    public string[] WheelClickActions=>Wheel.ClickActions;
+    public ObservableCollection<Choice> ClickOutputs {get;}=new();
     public ObservableCollection<Choice> MixChoices { get; } = new();
     private Wheel? selected;
     private string saveStatus = "Changes save automatically", message = "", portText;
@@ -461,10 +463,11 @@ public sealed class MainViewModel : Observable
         if (e.NewItems != null) foreach (Wheel w in e.NewItems) w.PropertyChanged += WheelChanged;
         UpdatePositions(); Changed(nameof(WheelCount));Changed(nameof(DisplayWheelCount)); ScheduleSave(); Update(snapshot); LayoutChanged?.Invoke();
     }
-    private void WindowsWheelChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName is nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.MaximumVolumePercent))ScheduleSave();if(e.PropertyName==nameof(Wheel.Name))RefreshPreviewSize();}
+    private void WindowsWheelChanged(object? sender,PropertyChangedEventArgs e) {if(e.PropertyName is nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.MaximumVolumePercent)||e.PropertyName?.Contains("Click")==true)ScheduleSave();if(e.PropertyName==nameof(Wheel.Name))RefreshPreviewSize();}
     private void WheelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if(e.PropertyName==nameof(Wheel.Name))RefreshPreviewSize();
+        if(e.PropertyName?.Contains("Click")==true){ScheduleSave();return;}
         if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId) or nameof(Wheel.MaximumVolumePercent))) return;
         if(e.PropertyName==nameof(Wheel.MaximumVolumePercent)) {ScheduleSave();StateChanged?.Invoke();return;}
         if (e.PropertyName == nameof(Wheel.ChannelId) && sender is Wheel wheel)
@@ -496,13 +499,18 @@ public sealed class MainViewModel : Observable
             var channel = snapshot.Channels.FirstOrDefault(c => c.Id == w.ChannelId);
             var mix = channel?.Mixes.FirstOrDefault(m => m.Id == w.MixId);
             w.Available = Connected && channel?.Available == true && (w.MixId.Length > 0 ? mix != null : channel.HasOverallLevel);
-            if (w.Available) { w.Level = mix?.Level ?? channel!.Level; w.Muted = mix?.Muted ?? channel!.Muted; }
+            if (w.Available) { w.Level = mix?.Level ?? channel!.Level; w.Muted = (mix?.Muted ?? channel!.Muted)||(channel!.HasOverallLevel&&channel.Muted); }
             var scope = w.MixId.Length == 0 ? "Whole channel" : snapshot.Mixes.FirstOrDefault(m => m.Id == w.MixId)?.Name ?? "Saved mix";
             w.Detail = channel == null ? (w.ChannelId.Length == 0 ? "Not bound yet" : "Saved channel · unavailable") : channel.Name + " · " + scope;
         }
     }
     private void UpdateMixChoices()
     {
+        var clickChannel=snapshot.Channels.FirstOrDefault(c=>c.Id==EditorWheel?.ChannelId);
+        var outputs=(clickChannel?.Mixes??Array.Empty<ChannelMix>()).Select(m=>new Choice(m.Id,snapshot.Mixes.FirstOrDefault(x=>x.Id==m.Id)?.Name??m.Id)).ToList();
+        outputs.Insert(0,new("","Choose output"));
+        foreach(var id in new[]{EditorWheel?.LeftClickOutput,EditorWheel?.RightClickOutput})if(!string.IsNullOrEmpty(id)&&!outputs.Any(o=>o.Id==id))outputs.Add(new(id,"Saved output · unavailable"));
+        ReplaceChoices(ClickOutputs,outputs.ToArray());
         var channel = snapshot.Channels.FirstOrDefault(c => c.Id == selected?.ChannelId);
         var choices = (channel?.Mixes ?? Array.Empty<ChannelMix>()).Select(m => new Choice(m.Id, snapshot.Mixes.FirstOrDefault(x => x.Id == m.Id)?.Name ?? m.Id)).ToList();
         if (channel?.HasOverallLevel != false) choices.Insert(0, new("", "Whole channel · all mixes"));
@@ -581,6 +589,43 @@ public sealed class MainViewModel : Observable
         var value = !wheel.Muted;
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) { other.Muted = value; other.Changed(nameof(Wheel.VolumeLabel)); }
         Client.QueueMute(new(wheel.ChannelId, wheel.MixId), value);
+    }
+    public void ExecuteClick(Wheel wheel,bool right)
+    {
+        if(!wheel.Available||!RefreshInteractionPolicy())return;
+        var action=right?wheel.RightClickAction:wheel.LeftClickAction;
+        if(action=="Set volume"){SetLevel(wheel,(right?wheel.RightClickVolume:wheel.LeftClickVolume)/100d);return;}
+        if(action=="None")return;
+        if(ReferenceEquals(wheel,WindowsWheel))
+        {
+            if(action=="Mute channel")ToggleMute(wheel);
+            else Message="Output-specific muting requires Wave Link.";
+            return;
+        }
+        if(!Connected||!Wheels.Contains(wheel))return;
+        var channel=snapshot.Channels.FirstOrDefault(c=>c.Id==wheel.ChannelId);
+        if(channel?.Available!=true)return;
+        var output=right?wheel.RightClickOutput:wheel.LeftClickOutput;
+        if(action=="Mute output")
+        {
+            var mix=channel.Mixes.FirstOrDefault(m=>m.Id==output);
+            if(mix==null){Message="The selected output is unavailable. Choose an output in this wheel's click action.";return;}
+            var value=!mix.Muted;Client.QueueMute(new(channel.Id,output),value);
+            channel=channel with {Mixes=channel.Mixes.Select(m=>m.Id==output?m with {Muted=value}:m).ToArray()};
+        }
+        else if(action=="Mute channel")
+        {
+            if(channel.HasOverallLevel){var value=!channel.Muted;Client.QueueMute(new(channel.Id,""),value);channel=channel with {Muted=value};}
+            else
+            {
+                if(channel.Mixes.Count==0)return;
+                var value=!channel.Mixes.All(m=>m.Muted);
+                foreach(var mix in channel.Mixes)Client.QueueMute(new(channel.Id,mix.Id),value);
+                channel=channel with {Mixes=channel.Mixes.Select(m=>m with {Muted=value}).ToArray()};
+            }
+        }
+        else return;
+        snapshot=snapshot with {Channels=snapshot.Channels.Select(c=>c.Id==channel.Id?channel:c).ToArray()};SyncWheels();StateChanged?.Invoke();
     }
     public void Reconnect()
     {

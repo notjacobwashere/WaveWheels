@@ -186,6 +186,7 @@ public sealed class WheelControl : FrameworkElement
     internal double NumberProgress=>(double)GetValue(NumberProgressProperty);
     private double numberLevel;
     public event Action<Wheel>? MuteRequested;
+    public event Action<Wheel,bool>? ClickRequested;
     public event Action<Wheel, double>? VolumeRequested;
     public event Action<Wheel>? Selected;
     public Func<bool>? CanAdjustVolume { get; set; }
@@ -245,6 +246,7 @@ public sealed class WheelControl : FrameworkElement
         Unloaded += (_, _) => { active=false;Effects.PropertyChanged-=EffectsChanged;hoverExitTimer.Stop();precisionTimer.Stop();SetPrecisionMode(false);StopMaximumEffect();StopNumberTransition();StopMuteFeedback();StopShiftFeedback();StopUnmuteFeedback();StopInteractionFeedback();if (Wheel != null) Wheel.PropertyChanged -= ModelChanged; };
         Loaded += (_, _) => {Effects.PropertyChanged-=EffectsChanged;Effects.PropertyChanged+=EffectsChanged; if (Wheel != null) { Wheel.PropertyChanged -= ModelChanged; Wheel.PropertyChanged += ModelChanged; maximumTransition.Reset(Wheel.Available,Wheel.Level);ResetNumberDisplay();AnimateLevel(); } };
         MouseLeftButtonDown += Down;
+        MouseRightButtonDown+=(_,e)=> {if(TryClickAt(e.GetPosition(this),true)){Selected?.Invoke(Wheel!);e.Handled=true;}};
         MouseMove += (_, e) => {SetMuteHovered(UseMuteButton&&HitsMute(e.GetPosition(this))); if (dragging && Wheel?.Available == true && CanAdjustVolume?.Invoke() != false) RequestVolumeWithBob(dragLevel - (e.GetPosition(this).Y - dragStart.Y) / 200); };
         MouseLeftButtonUp += (_, e) => { if (dragging) { dragging = false; ReleaseMouseCapture(); e.Handled = true; } };
         LostMouseCapture += (_, _) => dragging = false;
@@ -384,12 +386,13 @@ public sealed class WheelControl : FrameworkElement
         if(Wheel.Level<=0||Wheel.Level>=Wheel.MaximumVolumePercent/100d||Math.Abs(Wheel.Level-requested)>1e-7)scroll.Reset();
     }
     public void ResetScroll() {scroll.Reset();snap.Reset();}
-    internal bool TryMuteAt(Point point)
+    internal bool TryMuteAt(Point point)=>TryClickAt(point,false);
+    internal bool TryClickAt(Point point,bool right)
     {
         if(Wheel==null)return false;
-        var hit=UseMuteButton?HitsMute(point):WheelSilhouette(LabelBounds).FillContains(point);
+        var hit=!right&&UseMuteButton?HitsMute(point):WheelSilhouette(LabelBounds).FillContains(point);
         if(!hit)return false;
-        var wasMuted=Wheel.Muted;MuteRequested?.Invoke(Wheel);if(Wheel.Muted!=wasMuted&&MotionEnabled&&Effects.ClickEnabled) {TapFeedbackStarts++;tapClock=FeedbackClock(TapProgressProperty,240);}return true;
+        var wasMuted=Wheel.Muted;if(ClickRequested!=null)ClickRequested.Invoke(Wheel,right);else if(!right)MuteRequested?.Invoke(Wheel);if(Wheel.Muted!=wasMuted&&MotionEnabled&&Effects.ClickEnabled) {TapFeedbackStarts++;tapClock=FeedbackClock(TapProgressProperty,240);}return true;
     }
     private void Down(object sender, MouseButtonEventArgs e)
     {

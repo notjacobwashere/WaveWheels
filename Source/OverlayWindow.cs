@@ -84,7 +84,7 @@ public sealed class OverlayWindow : Window
         foreach (var wheel in model.DisplayWheels)
         {
             var c = new WheelControl { Wheel = wheel, Effects=model.Effects, EffectsEnabled=model.AnimateWheels,UseMuteButton=model.UseMuteButton,ScrollStepPercent=model.ScrollStepPercent,ShiftStepPercent=model.ShiftStepPercent,ShowShiftMarkers=model.ShowShiftMarkers,ScrollAccelerationEnabled=model.ScrollAccelerationEnabled,Margin = new Thickness(OverlaySizing.EffectPadding,0,OverlaySizing.EffectPadding,controls.Count<model.DisplayWheelCount-1?model.WheelSpacing:0), CanAdjustVolume = () => !model.IsApplicationBlocked&&input.CanAdjust(Environment.TickCount64) };
-            c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;
+            c.VolumeRequested += model.SetLevel; c.MuteRequested += model.ToggleMute;c.ClickRequested+=model.ExecuteClick;
             c.Selected += w => { model.EditorWheel = w; lastActivity = Environment.TickCount64; };
             var row=new Border{Child=c};var rowMotion=new OverlayMotion(row);rowMotion.SetEdge(model.ScreenEdge);
             controls.Add(c);rowMotions.Add(rowMotion);stack.Children.Add(row);

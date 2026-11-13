@@ -53,13 +53,14 @@ public partial class SettingsWindow : Window
         model.AppearanceChanged+=()=> {if(!MotionEnabled) {foreach(var motion in pageMotion.Values)motion.Reset();modeMotion.Reset();}};
         model.SelectionChanged+=QueueEditorBindings;
         model.Channels.CollectionChanged+=(_,_)=>QueueEditorBindings();
+        model.ClickOutputs.CollectionChanged+=(_,_)=>QueueEditorBindings();
         model.MixChoices.CollectionChanged+=(_,_)=>QueueEditorBindings();
         model.Monitors.CollectionChanged+=(_,_)=>QueueEditorBindings();
         Loaded+=(_,_)=>QueueEditorBindings();
         IsVisibleChanged+=(_,_)=> {if(IsVisible)QueueEditorBindings();};
         QueueEditorBindings();
         SelectedPreview.VolumeRequested += model.SetLevel;
-        SelectedPreview.MuteRequested += model.ToggleMute;
+        SelectedPreview.MuteRequested += model.ToggleMute;SelectedPreview.ClickRequested+=model.ExecuteClick;
         EffectsDemo.Wheel=new Wheel{Name="Preview",Color="#DA5DAD",Available=true,Level=.68};
         EffectsDemo.VolumeRequested+=(wheel,value)=>wheel.Level=value;
         EffectsDemo.MuteRequested+=wheel=>wheel.Muted=!wheel.Muted;
@@ -73,6 +74,8 @@ public partial class SettingsWindow : Window
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
     }
+    private void LeftClickOutputClosed(object? sender,EventArgs e){if(model.EditorWheel is {} w&&LeftClickOutputBox.SelectedValue is string id)w.LeftClickOutput=id;}
+    private void RightClickOutputClosed(object? sender,EventArgs e){if(model.EditorWheel is {} w&&RightClickOutputBox.SelectedValue is string id)w.RightClickOutput=id;}
     private void QueueEditorBindings()
     {
         if(editorRefreshQueued)return;editorRefreshQueued=true;
@@ -81,6 +84,8 @@ public partial class SettingsWindow : Window
             editorRefreshQueued=false;
             // Items may arrive after SelectedValue was first evaluated, or be replaced on discovery.
             // Reapply the saved IDs after the choice list settles, without writing transient nulls back.
+            if(!LeftClickOutputBox.IsDropDownOpen)LeftClickOutputBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
+            if(!RightClickOutputBox.IsDropDownOpen)RightClickOutputBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
             if(!ChannelBox.IsDropDownOpen)ChannelBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
             if(!MixBox.IsDropDownOpen)MixBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();
             if(!MonitorBox.IsDropDownOpen)MonitorBox.GetBindingExpression(Selector.SelectedValueProperty)?.UpdateTarget();

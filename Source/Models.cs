@@ -30,6 +30,21 @@ public sealed class Wheel : Observable
     public string Color { get => color; set { if (Set(ref color, value ?? "")) Changed(nameof(Accent)); } }
     public string ChannelId { get => channelId; set => Set(ref channelId, value ?? ""); }
     public string MixId { get => mixId; set => Set(ref mixId, value ?? ""); }
+    public static string[] ClickActions {get;}={"Mute channel","Mute output","Set volume","None"};
+    private string leftClickAction="Mute channel",rightClickAction="None",leftClickOutput="",rightClickOutput="";
+    private int leftClickVolume=50,rightClickVolume=50;
+    private static string ValidAction(string? value)=>Array.IndexOf(ClickActions,value)>=0?value!:"None";
+    public string LeftClickAction {get=>leftClickAction;set {if(Set(ref leftClickAction,ValidAction(value))){Changed(nameof(LeftUsesOutput));Changed(nameof(LeftUsesVolume));}}}
+    public string RightClickAction {get=>rightClickAction;set {if(Set(ref rightClickAction,ValidAction(value))){Changed(nameof(RightUsesOutput));Changed(nameof(RightUsesVolume));}}}
+    public string LeftClickOutput {get=>leftClickOutput;set=>Set(ref leftClickOutput,value??"");}
+    public string RightClickOutput {get=>rightClickOutput;set=>Set(ref rightClickOutput,value??"");}
+    public int LeftClickVolume {get=>leftClickVolume;set=>Set(ref leftClickVolume,Math.Clamp(value,0,100));}
+    public int RightClickVolume {get=>rightClickVolume;set=>Set(ref rightClickVolume,Math.Clamp(value,0,100));}
+    [JsonIgnore] public bool LeftUsesOutput=>LeftClickAction=="Mute output";
+    [JsonIgnore] public bool RightUsesOutput=>RightClickAction=="Mute output";
+    [JsonIgnore] public bool LeftUsesVolume=>LeftClickAction=="Set volume";
+    [JsonIgnore] public bool RightUsesVolume=>RightClickAction=="Set volume";
+    public void ResetClicks(){LeftClickAction="Mute channel";RightClickAction="None";LeftClickOutput="";RightClickOutput="";LeftClickVolume=RightClickVolume=50;}
     private int maximumVolumePercent=100;
     public int MaximumVolumePercent { get=>maximumVolumePercent;set {if(Set(ref maximumVolumePercent,Math.Clamp(value,0,100)))Changed(nameof(MaximumVolumeLabel));} }
     [JsonIgnore] public string MaximumVolumeLabel=>MaximumVolumePercent+"% maximum";

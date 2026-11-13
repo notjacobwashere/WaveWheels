@@ -49,6 +49,8 @@ internal static class SettingsSearch
         new("Muted button color","Effects","MutedButtonColorBox","red speaker colour hex"),
         new("Wheel background color","Effects","NormalColorBox","colour hex surface"),
         new("Wheel color","Wheels","ColorBox","colour accent hex picker"),
+        new("Left-click action","Wheels","LeftClickSection","mute output volume click"),
+        new("Right-click action","Wheels","RightClickSection","mute output volume click"),
         new("Wheel count","Wheels","CountBox","add remove number wheels"),
         new("Wheel label","Wheels","Wheel name","rename title name"),
         new("Wave Link input channel","Wheels","ChannelBox","bind connection input"),

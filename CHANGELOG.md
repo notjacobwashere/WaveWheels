@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1-beta.1
+
+- Added separate per-wheel left- and right-click action sections, with whole-channel mute, output-specific mute, volume presets, and no-action options.
+- Default left-click mutes the entire channel; right-click defaults to no action.
+- Preserve click actions through saves, profile copies, and profile export/import. Volume presets respect configured limits.
+
 ## 1.3.0
 
 - Promoted settings search, in-app release notes, and reviewed GitHub problem reports to stable.

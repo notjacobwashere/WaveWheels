@@ -16,7 +16,7 @@ internal static class ProfileTransfer
         public List<WheelProfile> Profiles {get;set;}=new();
     }
     private static readonly JsonSerializerOptions Options=new(){WriteIndented=true,PropertyNameCaseInsensitive=true};
-    public static Wheel CloneWheel(Wheel w)=>new(){Name=w.Name,Color=w.Color,ChannelId=w.ChannelId,MixId=w.MixId,MaximumVolumePercent=w.MaximumVolumePercent};
+    public static Wheel CloneWheel(Wheel w)=>new(){Name=w.Name,Color=w.Color,ChannelId=w.ChannelId,MixId=w.MixId,MaximumVolumePercent=w.MaximumVolumePercent,LeftClickAction=w.LeftClickAction,RightClickAction=w.RightClickAction,LeftClickOutput=w.LeftClickOutput,RightClickOutput=w.RightClickOutput,LeftClickVolume=w.LeftClickVolume,RightClickVolume=w.RightClickVolume};
     public static WheelProfile Clone(WheelProfile profile)=>new(){Name=profile.Name,Applications=profile.Applications,Wheels=profile.Wheels.Select(CloneWheel).ToList()};
     public static string Serialize(IEnumerable<WheelProfile> profiles)=>JsonSerializer.Serialize(new Bundle{Profiles=profiles.Select(Clone).ToList()},Options);
     public static List<WheelProfile> Parse(string json)
@@ -31,7 +31,7 @@ internal static class ProfileTransfer
         {
             if(profile==null||profile.Name.Length>40||profile.Applications.Length>2048||profile.Wheels==null||profile.Wheels.Count is <1 or >12)throw new InvalidDataException("A profile has invalid fields or wheel count.");
             foreach(var wheel in profile.Wheels)
-                if(wheel==null||wheel.Name.Length>32||wheel.ChannelId.Length>512||wheel.MixId.Length>512||!Regex.IsMatch(wheel.Color,"^#[0-9A-Fa-f]{6}$"))throw new InvalidDataException("A wheel has an invalid name, color, or binding.");
+                if(wheel==null||wheel.Name.Length>32||wheel.ChannelId.Length>512||wheel.MixId.Length>512||wheel.LeftClickOutput.Length>512||wheel.RightClickOutput.Length>512||!Regex.IsMatch(wheel.Color,"^#[0-9A-Fa-f]{6}$"))throw new InvalidDataException("A wheel has an invalid name, color, or binding.");
         }
         return bundle.Profiles.Select(Clone).ToList();
     }

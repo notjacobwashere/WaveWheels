@@ -297,6 +297,43 @@
                         <TextBlock Text="Applies to changes made in WaveWheels. Shared bindings use the lowest limit." Foreground="#8095A5" FontSize="10" TextWrapping="Wrap" />
                       </StackPanel>
                     </Expander>
+                    <Expander x:Name="LeftClickSection" Header="Left-click action" IsExpanded="False" Margin="0,0,0,12">
+                      <StackPanel Margin="16,4,16,16">
+                        <TextBlock Text="With a dedicated mute button enabled, this action applies to that button." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <ComboBox x:Name="LeftClickActionBox" ItemsSource="{Binding WheelClickActions}" SelectedItem="{Binding EditorWheel.LeftClickAction}" AutomationProperties.Name="Left-click action" />
+                        <StackPanel Margin="0,14,0,0">
+                          <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EditorWheel.LeftUsesOutput}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                          <TextBlock Text="Output" Style="{StaticResource FieldLabel}" />
+                          <ComboBox x:Name="LeftClickOutputBox" ItemsSource="{Binding ClickOutputs}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding EditorWheel.LeftClickOutput,Mode=OneWay}" DropDownClosed="LeftClickOutputClosed" IsEnabled="{Binding Connected}" AutomationProperties.Name="Left-click output" />
+                          <TextBlock Text="Toggles mute for this output only. Requires Wave Link." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
+                        </StackPanel>
+                        <StackPanel Margin="0,14,0,0">
+                          <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EditorWheel.LeftUsesVolume}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                          <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding EditorWheel.LeftClickVolume}" AutomationProperties.Name="Left-click volume" />
+                          <TextBlock Text="{Binding EditorWheel.LeftClickVolume,StringFormat={}{0}%}" Foreground="#A3E6D9" Margin="0,8,0,0" />
+                          <TextBlock Text="Sets the wheel's selected mix volume. Respects its maximum volume limit." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="Toggles mute for the entire input, including all outputs." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EditorWheel.LeftClickAction}" Value="Mute channel"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                      </StackPanel>
+                    </Expander>
+                    <Expander x:Name="RightClickSection" Header="Right-click action" IsExpanded="False" Margin="0,0,0,12">
+                      <StackPanel Margin="16,4,16,16">
+                        <ComboBox x:Name="RightClickActionBox" ItemsSource="{Binding WheelClickActions}" SelectedItem="{Binding EditorWheel.RightClickAction}" AutomationProperties.Name="Right-click action" />
+                        <StackPanel Margin="0,14,0,0">
+                          <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EditorWheel.RightUsesOutput}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                          <TextBlock Text="Output" Style="{StaticResource FieldLabel}" />
+                          <ComboBox x:Name="RightClickOutputBox" ItemsSource="{Binding ClickOutputs}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding EditorWheel.RightClickOutput,Mode=OneWay}" DropDownClosed="RightClickOutputClosed" IsEnabled="{Binding Connected}" AutomationProperties.Name="Right-click output" />
+                          <TextBlock Text="Toggles mute for this output only. Requires Wave Link." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
+                        </StackPanel>
+                        <StackPanel Margin="0,14,0,0">
+                          <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EditorWheel.RightUsesVolume}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                          <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding EditorWheel.RightClickVolume}" AutomationProperties.Name="Right-click volume" />
+                          <TextBlock Text="{Binding EditorWheel.RightClickVolume,StringFormat={}{0}%}" Foreground="#A3E6D9" Margin="0,8,0,0" />
+                          <TextBlock Text="Sets the wheel's selected mix volume. Respects its maximum volume limit." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="Toggles mute for the entire input, including all outputs." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding EditorWheel.RightClickAction}" Value="Mute channel"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                      </StackPanel>
+                    </Expander>
                     <WrapPanel Margin="0,6,0,12">
                       <Button Content="Restore defaults" Tag="Wheels" Click="RestoreDefaults" HorizontalAlignment="Left" Margin="0,0,8,0" Background="Transparent" Foreground="#98AABC" />
                       <Button Content="Remove wheel" IsEnabled="{Binding Connected}" Click="Remove" Background="#36232C" Foreground="#F1B8C4" Padding="16,10" MinHeight="38" Margin="0" FontSize="12" />
@@ -331,7 +368,7 @@
                 <Expander Header="Mute behavior" IsExpanded="False" Margin="0,0,0,12">
                   <StackPanel Margin="16,4,16,16">
                     <CheckBox x:Name="UseMuteButtonToggle" Style="{StaticResource Switch}" IsChecked="{Binding UseMuteButton}" Content="Show a dedicated mute button" AutomationProperties.Name="Use dedicated mute button" />
-                    <TextBlock Text="When enabled, only the speaker button toggles mute; dragging adjusts volume. Otherwise, click the wheel to mute and scroll to adjust." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
+                    <TextBlock Text="When enabled, left-click actions use the speaker button and dragging adjusts volume. Otherwise, the left-click action applies across the wheel." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
                   </StackPanel>
                 </Expander>
                 <Expander Header="Scroll and Shift steps" IsExpanded="False" Margin="0,0,0,12">
