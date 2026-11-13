@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+- Promoted settings search, in-app release notes, and reviewed GitHub problem reports to stable.
+
 ## 1.3.0-beta.1
 
 - Search settings by name or keyword with Ctrl+K, with direct navigation to the matching control.
