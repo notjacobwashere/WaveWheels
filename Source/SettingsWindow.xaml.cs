@@ -179,8 +179,8 @@ public partial class SettingsWindow : Window
         for(DependencyObject? node=target;node!=null;node=LogicalTreeHelper.GetParent(node))if(node is Expander expander)expander.IsExpanded=true;
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(()=> {target.BringIntoView();if(target.Focusable)target.Focus();}));
     }
-    private void ViewReleaseNotes(object sender,RoutedEventArgs e) {ReleaseNotesPanel.IsExpanded=true;ReleaseNotesPanel.BringIntoView();}
-    private void ViewBetaNotes(object sender,RoutedEventArgs e) {if(model.SelectedBetaBuild is {} release){model.ShowReleaseNotes(release);ViewReleaseNotes(sender,e);}}
+    private void ViewReleaseNotes(object sender,RoutedEventArgs e) {ReleaseNotesPanel.IsExpanded=!ReleaseNotesPanel.IsExpanded;if(ReleaseNotesPanel.IsExpanded)ReleaseNotesPanel.BringIntoView();}
+    private void ViewBetaNotes(object sender,RoutedEventArgs e) {if(model.SelectedBetaBuild is {} release){model.ShowReleaseNotes(release);ReleaseNotesPanel.IsExpanded=true;ReleaseNotesPanel.BringIntoView();}}
     private void ReportProblem(object sender,RoutedEventArgs e)=>new ProblemReportWindow(model.ProblemDiagnostics){Owner=this}.ShowDialog();
     internal void ShowSection(string section)
     {

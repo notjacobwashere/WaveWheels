@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2-beta.1
+
+- Styled the release notes button and made it toggle the notes section with View/Hide labels. Closed notes no longer occupy space.
+- Added View on GitHub beside the release notes button.
+
 ## 1.3.1
 
 - Added customizable left- and right-click actions for whole-channel mute, output-specific mute, volume presets, or no action.

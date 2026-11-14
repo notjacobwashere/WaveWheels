@@ -90,7 +90,7 @@ internal static class UiRendering
                     if(section=="Updates")
                     {
                         if(((Button)window.FindName("InstallUpdateButton")).IsEnabled||((Button)window.FindName("CancelUpdateButton")).IsEnabled)throw new Exception("Update buttons must be disabled before discovery and outside downloads.");
-                        if(!Descendants((FrameworkElement)window.FindName("UpdatesPage")).OfType<Button>().Any(b=>b.Content?.ToString()=="View release notes"))throw new Exception("The release-page fallback must remain available.");
+                        if(!Descendants((FrameworkElement)window.FindName("UpdatesPage")).OfType<Button>().Any(b=>b.Name=="ReleaseNotesToggleButton"))throw new Exception("The release-page fallback must remain available.");
                         var betaStore=new SettingsStore(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,"beta-render-"+Guid.NewGuid().ToString("N")));
                         betaStore.Save(new Preferences {UpdateChannel="Beta"});
                         var betaVm=new MainViewModel(betaStore,true);

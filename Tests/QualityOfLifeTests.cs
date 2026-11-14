@@ -29,6 +29,14 @@ internal static class QualityOfLifeTests
         window.NavigateToSetting(SettingsSearch.Find("shift dots").Single());Flush();
         Assert(((FrameworkElement)window.FindName("SettingsPage")).Visibility==Visibility.Visible,"A search result must navigate to the real page.");
         for(DependencyObject? node=(FrameworkElement)window.FindName("ShowShiftMarkersToggle");node!=null;node=LogicalTreeHelper.GetParent(node))if(node is Expander expander)Assert(expander.IsExpanded,"Search navigation must expand the target section.");
+        var notesPanel=(Expander)window.FindName("ReleaseNotesPanel");var notesButton=(Button)window.FindName("ReleaseNotesToggleButton");Flush();
+        Assert(!notesPanel.IsExpanded&&notesPanel.Visibility==Visibility.Collapsed,"Release notes must occupy no space when closed.");
+        notesButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();
+        Assert(notesPanel.IsExpanded&&notesPanel.Visibility==Visibility.Visible&&notesButton.Content?.ToString()=="Hide release notes","Release notes button must open the section and show its active label.");
+        notesButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();
+        Assert(!notesPanel.IsExpanded&&notesPanel.Visibility==Visibility.Collapsed&&notesButton.Content?.ToString()=="View release notes","The same button must fully collapse release notes.");
+        var githubButton=(Button)window.FindName("ViewReleaseOnGitHubButton");var actions=(Panel)notesButton.Parent;
+        Assert(actions.Children.IndexOf(githubButton)==actions.Children.IndexOf(notesButton)+1,"View on GitHub must follow the release notes button.");
         var notes="## Changes\n- **Improved** search\n- Fixed `colors`\n\n[Details](https://example.com/notes)\n![image](https://example.com/image.png)";
         var json=JsonSerializer.Serialize(new[]{new{tag_name="v3.0.0",prerelease=false,body=notes},new{tag_name="v2.0.0-beta.2",prerelease=true,body="Older beta notes"}});
         var catalog=ReleaseUpdates.ParseCatalog(json,model.AppVersion,false);

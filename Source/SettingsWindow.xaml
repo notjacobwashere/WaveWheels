@@ -655,14 +655,17 @@
                           </Style>
                         </Button.Style>
                       </Button>
-                      <Button Content="View release notes" Click="ViewReleaseNotes" Background="Transparent" Foreground="#98AABC" />
+                      <Button x:Name="ReleaseNotesToggleButton" Click="ViewReleaseNotes">
+                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Content" Value="View release notes"/><Style.Triggers><DataTrigger Binding="{Binding IsExpanded,ElementName=ReleaseNotesPanel}" Value="True"><Setter Property="Content" Value="Hide release notes"/><Setter Property="Background" Value="#243D3C"/><Setter Property="Foreground" Value="#A3E6D9"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                      </Button>
+                      <Button x:Name="ViewReleaseOnGitHubButton" Content="View on GitHub ↗" Click="OpenRelease" />
                     </WrapPanel>
                   </StackPanel>
                 </Border>
                 <Expander x:Name="ReleaseNotesPanel" Header="{Binding ReleaseNotesTitle}" IsExpanded="False" Margin="0,16,0,0">
+                  <Expander.Style><Style TargetType="Expander" BasedOn="{StaticResource {x:Type Expander}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsExpanded,RelativeSource={RelativeSource Self}}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Expander.Style>
                   <StackPanel Margin="20,0,20,20">
                     <TextBox x:Name="ReleaseNotesContent" Text="{Binding ReleaseNotesText,Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" MaxHeight="300" MinHeight="100" Background="Transparent" BorderThickness="0" Padding="0,8" FontSize="13" AutomationProperties.Name="Release notes" />
-                    <Button Content="Open release on GitHub ↗" Click="OpenRelease" Background="Transparent" Foreground="#98AABC" HorizontalAlignment="Left" Margin="0,10,0,0" />
                   </StackPanel>
                 </Expander>
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,16,0,16">
