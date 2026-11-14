@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1
+
+- Added customizable left- and right-click actions for whole-channel mute, output-specific mute, volume presets, or no action.
+- Fixed Wave Link 3 per-output commands and output selection persistence.
+- Added live L/R output-mute indicators with a setting to hide them.
+
 ## 1.3.1-beta.4
 
 - Show live L/R output-mute indicators on wheels with a Mute output click action. Indicators distinguish muted, unmuted, and unavailable outputs.
