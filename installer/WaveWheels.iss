@@ -150,6 +150,28 @@ begin
   if CurPageID = IntroPage.ID then Log('WaveWheels setup: introduction shown');
 end;
 
+function WaitForAppFiles(const AppPath: String): Boolean;
+var
+  Attempt: Integer;
+  Stream: TFileStream;
+begin
+  Result := True;
+  if not FileExists(AppPath) then Exit;
+  Result := False;
+  for Attempt := 1 to 100 do begin
+    try
+      { Open read/write exclusively without writing any bytes. Loaded executables deny this until exit. }
+      Stream := TFileStream.Create(AppPath, $12);
+      Stream.Free;
+      Result := True;
+      Log('WaveWheels setup: app files released');
+      Exit;
+    except
+      Sleep(100);
+    end;
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ExitCode: Integer;
@@ -157,8 +179,11 @@ var
 begin
   Result := '';
   AppPath := ExpandConstant('{app}\WaveWheels.exe');
-  if FileExists(AppPath) then
+  if FileExists(AppPath) then begin
     Exec(AppPath, '--shutdown', '', SW_HIDE, ewWaitUntilTerminated, ExitCode);
+    if not WaitForAppFiles(AppPath) then
+      Result := 'Please close WaveWheels and try again. Your settings have been kept.';
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -177,7 +202,7 @@ var
   ExitCode: Integer;
 begin
   Exec(ExpandConstant('{app}\WaveWheels.exe'), '--shutdown', '', SW_HIDE, ewWaitUntilTerminated, ExitCode);
-  Result := True;
+  Result := WaitForAppFiles(ExpandConstant('{app}\WaveWheels.exe'));
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
