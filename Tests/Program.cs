@@ -27,6 +27,7 @@ internal static class Program
             {
                 UiRendering.Run(Path.GetFullPath(args[1]));Console.WriteLine("PASS: window render, real collection reordering, selection retention, size/motion persistence and animation clocks.");return 0;
             }
+            if(args.Length==2&&args[0]=="--click-input-harness"){ClickInputHarness.Run(args[1]);return 0;}
             NewFeatures.Pure();
             MonitorPersistenceTests.Pure();
             await UpdateTests.Downloads();

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1-beta.3
+
+- Correct Wave Link 3 per-output command identifiers to match the live service, fixing rejected output mute and volume commands.
+- Make the protocol simulator reject the incorrect identifier format so tests cover this failure.
+
 ## 1.3.1-beta.2
 
 - Save click-action output selections immediately for mouse and keyboard input.

@@ -301,7 +301,13 @@ public sealed class WaveLinkClient : IDisposable
                             var change = new JsonObject();
                             if (write.Level.HasValue) change["level"] = write.Level.Value;
                             if (write.Muted.HasValue) change["isMuted"] = write.Muted.Value;
-                            if (key.MixId.Length > 0) { change["mixId"] = key.MixId; payload["mixes"] = new JsonArray(change); }
+                            if (key.MixId.Length > 0)
+                            {
+                                var mix=(channel["mixes"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(m=>Text(m,"id","mixId")==key.MixId);
+                                // Wave Link 3 uses id; retain compatibility with older mixId-shaped services.
+                                change[mix?.ContainsKey("id")==true?"id":"mixId"]=key.MixId;
+                                payload["mixes"] = new JsonArray(change);
+                            }
                             else foreach (var field in change) payload[field.Key] = field.Value?.DeepClone();
                         }
                     }
