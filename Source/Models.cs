@@ -22,6 +22,8 @@ public abstract class Observable : INotifyPropertyChanged
     public void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
+public sealed record OutputMuteIndicator(string Button,string Output,bool? Muted);
+
 public sealed class Wheel : Observable
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
@@ -44,6 +46,8 @@ public sealed class Wheel : Observable
     [JsonIgnore] public bool RightUsesOutput=>RightClickAction=="Mute output";
     [JsonIgnore] public bool LeftUsesVolume=>LeftClickAction=="Set volume";
     [JsonIgnore] public bool RightUsesVolume=>RightClickAction=="Set volume";
+    private OutputMuteIndicator[] outputMuteIndicators=Array.Empty<OutputMuteIndicator>();
+    [JsonIgnore] public OutputMuteIndicator[] OutputMuteIndicators {get=>outputMuteIndicators;internal set=>Set(ref outputMuteIndicators,value);}
     public void ResetClicks(){LeftClickAction="Mute channel";RightClickAction="None";LeftClickOutput="";RightClickOutput="";LeftClickVolume=RightClickVolume=50;}
     private int maximumVolumePercent=100;
     public int MaximumVolumePercent { get=>maximumVolumePercent;set {if(Set(ref maximumVolumePercent,Math.Clamp(value,0,100)))Changed(nameof(MaximumVolumeLabel));} }
@@ -75,6 +79,7 @@ public sealed class Preferences
     public int ShiftStepPercent { get; set; } = 20;
     public bool ShowShiftMarkers { get; set; } = true;
     public bool UseMuteButton {get;set;}
+    public bool ShowOutputMuteIndicators {get;set;}=true;
     public bool ApplicationBlacklistEnabled {get;set;}=true;
     public List<string> BlacklistedApplications {get;set;}=new();
     public bool ScrollAccelerationEnabled { get; set; } = true;

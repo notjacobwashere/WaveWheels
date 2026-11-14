@@ -201,6 +201,8 @@ public sealed class WheelControl : FrameworkElement
     private readonly ShiftVolumeSnap snap=new();
     public int ShiftStepPercent {get=>snap.StepPercent;set {snap.StepPercent=value;InvalidateVisual();}}
     private bool showShiftMarkers;
+    private bool showOutputMuteIndicators=true;
+    public bool ShowOutputMuteIndicators {get=>showOutputMuteIndicators;set {if(showOutputMuteIndicators==value)return;showOutputMuteIndicators=value;InvalidateVisual();}}
     public bool ShowShiftMarkers {get=>showShiftMarkers;set {if(showShiftMarkers==value)return;showShiftMarkers=value;InvalidateVisual();}}
     internal static Point PrecisionMarkerPoint(int percent)
     {
@@ -280,7 +282,7 @@ public sealed class WheelControl : FrameworkElement
             if(Wheel?.Available==true&&MotionEnabled) {if(Wheel.Muted&&Effects.MuteEnabled)StartMuteFeedback();else if(!Wheel.Muted&&Effects.UnmuteEnabled)StartUnmuteFeedback();}
         }
         InvalidateVisual();
-        if (Wheel != null) System.Windows.Automation.AutomationProperties.SetName(this, Wheel.Name + ", " + Wheel.VolumeLabel);
+        if (Wheel != null) System.Windows.Automation.AutomationProperties.SetName(this, Wheel.Name + ", " + Wheel.VolumeLabel+(ShowOutputMuteIndicators?string.Concat(System.Linq.Enumerable.Select(Wheel.OutputMuteIndicators,s=>$", {s.Button} {s.Output}: {(s.Muted==true?"muted":s.Muted==false?"unmuted":"unavailable")}")):""));
     }
     internal void StartMaximumEffect()
     {
@@ -457,6 +459,17 @@ public sealed class WheelControl : FrameworkElement
                 dc.DrawEllipse(WithOpacity(accent,percent*.01<=w.Level+1e-7?1:.5),null,point,2.2,2.2);
             }
         DrawNumber(dc);
+        if(ShowOutputMuteIndicators&&w.OutputMuteIndicators.Length>0)
+        {
+            var indicators=w.OutputMuteIndicators;var y=UseMuteButton?33d:81d;
+            for(var i=0;i<indicators.Length;i++)
+            {
+                var status=indicators[i];var x=indicators.Length==1?60d:39d+i*42d;
+                var tint=status.Muted==true?Color.FromRgb(245,112,131):status.Muted==false?Color.FromRgb(115,220,200):Color.FromRgb(152,170,188);
+                dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(230,21,30,41)),null,new Rect(x-20,y-7,40,14),6,6);
+                DrawText(dc,status.Button+": "+(status.Muted==true?"MUTE":status.Muted==false?"ON":"—"),7.5,new Point(x,y),new SolidColorBrush(tint),true,true,38);
+            }
+        }
         if (!Compact)
         {
             dc.DrawText(label!,new Point(92,4+(26-label!.Height)/2));

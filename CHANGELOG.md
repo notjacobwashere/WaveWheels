@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1-beta.4
+
+- Show live L/R output-mute indicators on wheels with a Mute output click action. Indicators distinguish muted, unmuted, and unavailable outputs.
+- Added Show output mute indicators under Settings > Controls > Mute behavior, enabled by default and included in Restore defaults.
+
 ## 1.3.1-beta.3
 
 - Correct Wave Link 3 per-output command identifiers to match the live service, fixing rejected output mute and volume commands.

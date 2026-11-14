@@ -69,7 +69,7 @@ public partial class SettingsWindow : Window
         SetupDemo.Wheel=new Wheel{Name="Sample",Color="#73DCC8",Available=true,Level=.5};
         SetupDemo.VolumeRequested+=(wheel,value)=>wheel.Level=Math.Clamp(value,0,1);
         SetupDemo.MuteRequested+=wheel=>wheel.Muted=!wheel.Muted;
-        void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ShiftStepPercent=model.ShiftStepPercent;SelectedPreview.ShowShiftMarkers=model.ShowShiftMarkers;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
+        void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ShiftStepPercent=model.ShiftStepPercent;SelectedPreview.ShowShiftMarkers=model.ShowShiftMarkers;SelectedPreview.ShowOutputMuteIndicators=model.ShowOutputMuteIndicators;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
         PreviewInputSettings();model.InputSettingsChanged+=PreviewInputSettings;
         RefreshNavigation();
         Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); } };

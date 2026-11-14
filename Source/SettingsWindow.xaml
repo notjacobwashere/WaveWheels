@@ -367,6 +367,8 @@
                 </Expander>
                 <Expander Header="Mute behavior" IsExpanded="False" Margin="0,0,0,12">
                   <StackPanel Margin="16,4,16,16">
+                    <CheckBox x:Name="OutputMuteIndicatorsToggle" Style="{StaticResource Switch}" IsChecked="{Binding ShowOutputMuteIndicators}" Content="Show output mute indicators" Margin="0,0,0,12" />
+                    <TextBlock Text="Shows L/R badges when a click action mutes an output. Red means muted; green means unmuted. A dash means unavailable." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,18" />
                     <CheckBox x:Name="UseMuteButtonToggle" Style="{StaticResource Switch}" IsChecked="{Binding UseMuteButton}" Content="Show a dedicated mute button" AutomationProperties.Name="Use dedicated mute button" />
                     <TextBlock Text="When enabled, left-click actions use the speaker button and dragging adjusts volume. Otherwise, the left-click action applies across the wheel." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
                   </StackPanel>

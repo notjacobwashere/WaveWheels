@@ -59,7 +59,7 @@ public sealed class MainViewModel : Observable
         {
             case "Effects":Effects.Reset();break;
             case "Placement":ScreenEdge=d.ScreenEdge;MonitorId=d.MonitorId;PositionPercent=d.PositionPercent;WheelSpacing=d.WheelSpacing;EdgeDistance=d.EdgeDistance;break;
-            case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;UseMuteButton=d.UseMuteButton;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
+            case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;UseMuteButton=d.UseMuteButton;ShowOutputMuteIndicators=d.ShowOutputMuteIndicators;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
             case "Wheels":EditorWheel?.ResetClicks();if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
             case "Startup":StartupEnabled=false;break;
@@ -96,6 +96,7 @@ public sealed class MainViewModel : Observable
     public int ShiftStepPercent {get=>Preferences.ShiftStepPercent;set {value=Math.Clamp(value,5,50);if(value==Preferences.ShiftStepPercent)return;Preferences.ShiftStepPercent=value;Changed();Changed(nameof(ShiftStepLabel));ScheduleSave();InputSettingsChanged?.Invoke();}}
     public string ShiftStepLabel=>ShiftStepPercent+"% while holding Shift";
     public bool ShowShiftMarkers {get=>Preferences.ShowShiftMarkers;set {if(value==Preferences.ShowShiftMarkers)return;Preferences.ShowShiftMarkers=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
+    public bool ShowOutputMuteIndicators {get=>Preferences.ShowOutputMuteIndicators;set {if(value==Preferences.ShowOutputMuteIndicators)return;Preferences.ShowOutputMuteIndicators=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public bool UseMuteButton {get=>Preferences.UseMuteButton;set {if(value==Preferences.UseMuteButton)return;Preferences.UseMuteButton=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public bool ScrollAccelerationEnabled {get=>Preferences.ScrollAccelerationEnabled;set {if(value==Preferences.ScrollAccelerationEnabled)return;Preferences.ScrollAccelerationEnabled=value;Changed();ScheduleSave();InputSettingsChanged?.Invoke();}}
     public int IdleMilliseconds {get=>Preferences.IdleMilliseconds;set {value=Math.Clamp(value,500,5000);if(value==Preferences.IdleMilliseconds)return;Preferences.IdleMilliseconds=value;Changed();Changed(nameof(IdleLabel));ScheduleSave();}}
@@ -471,7 +472,7 @@ public sealed class MainViewModel : Observable
         if(e.PropertyName?.Contains("Click")==true)
         {
             if(sender is Wheel changed&&e.PropertyName is nameof(Wheel.LeftClickAction) or nameof(Wheel.RightClickAction))ChooseInitialClickOutput(changed,e.PropertyName==nameof(Wheel.RightClickAction));
-            ScheduleSave();return;
+            SyncWheels();ScheduleSave();return;
         }
         if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId) or nameof(Wheel.MaximumVolumePercent))) return;
         if(e.PropertyName==nameof(Wheel.MaximumVolumePercent)) {ScheduleSave();StateChanged?.Invoke();return;}
@@ -505,6 +506,15 @@ public sealed class MainViewModel : Observable
             var mix = channel?.Mixes.FirstOrDefault(m => m.Id == w.MixId);
             w.Available = Connected && channel?.Available == true && (w.MixId.Length > 0 ? mix != null : channel.HasOverallLevel);
             if (w.Available) { w.Level = mix?.Level ?? channel!.Level; w.Muted = (mix?.Muted ?? channel!.Muted)||(channel!.HasOverallLevel&&channel.Muted); }
+            var indicators=new List<OutputMuteIndicator>();
+            foreach(var right in new[]{false,true})
+            {
+                if((right?w.RightClickAction:w.LeftClickAction)!="Mute output")continue;
+                var id=right?w.RightClickOutput:w.LeftClickOutput;
+                var target=channel?.Mixes.FirstOrDefault(m=>m.Id==id);
+                indicators.Add(new(right?"R":"L",snapshot.Mixes.FirstOrDefault(m=>m.Id==id)?.Name??"Output",Connected&&channel?.Available==true?target?.Muted:null));
+            }
+            if(!w.OutputMuteIndicators.SequenceEqual(indicators))w.OutputMuteIndicators=indicators.ToArray();
             var scope = w.MixId.Length == 0 ? "Whole channel" : snapshot.Mixes.FirstOrDefault(m => m.Id == w.MixId)?.Name ?? "Saved mix";
             w.Detail = channel == null ? (w.ChannelId.Length == 0 ? "Not bound yet" : "Saved channel · unavailable") : channel.Name + " · " + scope;
         }

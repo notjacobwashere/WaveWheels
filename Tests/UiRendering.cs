@@ -151,6 +151,7 @@ internal static class UiRendering
                 BetaDiscoveryTests.Run(Path.GetDirectoryName(path)!);
                 PlacementAndColorCommitTests.Run(Path.GetDirectoryName(path)!);
                 StableChannelSwitchTests.Run(Path.GetDirectoryName(path)!);
+                OutputIndicatorTests.Run(Path.GetDirectoryName(path)!);
                 ClickActionTests.Run(Path.GetDirectoryName(path)!);
                 QualityOfLifeTests.Run(Path.GetDirectoryName(path)!);
                 vm.Dispose();
