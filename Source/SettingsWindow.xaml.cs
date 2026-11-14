@@ -38,6 +38,8 @@ public partial class SettingsWindow : Window
         this.model = model;
         InitializeComponent();
         PreviewKeyDown+=(_,e)=> {if(e.Key==Key.K&&(Keyboard.Modifiers&ModifierKeys.Control)!=0){OpenSettingsSearch(this,new RoutedEventArgs());e.Handled=true;}};
+        LeftClickOutputBox.SelectionChanged+=(_,_)=>{if(LeftClickOutputBox.IsDropDownOpen||LeftClickOutputBox.IsKeyboardFocusWithin)CommitClickOutput(false);};
+        RightClickOutputBox.SelectionChanged+=(_,_)=>{if(RightClickOutputBox.IsDropDownOpen||RightClickOutputBox.IsKeyboardFocusWithin)CommitClickOutput(true);};
         MonitorBox.DropDownOpened+=(_,_)=>pendingMonitor=null;
         SetupMonitorBox.DropDownOpened+=(_,_)=>pendingSetupMonitor=null;
         SetupMonitorBox.SelectionChanged+=(_,_)=>{if(SetupMonitorBox.IsDropDownOpen&&!model.IsRefreshingMonitorChoices)pendingSetupMonitor=SetupMonitorBox.SelectedValue as string;};
@@ -74,8 +76,16 @@ public partial class SettingsWindow : Window
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
     }
-    private void LeftClickOutputClosed(object? sender,EventArgs e){if(model.EditorWheel is {} w&&LeftClickOutputBox.SelectedValue is string id)w.LeftClickOutput=id;}
-    private void RightClickOutputClosed(object? sender,EventArgs e){if(model.EditorWheel is {} w&&RightClickOutputBox.SelectedValue is string id)w.RightClickOutput=id;}
+    internal void CommitClickOutput(bool right)
+    {
+        if(model.IsRefreshingClickOutputs||!model.Connected||model.EditorWheel is not {} wheel)return;
+        var box=right?RightClickOutputBox:LeftClickOutputBox;
+        if(box.SelectedItem is not Choice choice||string.IsNullOrEmpty(choice.Id)||!model.ClickOutputs.Any(o=>o.Id==choice.Id))return;
+        var id=choice.Id;
+        if(right)wheel.RightClickOutput=id;else wheel.LeftClickOutput=id;
+    }
+    private void LeftClickOutputClosed(object? sender,EventArgs e)=>CommitClickOutput(false);
+    private void RightClickOutputClosed(object? sender,EventArgs e)=>CommitClickOutput(true);
     private void QueueEditorBindings()
     {
         if(editorRefreshQueued)return;editorRefreshQueued=true;

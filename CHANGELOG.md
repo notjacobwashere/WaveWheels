@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1-beta.2
+
+- Save click-action output selections immediately for mouse and keyboard input.
+- Initialize an empty mute-output target from the wheel’s selected mix or first available output, including older saved click actions.
+- Preserve click-output selections during mixer refreshes.
+
 ## 1.3.1-beta.1
 
 - Added separate per-wheel left- and right-click action sections, with whole-channel mute, output-specific mute, volume presets, and no-action options.

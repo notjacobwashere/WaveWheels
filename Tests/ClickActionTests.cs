@@ -18,7 +18,7 @@ internal static class ClickActionTests
         Assert(control.TryClickAt(new Point(60,60),true)&&!wheel.Muted,"Default right-click must not mute.");
         control.TryClickAt(new Point(60,60),false);Assert(wheel.Muted,"Default left click must mute.");wheel.MixId="b";Assert(wheel.Muted,"Whole-channel mute must cover every output when the protocol has no overall target.");
         model.ExecuteClick(wheel,false);Assert(!wheel.Muted,"A second whole-channel click must unmute all outputs.");wheel.MixId="a";Assert(!wheel.Muted,"Whole-channel unmute must include the other output.");
-        wheel.RightClickAction="Mute output";wheel.RightClickOutput="b";model.ExecuteClick(wheel,true);Assert(!wheel.Muted,"Output mute must leave the selected other output unchanged.");wheel.MixId="b";Assert(wheel.Muted,"Output action must target the specified output.");model.ExecuteClick(wheel,true);Assert(!wheel.Muted,"Output mute must toggle from the output's own state.");
+        wheel.RightClickAction="Mute output";Assert(wheel.RightClickOutput=="a","Choosing output mute must initialize a visible valid output.");wheel.RightClickOutput="b";model.ExecuteClick(wheel,true);Assert(!wheel.Muted,"Output mute must leave the selected other output unchanged.");wheel.MixId="b";Assert(wheel.Muted,"Output action must target the specified output.");model.ExecuteClick(wheel,true);Assert(!wheel.Muted,"Output mute must toggle from the output's own state.");
         wheel.RightClickOutput="missing";model.ExecuteClick(wheel,true);Assert(!wheel.Muted&&model.Message.Contains("unavailable"),"Unavailable outputs must not fall back to whole-channel muting.");
         model.Update(Snapshot(true));wheel.MixId="a";model.ExecuteClick(wheel,false);Assert(wheel.Muted,"Output wheels must show effective whole-channel mute.");wheel.MixId="";Assert(wheel.Muted,"A protocol with overall mute must target the whole channel even when the wheel is scoped to an output.");
         wheel.RightClickAction="Set volume";wheel.RightClickVolume=90;wheel.MaximumVolumePercent=40;model.ExecuteClick(wheel,true);Assert(wheel.Level==.4,"Preset volume must respect the configured cap.");
@@ -31,6 +31,11 @@ internal static class ClickActionTests
         var imported=ProfileTransfer.Parse(ProfileTransfer.Serialize(new[]{model.ActiveProfile!}))[0].Wheels[0];Assert(imported.LeftClickOutput=="a"&&imported.RightClickVolume==35,"Profile export/import must preserve actions.");
         var window=new SettingsWindow(model);Assert(window.FindName("LeftClickSection") is Expander&&window.FindName("RightClickSection") is Expander,"Both click actions must have their own wheel sections.");
         var frame=new System.Windows.Threading.DispatcherFrame();System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,new Action(()=>frame.Continue=false));System.Windows.Threading.Dispatcher.PushFrame(frame);
+        wheel.RightClickAction="Mute output";
+        var outputs=(ComboBox)window.FindName("RightClickOutputBox");outputs.IsDropDownOpen=true;outputs.SelectedValue="b";window.CommitClickOutput(true);
+        Assert(wheel.RightClickOutput=="b","Output selection commits must save the selected item before dropdown close.");outputs.IsDropDownOpen=false;
+        outputs.SelectedValue="a";window.CommitClickOutput(true);Assert(wheel.RightClickOutput=="a","Keyboard/output commits must save the displayed target.");
+        model.Update(Snapshot(true));Assert(wheel.RightClickOutput=="a","Mixer refresh must preserve saved click-output selections.");
         ((ComboBox)window.FindName("LeftClickActionBox")).SelectedItem="Set volume";Assert(wheel.LeftClickAction=="Set volume","The left action selector must edit the selected wheel.");
         wheel.LeftClickAction="Mute output";wheel.LeftClickOutput="a";wheel.RightClickAction="Set volume";
         var panel=new StackPanel{Margin=new Thickness(24),DataContext=model,Resources=window.Resources};panel.SetValue(Control.ForegroundProperty,System.Windows.Media.Brushes.White);

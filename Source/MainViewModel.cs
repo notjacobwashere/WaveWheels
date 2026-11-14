@@ -195,6 +195,7 @@ public sealed class MainViewModel : Observable
     private string notifiedVersion="";
     public ObservableCollection<Choice> Channels { get; } = new();
     public string[] WheelClickActions=>Wheel.ClickActions;
+    internal bool IsRefreshingClickOutputs {get;private set;}
     public ObservableCollection<Choice> ClickOutputs {get;}=new();
     public ObservableCollection<Choice> MixChoices { get; } = new();
     private Wheel? selected;
@@ -467,7 +468,11 @@ public sealed class MainViewModel : Observable
     private void WheelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if(e.PropertyName==nameof(Wheel.Name))RefreshPreviewSize();
-        if(e.PropertyName?.Contains("Click")==true){ScheduleSave();return;}
+        if(e.PropertyName?.Contains("Click")==true)
+        {
+            if(sender is Wheel changed&&e.PropertyName is nameof(Wheel.LeftClickAction) or nameof(Wheel.RightClickAction))ChooseInitialClickOutput(changed,e.PropertyName==nameof(Wheel.RightClickAction));
+            ScheduleSave();return;
+        }
         if (e.PropertyName is not (nameof(Wheel.Name) or nameof(Wheel.Color) or nameof(Wheel.ChannelId) or nameof(Wheel.MixId) or nameof(Wheel.MaximumVolumePercent))) return;
         if(e.PropertyName==nameof(Wheel.MaximumVolumePercent)) {ScheduleSave();StateChanged?.Invoke();return;}
         if (e.PropertyName == nameof(Wheel.ChannelId) && sender is Wheel wheel)
@@ -510,7 +515,7 @@ public sealed class MainViewModel : Observable
         var outputs=(clickChannel?.Mixes??Array.Empty<ChannelMix>()).Select(m=>new Choice(m.Id,snapshot.Mixes.FirstOrDefault(x=>x.Id==m.Id)?.Name??m.Id)).ToList();
         outputs.Insert(0,new("","Choose output"));
         foreach(var id in new[]{EditorWheel?.LeftClickOutput,EditorWheel?.RightClickOutput})if(!string.IsNullOrEmpty(id)&&!outputs.Any(o=>o.Id==id))outputs.Add(new(id,"Saved output · unavailable"));
-        ReplaceChoices(ClickOutputs,outputs.ToArray());
+        IsRefreshingClickOutputs=true;try{ReplaceChoices(ClickOutputs,outputs.ToArray());}finally{IsRefreshingClickOutputs=false;}
         var channel = snapshot.Channels.FirstOrDefault(c => c.Id == selected?.ChannelId);
         var choices = (channel?.Mixes ?? Array.Empty<ChannelMix>()).Select(m => new Choice(m.Id, snapshot.Mixes.FirstOrDefault(x => x.Id == m.Id)?.Name ?? m.Id)).ToList();
         if (channel?.HasOverallLevel != false) choices.Insert(0, new("", "Whole channel · all mixes"));
@@ -590,9 +595,18 @@ public sealed class MainViewModel : Observable
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) { other.Muted = value; other.Changed(nameof(Wheel.VolumeLabel)); }
         Client.QueueMute(new(wheel.ChannelId, wheel.MixId), value);
     }
+    private void ChooseInitialClickOutput(Wheel wheel,bool right)
+    {
+        if((right?wheel.RightClickAction:wheel.LeftClickAction)!="Mute output"||!string.IsNullOrEmpty(right?wheel.RightClickOutput:wheel.LeftClickOutput))return;
+        var channel=snapshot.Channels.FirstOrDefault(c=>c.Id==wheel.ChannelId);
+        var output=channel?.Mixes.FirstOrDefault(m=>m.Id==wheel.MixId)??channel?.Mixes.FirstOrDefault();
+        if(output==null)return;
+        if(right)wheel.RightClickOutput=output.Id;else wheel.LeftClickOutput=output.Id;
+    }
     public void ExecuteClick(Wheel wheel,bool right)
     {
         if(!wheel.Available||!RefreshInteractionPolicy())return;
+        ChooseInitialClickOutput(wheel,right);
         var action=right?wheel.RightClickAction:wheel.LeftClickAction;
         if(action=="Set volume"){SetLevel(wheel,(right?wheel.RightClickVolume:wheel.LeftClickVolume)/100d);return;}
         if(action=="None")return;

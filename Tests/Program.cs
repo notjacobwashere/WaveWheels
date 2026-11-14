@@ -99,6 +99,26 @@ internal static class Program
             var initial=await Wait(snapshots,s=>s.Connected&&s.Channels.Count==2);
             var isLegacy=initial.Protocol.Contains("legacy");var mixId=isLegacy?"local":"personal";
             Console.WriteLine("PASS: handshake, protocol detection, channel and mix discovery ("+initial.Protocol+").");
+            Exception? clickFailure=null;
+            var clickThread=new Thread(()=>
+            {
+                MainViewModel? clickModel=null;
+                try
+                {
+                    var testApp=new System.Windows.Application{ShutdownMode=System.Windows.ShutdownMode.OnExplicitShutdown};
+                    clickModel=new MainViewModel(new SettingsStore(Path.Combine(args[1],"output-click-rpc")),true);
+                    var received=new ConcurrentQueue<MixerSnapshot>();clickModel.Client.Updated+=received.Enqueue;clickModel.Client.Start(port);
+                    var state=Wait(received,s=>s.Connected&&s.Channels.Count==2).GetAwaiter().GetResult();clickModel.Update(state);
+                    var clickWheel=clickModel.Wheels[0];clickWheel.ChannelId="music";clickWheel.MixId=mixId;clickWheel.RightClickAction="Mute output";clickWheel.RightClickOutput="stream";
+                    clickModel.ExecuteClick(clickWheel,true);
+                    var changed=Wait(received,s=>s.Connected&&s.Channels.First(c=>c.Id=="music").Mixes.First(m=>m.Id=="stream").Muted).GetAwaiter().GetResult();
+                    Assert(!changed.Channels.First(c=>c.Id=="music").Mixes.First(m=>m.Id==mixId).Muted,"Right-click RPC must mute only the chosen output.");clickModel.Update(changed);clickModel.ExecuteClick(clickWheel,true);
+                    Wait(received,s=>s.Connected&&!s.Channels.First(c=>c.Id=="music").Mixes.First(m=>m.Id=="stream").Muted).GetAwaiter().GetResult();
+                }
+                catch(Exception ex){clickFailure=ex;}finally{clickModel?.Dispose();}
+            });
+            clickThread.SetApartmentState(ApartmentState.STA);clickThread.Start();clickThread.Join();if(clickFailure!=null)throw clickFailure;
+            Console.WriteLine("PASS: configured right-click output mute/unmute reaches the protocol service and leaves the other output unchanged.");
             if(!isLegacy)
             {
                 client.QueueLevel(new("music",""),.61);
