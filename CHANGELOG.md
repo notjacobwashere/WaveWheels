@@ -2,6 +2,8 @@
 
 ## 1.3.2-beta.1
 
+- Wait for app files to be released during graceful installer upgrades.
+
 - Styled the release notes button and made it toggle the notes section with View/Hide labels. Closed notes no longer occupy space.
 - Added View on GitHub beside the release notes button.
 

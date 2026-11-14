@@ -140,6 +140,7 @@ public static class IntroWizardSmoke {
     Assert-Settings
     Run-Setup 'installer-upgrade.log' $true
     $upgradeTrace=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'artifacts/installer-upgrade.log') -Raw
+    if(-not $upgradeTrace.Contains('WaveWheels setup: app files released')){throw 'Upgrade did not wait for app files to be released.'}
     if($upgradeTrace.Contains('WaveWheels setup: introduction shown')){throw 'An in-app upgrade unexpectedly showed onboarding.'}
     if (-not $app.WaitForExit(10000)) { throw 'Upgrade did not close the running app gracefully.' }
     Assert-Settings
