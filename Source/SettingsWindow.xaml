@@ -612,12 +612,12 @@
                       </ProgressBar.Style>
                     </ProgressBar>
                     <WrapPanel Margin="0,20,0,0">
-                      <Button x:Name="InstallUpdateButton" Content="Download and install" Click="InstallUpdate" IsEnabled="{Binding CanInstallUpdate}" Background="#73DCC8" Foreground="#10231F">
+                      <Button x:Name="InstallUpdateButton" Content="Download and install" Click="InstallUpdate" IsEnabled="{Binding CanInstallSelectedRelease}" Background="#73DCC8" Foreground="#10231F">
                         <Button.Style>
                           <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                              <DataTrigger Binding="{Binding CanInstallUpdate}" Value="True">
+                              <DataTrigger Binding="{Binding CanInstallSelectedRelease}" Value="True">
                                 <Setter Property="Visibility" Value="Visible" />
                               </DataTrigger>
                             </Style.Triggers>
@@ -625,9 +625,6 @@
                         </Button.Style>
                       </Button>
                       <Button x:Name="CheckUpdatesButton" Content="Check for updates" Click="CheckUpdates" IsEnabled="{Binding CanCheckUpdates}" />
-                      <Button x:Name="StableSwitchButton" Content="{Binding StableSwitchLabel}" Click="InstallStable" IsEnabled="{Binding CanInstallStable}" Background="#73DCC8" Foreground="#10231F">
-                        <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ShowStableSwitch}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Button.Style>
-                      </Button>
                       <Button x:Name="CancelUpdateButton" Content="Cancel download" Click="CancelUpdate" IsEnabled="{Binding InstallingUpdate}">
                         <Button.Style>
                           <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -682,7 +679,7 @@
                   <StackPanel Margin="20,0,20,20">
                     <TextBlock Text="Latest stable" FontSize="16" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding StableReleaseLabel}" Foreground="#98AABC" Margin="0,7,0,12" TextWrapping="Wrap" />
-                    <Button x:Name="InstallStableButton" Content="Switch to stable" Click="InstallStable" IsEnabled="{Binding CanInstallStable}" HorizontalAlignment="Left" />
+                    <Button x:Name="InstallStableButton" Content="Download and install" Click="InstallStable" IsEnabled="{Binding CanInstallStable}" HorizontalAlignment="Left" />
                     <TextBlock Text="You can return to Stable even if its version is older." Foreground="#98AABC" FontSize="12" Margin="0,8,0,24" TextWrapping="Wrap" />
                     <TextBlock Text="Beta archive" FontSize="16" FontWeight="SemiBold" />
                     <TextBlock Text="Choose Beta above to install a previous preview." Foreground="#98AABC" Margin="0,7,0,12" TextWrapping="Wrap" FontSize="12" />
@@ -701,8 +698,8 @@
                       </ListBox.ItemTemplate>
                     </ListBox>
                     <WrapPanel Margin="0,14,0,0">
+                      <Button x:Name="InstallBetaButton" Content="Download and install" Click="InstallBeta" IsEnabled="{Binding CanInstallBeta}" />
                       <Button Content="View notes" Click="ViewBetaNotes" IsEnabled="{Binding BetaChannelEnabled}" />
-                      <Button x:Name="InstallBetaButton" Content="Install selected beta" Click="InstallBeta" IsEnabled="{Binding CanInstallBeta}" />
                       <Button Content="Release details ↗" Click="OpenBetaRelease" Background="Transparent" Foreground="#98AABC" />
                     </WrapPanel>
                   </StackPanel>

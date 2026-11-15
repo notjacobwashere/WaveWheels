@@ -145,7 +145,10 @@ public sealed class MainViewModel : Observable
     private ReleaseUpdate? stableRelease;
     public string StableReleaseLabel=>stableRelease==null?"Check for updates to find the latest stable release.":$"Latest stable · {stableRelease.Version}";
     public bool ShowStableSwitch=>!BetaChannelEnabled&&availableUpdate==null&&stableRelease!=null&&stableRelease.Version!=AppVersion;
-    public string StableSwitchLabel=>stableRelease==null?"Install latest stable":"Install stable "+stableRelease.Version;
+    public bool CanInstallSelectedRelease=>CanInstallUpdate||(ShowStableSwitch&&CanInstallStable);
+    public Task InstallSelectedReleaseAsync()=>InstallSelectedReleaseCoreAsync(DownloadUpdate,UpdateInstaller.Launch);
+    internal Task InstallSelectedReleaseCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
+        =>ShowStableSwitch?InstallStableCoreAsync(download,launch):InstallUpdateCoreAsync(download,launch);
     public bool CanInstallStable=>!isolated&&CanCheckUpdates&&stableRelease?.Installer!=null&&stableRelease.Version!=AppVersion;
     public Task InstallStableAsync()=>InstallStableCoreAsync(DownloadUpdate,UpdateInstaller.Launch);
     internal Task InstallStableCoreAsync(Func<ReleaseUpdate,IProgress<DownloadProgress>,CancellationToken,Task<string>> download,Action<string> launch)
@@ -171,7 +174,7 @@ public sealed class MainViewModel : Observable
     public bool CanCheckUpdates=>!CheckingUpdates&&!InstallingUpdate;
     public bool CanInstallUpdate=>!isolated&&!CheckingUpdates&&!InstallingUpdate&&availableUpdate?.Installer!=null;
     public event Action? UpdateInstallationStarted;
-    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));Changed(nameof(ShowStableSwitch));Changed(nameof(StableSwitchLabel));Changed(nameof(ShowBetaVersionWarning));Changed(nameof(LatestBetaWarning));}
+    private void UpdateActionsChanged() {Changed(nameof(CanCheckUpdates));Changed(nameof(CanInstallUpdate));Changed(nameof(CanInstallBeta));Changed(nameof(CanInstallStable));Changed(nameof(ShowStableSwitch));Changed(nameof(CanInstallSelectedRelease));Changed(nameof(ShowBetaVersionWarning));Changed(nameof(LatestBetaWarning));}
     public bool CheckUpdatesAutomatically { get=>Preferences.CheckUpdatesAutomatically;set { Preferences.CheckUpdatesAutomatically=value;Changed();ScheduleSave(); } }
     public bool AutoInstallUpdates {get=>Preferences.AutoInstallUpdates;set {if(Preferences.AutoInstallUpdates==value)return;Preferences.AutoInstallUpdates=value;Changed();ScheduleSave();}}
     public Task RepairAppAsync()=>RepairAppCoreAsync(()=>ReleaseUpdates.CheckAsync(false,updateLifetime.Token),DownloadUpdate,UpdateInstaller.Launch);

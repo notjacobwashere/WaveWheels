@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2-beta.3
+
+- Unified stable and beta installation into one Download and install action with consistent placement and styling.
+- Matched version-history install labels and placed the beta install action first.
+- Added regression coverage for channel switching and the shared install action.
+
 ## 1.3.2-beta.2
 
 - Moved wheel size, animation controls, Shift dots, and output-mute indicators to Appearance; updated search and page-scoped resets.

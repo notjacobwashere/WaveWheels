@@ -293,7 +293,7 @@ public partial class SettingsWindow : Window
     }
     private async void CheckUpdates(object sender,RoutedEventArgs e)=>await model.CheckForUpdatesAsync();
     private async void RepairApp(object sender,RoutedEventArgs e)=>await model.RepairAppAsync();
-    private async void InstallUpdate(object sender,RoutedEventArgs e)=>await model.InstallUpdateAsync();
+    private async void InstallUpdate(object sender,RoutedEventArgs e)=>await model.InstallSelectedReleaseAsync();
     private void CancelUpdate(object sender,RoutedEventArgs e)=>model.CancelUpdate();
     private async void InstallBeta(object sender,RoutedEventArgs e)=>await model.InstallBetaAsync();
     internal void SelectFirstWheelForPreview()=>model.EditorWheel=model.DisplayWheels.FirstOrDefault();
