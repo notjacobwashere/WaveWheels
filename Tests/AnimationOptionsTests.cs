@@ -29,7 +29,7 @@ internal static class AnimationOptionsTests
         firstControl.SeekLevelAnimation(TimeSpan.FromMilliseconds(400));
         firstWheel.Level=.6;firstControl.SeekLevelAnimation(TimeSpan.FromMilliseconds(60));firstControl.SeekNumberTransition(TimeSpan.FromMilliseconds(60));
         Assert(firstControl.DisplayLevel>.5&&firstControl.DisplayLevel<.6&&firstControl.NumberProgress>0&&firstControl.NumberProgress<1,"Enabled app settings must start real bar and number clocks regardless of Windows animation effects.");
-        firstRun.ShowShiftMarkers=false;firstRun.RestoreDefaults("Settings");Assert(firstRun.ShowShiftMarkers,"Restore defaults must enable Shift dots.");
+        firstRun.ShowShiftMarkers=false;firstRun.RestoreDefaults("Effects");Assert(firstRun.ShowShiftMarkers,"Restore defaults must enable Shift dots.");
         firstRun.Dispose();
         Console.WriteLine($"PASS: fresh/missing settings enable Shift dots and motion; explicit off choices persist; real clocks run with Windows animation effects={SystemParameters.ClientAreaAnimation}.");
         var effects=model.Effects;

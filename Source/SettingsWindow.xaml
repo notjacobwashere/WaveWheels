@@ -346,29 +346,8 @@
               <StackPanel>
                 <TextBlock Text="Controls" FontSize="26" FontWeight="SemiBold" />
                 <TextBlock Text="Configure wheel behavior and input." Foreground="#98AABC" Margin="0,7,0,20" />
-                <Expander Header="Wheel size" IsExpanded="True" Margin="0,0,0,12">
-                  <StackPanel Margin="16,4,16,16">
-                    <Grid>
-                      <TextBlock Text="{Binding WheelSizeLabel}" HorizontalAlignment="Left" Foreground="#A3E6D9" FontSize="18" TextWrapping="Wrap" />
-                    </Grid>
-                    <Slider x:Name="WheelSizeSlider" Minimum="50" Maximum="180" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding WheelSizePercent}" Margin="0,22,0,10" AutomationProperties.Name="Overlay wheel size" />
-                    <Grid>
-                      <TextBlock Text="50%" Foreground="#8596A6" FontSize="10" TextWrapping="Wrap" />
-                      <TextBlock Text="180%" Foreground="#8596A6" FontSize="10" HorizontalAlignment="Right" TextWrapping="Wrap" />
-                    </Grid>
-                    <TextBlock Text="Scales the complete wheel. Large layouts fit the display automatically." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,20,0,0" />
-                  </StackPanel>
-                </Expander>
-                <Expander Header="Animations" IsExpanded="False" Margin="0,0,0,12">
-                  <StackPanel Margin="16,4,16,16">
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AnimateWheels}" IsEnabled="{Binding AnimationControlsEnabled}" Content="Toggle animations" AutomationProperties.Name="Animate wheels" />
-                    <TextBlock Text="Enable app and wheel animations." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
-                  </StackPanel>
-                </Expander>
                 <Expander Header="Mute behavior" IsExpanded="False" Margin="0,0,0,12">
                   <StackPanel Margin="16,4,16,16">
-                    <CheckBox x:Name="OutputMuteIndicatorsToggle" Style="{StaticResource Switch}" IsChecked="{Binding ShowOutputMuteIndicators}" Content="Show output mute indicators" Margin="0,0,0,12" />
-                    <TextBlock Text="Shows L/R badges when a click action mutes an output. Red means muted; green means unmuted. A dash means unavailable." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,18" />
                     <CheckBox x:Name="UseMuteButtonToggle" Style="{StaticResource Switch}" IsChecked="{Binding UseMuteButton}" Content="Show a dedicated mute button" AutomationProperties.Name="Use dedicated mute button" />
                     <TextBlock Text="When enabled, left-click actions use the speaker button and dragging adjusts volume. Otherwise, the left-click action applies across the wheel." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
                   </StackPanel>
@@ -384,7 +363,6 @@
                     <TextBlock Text="{Binding ShiftStepLabel}" Foreground="#A3E6D9" TextWrapping="Wrap" />
                     <Slider x:Name="ShiftStepSlider" Minimum="5" Maximum="50" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding ShiftStepPercent}" AutomationProperties.Name="Shift precision increment" Margin="0,8,0,8" />
                     <TextBlock Text="Hold Shift to use this larger step size." Foreground="#98AABC" TextWrapping="Wrap" />
-                    <CheckBox x:Name="ShowShiftMarkersToggle" Style="{StaticResource Switch}" IsChecked="{Binding ShowShiftMarkers}" Content="Show Shift increment dots" Margin="0,16,0,0" />
                     <TextBlock Text="Hide delay" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding IdleLabel}" Foreground="#A3E6D9" TextWrapping="Wrap" />
                     <Slider x:Name="HideDelaySlider" Minimum="500" Maximum="5000" TickFrequency="250" IsSnapToTickEnabled="True" Value="{Binding IdleMilliseconds}" AutomationProperties.Name="Wheel hide delay" Margin="0,8,0,0" />
@@ -415,7 +393,7 @@
                 <RowDefinition Height="*" />
               </Grid.RowDefinitions>
               <StackPanel>
-                <TextBlock Text="Effects" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="Appearance" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <TextBlock Text="Adjust glow, particles, motion, and colors." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,7,0,20" />
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
                   <StackPanel>
@@ -431,8 +409,28 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                   <StackPanel>
-                    <Expander Header="Animations" IsExpanded="False" Margin="0,0,0,12">
-                      <StackPanel x:Name="AnimationOptionsPanel" IsEnabled="{Binding AnimationControlsEnabled}" Margin="16,4,16,16">
+                <Expander Header="Wheel size" IsExpanded="True" Margin="0,0,0,12">
+                  <StackPanel Margin="16,4,16,16">
+                    <Grid>
+                      <TextBlock Text="{Binding WheelSizeLabel}" HorizontalAlignment="Left" Foreground="#A3E6D9" FontSize="18" TextWrapping="Wrap" />
+                    </Grid>
+                    <Slider x:Name="WheelSizeSlider" Minimum="50" Maximum="180" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding WheelSizePercent}" Margin="0,22,0,10" AutomationProperties.Name="Overlay wheel size" />
+                    <Grid>
+                      <TextBlock Text="50%" Foreground="#8596A6" FontSize="10" TextWrapping="Wrap" />
+                      <TextBlock Text="180%" Foreground="#8596A6" FontSize="10" HorizontalAlignment="Right" TextWrapping="Wrap" />
+                    </Grid>
+                    <TextBlock Text="Scales the complete wheel. Large layouts fit the display automatically." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,20,0,0" />
+                  </StackPanel>
+                </Expander>
+
+<Expander Header="Wheel indicators" IsExpanded="False" Margin="0,0,0,12"><StackPanel Margin="16,4,16,16">                    <CheckBox x:Name="OutputMuteIndicatorsToggle" Style="{StaticResource Switch}" IsChecked="{Binding ShowOutputMuteIndicators}" Content="Show output mute indicators" Margin="0,0,0,12" />
+                    <TextBlock Text="Shows L/R badges when a click action mutes an output. Red means muted; green means unmuted. A dash means unavailable." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,18" />
+                    <CheckBox x:Name="ShowShiftMarkersToggle" Style="{StaticResource Switch}" IsChecked="{Binding ShowShiftMarkers}" Content="Show Shift increment dots" Margin="0,16,0,0" />
+</StackPanel></Expander>                    <Expander Header="Animations" IsExpanded="False" Margin="0,0,0,12">
+                      <StackPanel x:Name="AnimationOptionsPanel" IsEnabled="{Binding AnimationControlsEnabled}" Margin="16,4,16,16"><StackPanel Margin="0,0,0,20">
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AnimateWheels}" IsEnabled="{Binding AnimationControlsEnabled}" Content="Toggle animations" AutomationProperties.Name="Animate wheels" />
+                    <TextBlock Text="Enable app and wheel animations." Foreground="#98AABC" TextWrapping="Wrap" Margin="58,12,0,0" />
+                  </StackPanel>
                         <CheckBox Style="{StaticResource Switch}" Content="Opening and closing" IsChecked="{Binding AnimateOverlay}" Margin="0,0,0,14" />
                         <CheckBox Style="{StaticResource Switch}" Content="Page and button transitions" IsChecked="{Binding AnimateInterface}" Margin="0,0,0,14" />
                         <CheckBox Style="{StaticResource Switch}" Content="Hover feedback" IsChecked="{Binding AnimateHover}" Margin="0,0,0,14" />
@@ -499,7 +497,7 @@
                       </StackPanel>
                     </Expander>
                     <Button Content="Restore defaults" Tag="Effects" Click="RestoreDefaults" HorizontalAlignment="Left" Margin="0,24,0,8" />
-                    <TextBlock Text="Resets effect settings and colors." Foreground="#8095A5" TextWrapping="Wrap" />
+                    <TextBlock Text="Resets wheel size, animations, indicators, effects, and colors." Foreground="#8095A5" TextWrapping="Wrap" />
                   </StackPanel>
                 </ScrollViewer>
                 <Border Background="#111B25" CornerRadius="14" Padding="12" Grid.Column="1" VerticalAlignment="Top" Margin="18,0,0,0">
@@ -520,48 +518,35 @@
             </Grid>
             <ScrollViewer x:Name="ProfilesPage" IsEnabled="{Binding Connected}" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
               <StackPanel>
-                <TextBlock Text="Profiles" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="Save layouts and assign them to applications." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,7,0,20" />
-                <Border CornerRadius="14" Background="#151E29" Padding="18">
+                <TextBlock Text="Profiles" FontSize="26" FontWeight="SemiBold" />
+                <TextBlock Text="Save wheel layouts and switch them automatically for your apps." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,7,0,22" />
+                <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="22" Margin="0,0,0,16">
                   <StackPanel>
-                    <TextBlock Text="Active profile" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
-                    <ComboBox x:Name="ProfilePicker" ItemsSource="{Binding Profiles}" SelectedItem="{Binding ActiveProfile,Mode=TwoWay}" AutomationProperties.Name="Active profile">
-                      <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                          <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
-                        </DataTemplate>
-                      </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <TextBlock Text="Profile name" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
-                    <TextBox Text="{Binding ActiveProfile.Name,UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Profile name" />
-                    <Button Content="Manage profile  ▾" Click="OpenActions" HorizontalAlignment="Left" Margin="0,16,0,0">
-                      <Button.ContextMenu>
-                        <ContextMenu>
-                          <MenuItem Header="＋ New profile" Click="NewProfile" />
-                          <MenuItem Header="Duplicate layout" Click="DuplicateProfile" />
-                          <MenuItem Header="Remove profile" Click="RemoveProfile" />
-                          <MenuItem Header="Export profile" Click="ExportProfile" />
-                          <MenuItem Header="Export all" Click="ExportAllProfiles" />
-                          <MenuItem Header="Import profiles" Click="ImportProfiles" />
-                        </ContextMenu>
-                      </Button.ContextMenu>
-                    </Button>
-                    <TextBlock Text="Saves wheel appearance, order, and bindings. Switching profiles preserves audio levels." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,20,0,0" />
+                    <TextBlock Text="Your layouts" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
+                    <TextBlock Text="Choose a layout to edit. Audio levels stay unchanged when switching." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,0,0,18" />
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                      <StackPanel Margin="0,0,16,0"><TextBlock Text="Active profile" Margin="0,0,0,8" Foreground="#98AABC"/><ComboBox x:Name="ProfilePicker" ItemsSource="{Binding Profiles}" SelectedItem="{Binding ActiveProfile,Mode=TwoWay}" DisplayMemberPath="Name" AutomationProperties.Name="Active profile" /></StackPanel>
+                      <StackPanel Grid.Column="1"><TextBlock Text="Profile name" Margin="0,0,0,8" Foreground="#98AABC"/><TextBox Text="{Binding ActiveProfile.Name,UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Profile name" /></StackPanel>
+                    </Grid>
+                    <WrapPanel Margin="0,20,0,0"><Button Content="New profile" Click="NewProfile" Background="#73DCC8" Foreground="#10231F"/><Button x:Name="DuplicateProfileButton" Content="Duplicate layout" Click="DuplicateProfile" /></WrapPanel>
                   </StackPanel>
                 </Border>
-                <Expander Header="Automatic profile switching" IsExpanded="False" Margin="0,0,0,12">
-                  <StackPanel Margin="16,4,16,16">
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AutomaticProfilesEnabled}" Content="Switch profiles with the focused app" />
-                    <TextBlock Text="{Binding AutomaticProfileStatus}" Foreground="#A3E6D9" TextWrapping="Wrap" Margin="0,15,0,8" />
-                    <TextBlock Text="App executables for this profile" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
-                    <TextBox x:Name="ProfileApplicationsBox" Text="{Binding ActiveProfile.Applications,UpdateSourceTrigger=PropertyChanged}" Height="65" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" MaxLength="2048" AutomationProperties.Name="Apps that activate this profile" />
-                    <Button Content="Browse for app…" Click="AddProfileApp" HorizontalAlignment="Left" Margin="0,12,0,14" />
-                    <TextBlock Text="Enter executable names separated by commas. The first match applies. Unmatched apps restore the manual profile." Foreground="#98AABC" TextWrapping="Wrap" />
-                    <TextBlock Text="Exports include layout settings and app rules, excluding live audio levels. Imports add profiles without overwriting existing layouts." Foreground="#8095A5" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,0" />
+                <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="22" Margin="0,0,0,16">
+                  <StackPanel>
+                    <TextBlock Text="Automatic switching" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" />
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AutomaticProfilesEnabled}" Content="Switch with the focused app" />
+                    <TextBlock Text="{Binding AutomaticProfileStatus}" Foreground="#A3E6D9" TextWrapping="Wrap" Margin="0,16,0,20" />
+                    <TextBlock Text="Apps assigned to this profile" Foreground="#98AABC" Margin="0,0,0,8" />
+                    <TextBox x:Name="ProfileApplicationsBox" Text="{Binding ActiveProfile.Applications,UpdateSourceTrigger=PropertyChanged}" MinHeight="85" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" MaxLength="2048" AutomationProperties.Name="Apps that activate this profile" />
+                    <TextBlock Text="Enter executable names separated by commas, such as discord.exe, game.exe. Unmatched apps restore your manual profile." Foreground="#98AABC" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,14" />
+                    <Button Content="Browse for app…" Click="AddProfileApp" HorizontalAlignment="Left" />
                   </StackPanel>
+                </Border>
+                <Expander Header="Import and export" IsExpanded="False" Margin="0,0,0,16">
+                  <StackPanel Margin="22,8,22,22"><TextBlock Text="Share layouts and app rules. Imports add profiles without replacing existing ones." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,0,0,16"/><WrapPanel><Button Content="Import profiles" Click="ImportProfiles"/><Button Content="Export profile" Click="ExportProfile"/><Button Content="Export all" Click="ExportAllProfiles"/></WrapPanel></StackPanel>
                 </Expander>
-                <Button Content="Restore defaults" Tag="Profiles" Click="RestoreDefaults" HorizontalAlignment="Left" Margin="0,24,0,8" />
-                <TextBlock Text="Disables automatic switching and clears this profile’s app rules. Preserves layouts." Foreground="#8095A5" TextWrapping="Wrap" />
+                <WrapPanel Margin="0,8,0,8"><Button x:Name="RemoveProfileButton" Content="Remove profile" Click="RemoveProfile" Background="#36232C" Foreground="#F1B8C4"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Style.Triggers><DataTrigger Binding="{Binding Profiles.Count}" Value="1"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers></Style></Button.Style></Button><Button Content="Restore defaults" Tag="Profiles" Click="RestoreDefaults"/></WrapPanel>
+                <TextBlock Text="Restore defaults clears this profile's app rules and disables automatic switching. Layouts are kept." Foreground="#8095A5" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,12" />
               </StackPanel>
             </ScrollViewer>
             <ScrollViewer x:Name="PlacementPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">

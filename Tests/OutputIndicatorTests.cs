@@ -21,7 +21,7 @@ internal static class OutputIndicatorTests
   wheel.LeftClickAction="Mute output";wheel.LeftClickOutput="b";Assert(wheel.OutputMuteIndicators.Length==2&&wheel.OutputMuteIndicators[0].Button=="L"&&wheel.OutputMuteIndicators[0].Muted==false,"Separate left/right targets must show separate states.");
   var window=new SettingsWindow(model);model.ShowOutputMuteIndicators=false;
   Assert(!((WheelControl)window.FindName("SelectedPreview")).ShowOutputMuteIndicators,"The setting must hide indicators in the actual configuration preview.");model.Save();Assert(!store.Load().ShowOutputMuteIndicators,"The indicator preference must survive reload.");
-  model.RestoreDefaults("Settings");Assert(model.ShowOutputMuteIndicators,"Restore defaults must enable output indicators.");
+  model.RestoreDefaults("Effects");Assert(model.ShowOutputMuteIndicators,"Restore defaults must enable output indicators.");
   using(var json=System.Text.Json.JsonDocument.Parse(File.ReadAllText(store.FilePath)))Assert(!json.RootElement.GetProperty("Wheels")[0].TryGetProperty("OutputMuteIndicators",out _),"Runtime output states must not be persisted.");
   var control=new WheelControl{Wheel=wheel,EffectsEnabled=false};control.Measure(new Size(300,120));control.Arrange(new Rect(0,0,300,120));
   foreach(var button in new[]{false,true}){control.UseMuteButton=button;control.InvalidateVisual();control.UpdateLayout();var bitmap=new RenderTargetBitmap(300,120,96,96,PixelFormats.Pbgra32);bitmap.Render(control);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using var file=File.Create(Path.Combine(directory,button?"indicators-with-button.png":"indicators.png"));encoder.Save(file);}

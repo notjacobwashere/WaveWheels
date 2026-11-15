@@ -26,7 +26,7 @@ internal static class CustomizationTests
         var wheel=vm.Wheels[0];wheel.ChannelId="fixture";wheel.MixId="";wheel.Available=true;wheel.Level=.5;wheel.MaximumVolumePercent=60;
         vm.ScreenEdge="Right";vm.EdgeDistance=100;vm.WheelSizePercent=145;vm.Effects.SparkCount=300;
         vm.RestoreDefaults("Placement");Assert(vm.ScreenEdge=="Left"&&vm.EdgeDistance==32&&vm.WheelSizePercent==145&&vm.Effects.SparkCount==300,"Placement reset must not change other pages.");
-        vm.RestoreDefaults("Settings");Assert(vm.WheelSizePercent==100&&vm.ScrollStepPercent==1&&vm.ShiftStepPercent==20&&vm.Effects.SparkCount==300&&vm.BlacklistedApplications.Count==0,"Settings reset must remain scoped and restore original values.");
+        vm.RestoreDefaults("Settings");Assert(vm.WheelSizePercent==145&&vm.ScrollStepPercent==1&&vm.ShiftStepPercent==20&&vm.Effects.SparkCount==300&&vm.BlacklistedApplications.Count==0,"Settings reset must remain scoped and restore original values.");
         vm.SelectedWheel=wheel;wheel.Name="Custom";wheel.Color="#FFFFFF";vm.RestoreDefaults("Wheels");Assert(wheel.ChannelId=="fixture"&&wheel.Name=="Music"&&wheel.MaximumVolumePercent==100,"Wheel reset must preserve channel bindings and identity.");
         var migrationStore=new SettingsStore(Path.Combine(directory,"beta1-migration"));
         Directory.CreateDirectory(Path.GetDirectoryName(migrationStore.FilePath)!);

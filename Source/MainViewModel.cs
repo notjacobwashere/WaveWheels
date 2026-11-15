@@ -57,9 +57,9 @@ public sealed class MainViewModel : Observable
         var d=new Preferences();
         switch(page)
         {
-            case "Effects":Effects.Reset();break;
+            case "Effects":Effects.Reset();WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ShowShiftMarkers=d.ShowShiftMarkers;ShowOutputMuteIndicators=d.ShowOutputMuteIndicators;break;
             case "Placement":ScreenEdge=d.ScreenEdge;MonitorId=d.MonitorId;PositionPercent=d.PositionPercent;WheelSpacing=d.WheelSpacing;EdgeDistance=d.EdgeDistance;break;
-            case "Settings":WheelSizePercent=d.WheelSizePercent;AnimateWheels=d.AnimateWheels;ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;ShowShiftMarkers=d.ShowShiftMarkers;UseMuteButton=d.UseMuteButton;ShowOutputMuteIndicators=d.ShowOutputMuteIndicators;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
+            case "Settings":ScrollStepPercent=d.ScrollStepPercent;ShiftStepPercent=d.ShiftStepPercent;UseMuteButton=d.UseMuteButton;ScrollAccelerationEnabled=d.ScrollAccelerationEnabled;IdleMilliseconds=d.IdleMilliseconds;ApplicationBlacklistEnabled=d.ApplicationBlacklistEnabled;BlacklistedApplications.Clear();RefreshInteractionPolicy();break;
             case "Wheels":EditorWheel?.ResetClicks();if(!Connected) {WindowsWheel.Name="Windows Audio";WindowsWheel.Color="#63CEA4";WindowsWheel.MaximumVolumePercent=100;}else if(SelectedWheel!=null) {var index=Wheels.IndexOf(SelectedWheel);var w=d.Wheels[Math.Max(0,index)%d.Wheels.Count];SelectedWheel.Name=index<3?w.Name:$"Wheel {index+1}";SelectedWheel.Color=w.Color;SelectedWheel.MaximumVolumePercent=100;}break;
             case "Profiles":AutomaticProfilesEnabled=false;if(ActiveProfile!=null)ActiveProfile.Applications="";break;
             case "Startup":StartupEnabled=false;break;

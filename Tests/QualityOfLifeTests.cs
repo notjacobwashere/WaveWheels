@@ -27,7 +27,7 @@ internal static class QualityOfLifeTests
         Assert(SettingsSearch.Find("SPARK density").First().Title=="Spark density"&&SettingsSearch.Find("boot").Any(e=>e.Section=="Startup"),"Search must support case-insensitive names and common keywords.");
         Assert(SettingsSearch.Find("   ").Length==0&&SettingsSearch.Find("no-such-setting").Length==0,"Blank and unmatched queries must not return unrelated settings.");
         window.NavigateToSetting(SettingsSearch.Find("shift dots").Single());Flush();
-        Assert(((FrameworkElement)window.FindName("SettingsPage")).Visibility==Visibility.Visible,"A search result must navigate to the real page.");
+        Assert(((FrameworkElement)window.FindName("EffectsPage")).Visibility==Visibility.Visible,"A search result must navigate to the real page.");
         for(DependencyObject? node=(FrameworkElement)window.FindName("ShowShiftMarkersToggle");node!=null;node=LogicalTreeHelper.GetParent(node))if(node is Expander expander)Assert(expander.IsExpanded,"Search navigation must expand the target section.");
         var notesPanel=(Expander)window.FindName("ReleaseNotesPanel");var notesButton=(Button)window.FindName("ReleaseNotesToggleButton");Flush();
         Assert(!notesPanel.IsExpanded&&notesPanel.Visibility==Visibility.Collapsed,"Release notes must occupy no space when closed.");

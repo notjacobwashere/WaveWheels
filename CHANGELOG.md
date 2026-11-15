@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2-beta.2
+
+- Moved wheel size, animation controls, Shift dots, and output-mute indicators to Appearance; updated search and page-scoped resets.
+- Redesigned Profiles with separate layout, automatic-switching, and transfer sections, direct actions, and consistent padding.
+- Removed the native context-menu gutter responsible for the white strip.
+
 ## 1.3.2-beta.1
 
 - Wait for app files to be released during graceful installer upgrades.

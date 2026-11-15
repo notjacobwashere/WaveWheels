@@ -10,12 +10,10 @@ internal static class RedesignTests
     internal static void Run(MainViewModel model,SettingsWindow window,FrameworkElement root)
     {
         ((Button)window.FindName("ProfilesNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
-        var menu=Children(root).OfType<Button>().First(b=>b.Content?.ToString()=="Manage profile  ▾").ContextMenu;
-        if(menu.Items.Count!=6)throw new Exception("Profile management must retain all six actions.");
         var count=model.Profiles.Count;var previous=model.ActiveProfile;
-        menu.Items.OfType<MenuItem>().Single(i=>i.Header.ToString()=="Duplicate layout").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        ((Button)window.FindName("DuplicateProfileButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         if(model.Profiles.Count!=count+1||model.ActiveProfile==previous)throw new Exception("The profile menu must duplicate the active layout.");
-        menu.Items.OfType<MenuItem>().Single(i=>i.Header.ToString()=="Remove profile").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        ((Button)window.FindName("RemoveProfileButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         if(model.Profiles.Count!=count)throw new Exception("The profile menu must remove the selected layout.");
         ((Button)window.FindName("SettingsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
         var group=Children((FrameworkElement)window.FindName("SettingsPage")).OfType<Expander>().Single(e=>e.Header.ToString()=="Scroll and Shift steps");group.IsExpanded=true;root.UpdateLayout();

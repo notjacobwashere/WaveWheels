@@ -18,14 +18,14 @@ internal sealed record SettingSearchEntry(string Title,string Section,string Tar
 internal static class SettingsSearch
 {
     internal static readonly SettingSearchEntry[] Entries={
-        new("Wheel size","Settings","WheelSizeSlider","scale zoom bigger smaller"),
-        new("Animations","Settings","Animate wheels","motion enable disable toggle"),
-        new("Shift increment dots","Settings","ShowShiftMarkersToggle","markers precision step"),
+        new("Wheel size","Effects","WheelSizeSlider","scale zoom bigger smaller"),
+        new("Animations","Effects","Animate wheels","motion enable disable toggle"),
+        new("Shift increment dots","Effects","ShowShiftMarkersToggle","markers precision step"),
         new("Shift volume step","Settings","ShiftStepSlider","increment precision faster"),
         new("Scroll volume step","Settings","ScrollStepSlider","increment wheel sensitivity"),
         new("Scroll acceleration","Settings","Accelerate fast scrolling","speed sensitivity"),
         new("Wheel hide delay","Settings","HideDelaySlider","timeout idle disappear"),
-        new("Output mute indicators","Settings","OutputMuteIndicatorsToggle","badge status left right muted unmuted"),
+        new("Output mute indicators","Effects","OutputMuteIndicatorsToggle","badge status left right muted unmuted"),
         new("Dedicated mute button","Settings","UseMuteButtonToggle","speaker click unmute"),
         new("Application exclusions","Settings","BlacklistEnabledToggle","blacklist games pause disable"),
         new("Start with Windows","Startup","Start with Windows","startup boot sign-in launch"),
