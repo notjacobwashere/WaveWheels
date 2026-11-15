@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.2
+
+- Redesigned Profiles with clearer sections for layouts, automatic switching, and import/export, plus improved spacing and direct profile actions.
+- Moved wheel size, animations, Shift dots, and output-mute indicators into Appearance. Updated search and Restore defaults to match.
+- Fixed the white strip in context menus.
+- Release notes now have a styled View/Hide button and only occupy space when open. Added View on GitHub beside it.
+- Unified stable and beta install controls with consistent wording, styling, and placement.
+- Improved installer upgrades by waiting for app files to be released before replacing them.
+
 ## 1.3.2-beta.3
 
 - Unified stable and beta installation into one Download and install action with consistent placement and styling.
