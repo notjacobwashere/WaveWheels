@@ -40,15 +40,13 @@ The configuration window stays closed on normal launch and at Windows sign-in. C
 
 Scroll at your configured monitor edge to reveal the overlay. The entire opening scroll burst leaves volume unchanged. Stop scrolling for at least **250 ms**, then hover a wheel and scroll again to change its volume. Scrolling on the activation strip never adjusts the last hovered wheel and is consumed so it does not scroll the application underneath. Click a wheel to mute or unmute; mute retains its level. An optional dedicated mute button limits mute clicks to the speaker icon and enables drag adjustment. Changed digits roll while unchanged digits stay still. Normal adjustments produce a slight bob; reaching maximum triggers glow and sparks. Pushing beyond the cap produces a small nudge and bar recoil without changing audio.
 
-The sidebar has four sections: **Wheels**, **Appearance**, **Settings**, and **Updates**. Related pages are arranged in tabs. Open **Settings → Controls** to choose wheel size, mute behavior, scroll tuning, or disable animations. Larger stacks fit the available display height. Drag the grip in the wheel list, use the row arrows, or press **Alt+Up/Down** to reorder.
-
-![Settings page showing wheel size and motion controls, using example data](docs/images/settings.png)
+The sidebar has four sections: **Wheels**, **Appearance**, **Settings**, and **Updates**. Related pages are arranged in tabs. Open **Settings → Controls** to adjust mute behavior, scroll and Shift steps, and hide delay. Open **Appearance → Effects** to resize wheels, adjust animations, or change wheel indicators. Larger stacks fit the available display height. Drag the grip in the wheel list, use the row arrows, or press **Alt+Up/Down** to reorder.
 
 Settings save automatically in `%LOCALAPPDATA%\WaveWheels\settings.json`. They are separate from the app folder. No personal settings are bundled in downloads.
 
 ## Effects
 
-**Appearance → Effects** includes individual animation switches and **Performance mode**, which locks animations off while preserving your choices. It also provides a live preview and controls for bloom, sparks, mute movement/timing, and surface colors. **Restore defaults** returns every effect to its original value. Each customization page has its own scoped reset; wheel resets retain channel bindings, and profile resets retain saved layouts.
+In **Appearance → Effects**, expand **Wheel size** to resize the overlay, **Animations** to toggle all or individual animations, or **Wheel indicators** to show or hide Shift increment dots and output-mute indicators. **Performance mode** locks animations off while preserving your choices. It also provides a live preview and controls for bloom, sparks, mute movement/timing, and surface colors. **Restore defaults** on Effects resets wheel size, animation settings, wheel indicators, and the other effects on that page. Each customization page has its own scoped reset; wheel resets retain channel bindings, and profile resets retain saved layouts.
 
 
 ## Profiles, placement, and updates
@@ -64,11 +62,11 @@ On **Profiles**, turn on automatic switching and add executable names such as `d
 
 Use **Export profile** or **Export all** to save a `.wavewheels.json` file. **Import profiles** adds independent copies and resolves duplicate names. Files preserve wheels, bindings, volume limits, and app rules, but exclude live levels and global settings. Check channel bindings when moving between PCs.
 
-In **Settings**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. Fractional hardware input accumulates into complete configured steps, with fresh input state after a volume boundary. Hold **Shift** over a wheel to snap between larger increments, with a 180 ms cooldown. Its separate setting defaults to 20% and supports 5–50%. **Show Shift increment dots** is off by default; enable it for dots at the snap positions, without numeric labels. **Toggle animations** controls opening, hover, volume, mute, and reorder motion, respecting Windows motion preferences. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
+In **Settings → Controls → Scroll and Shift steps**, choose 1–10% per scroll notch, enable or disable acceleration, and set the hide delay from 0.5–5 seconds. Fractional hardware input accumulates into complete configured steps, with fresh input state after a volume boundary. Hold **Shift** over a wheel to snap between larger increments, with a 180 ms cooldown. Its separate setting defaults to 20% and supports 5–50%. **Show Shift increment dots** is on by default for new installs and marks snap positions with dots. WaveWheels preserves your saved preference when you upgrade. **Toggle animations** controls opening, hover, volume, mute, and reorder motion, respecting Windows motion preferences. In each wheel editor, set **Maximum volume**. The cap applies to changes through WaveWheels; external mixer controls can still exceed it. Duplicate wheels targeting the same channel and mix use the lowest cap in the active layout. Setting a limit does not immediately change the channel volume.
 
 ## Application blacklist
 
-In **Settings → App blacklist**, add an executable name such as `game.exe`, or use **Browse app**. Names match exactly and case-insensitively, including dotted names; window titles and wildcards are never used. While a listed executable is focused, WaveWheels hides its overlay and ignores volume, mute, and preview interactions. Other apps remain unaffected, and configuration remains accessible from the tray.
+In **Settings → Controls → Application exclusions**, add an executable name such as `game.exe` to the app blacklist, or use **Browse app**. Names match exactly and case-insensitively, including dotted names; window titles and wildcards are never used. While a listed executable is focused, WaveWheels hides its overlay and ignores volume, mute, and preview interactions. Other apps remain unaffected, and configuration remains accessible from the tray.
 
 **Enable app blacklist** turns suppression on or off without removing entries. It starts enabled with an empty list, which has no effect. Use **Remove selected** to delete an entry. Up to 50 names are saved locally; no foreground-app history is recorded or sent anywhere. Automatic profile switching can stay enabled independently.
 
@@ -92,7 +90,7 @@ The default fallback name is **Windows Audio**. Channel and mix-scope fields are
 
 Windows master volume uses Microsoft's [Core Audio endpoint-volume API](https://learn.microsoft.com/en-us/windows/win32/api/endpointvolume/nn-endpointvolume-iaudioendpointvolume). Tests use an injected backend; the local native smoke check only reads volume and mute.
 
-By default, speaker buttons are hidden: click anywhere on the wheel or its label to mute/unmute, and scroll to change volume. **Settings → Show a dedicated mute button** restores the speaker control; only that button toggles mute in this mode, and dragging elsewhere adjusts volume. Restore defaults turns button mode off.
+By default, speaker buttons are hidden: click anywhere on the wheel or its label to mute/unmute, and scroll to change volume. **Settings → Controls → Mute behavior → Show a dedicated mute button** restores the speaker control; only that button toggles mute in this mode, and dragging elsewhere adjusts volume. Restore defaults turns button mode off.
 
 Wheels now open in a short stagger, Shift volume steps give a directional spring bounce, and unmuting restores the normal color with a soft pulse. These effects respect the motion setting and Windows reduced motion.
 
