@@ -533,7 +533,21 @@
                       <StackPanel Margin="0,0,16,0"><TextBlock Text="Active profile" Margin="0,0,0,8" Foreground="#98AABC"/><ComboBox x:Name="ProfilePicker" ItemsSource="{Binding Profiles}" SelectedItem="{Binding ActiveProfile,Mode=TwoWay}" DisplayMemberPath="Name" AutomationProperties.Name="Active profile" /></StackPanel>
                       <StackPanel Grid.Column="1"><TextBlock Text="Profile name" Margin="0,0,0,8" Foreground="#98AABC"/><TextBox Text="{Binding ActiveProfile.Name,UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Profile name" /></StackPanel>
                     </Grid>
-                    <WrapPanel Margin="0,20,0,0"><Button Content="New profile" Click="NewProfile" Background="#73DCC8" Foreground="#10231F"/><Button x:Name="DuplicateProfileButton" Content="Duplicate layout" Click="DuplicateProfile" /></WrapPanel>
+                    <WrapPanel Margin="0,20,0,0">
+                      <Button Content="New profile" Click="NewProfile" Background="#73DCC8" Foreground="#10231F"/>
+                      <Button x:Name="DuplicateProfileButton" Content="Duplicate layout" Click="DuplicateProfile" />
+                      <Button x:Name="RemoveProfileButton" Content="Remove profile" Click="RemoveProfile" Background="#36232C" Foreground="#F1B8C4">
+                        <Button.Style>
+                          <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding Profiles.Count}" Value="1">
+                                <Setter Property="IsEnabled" Value="False" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Button.Style>
+                      </Button>
+                    </WrapPanel>
                   </StackPanel>
                 </Border>
                 <Border Background="#151E29" BorderBrush="#293A49" BorderThickness="1" CornerRadius="12" Padding="22" Margin="0,0,0,16">
@@ -550,7 +564,7 @@
                 <Expander Header="Import and export" IsExpanded="False" Margin="0,0,0,16">
                   <StackPanel Margin="22,8,22,22"><TextBlock Text="Share layouts and app rules. Imports add profiles without replacing existing ones." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,0,0,16"/><WrapPanel><Button Content="Import profiles" Click="ImportProfiles"/><Button Content="Export profile" Click="ExportProfile"/><Button Content="Export all" Click="ExportAllProfiles"/></WrapPanel></StackPanel>
                 </Expander>
-                <WrapPanel Margin="0,8,0,8"><Button x:Name="RemoveProfileButton" Content="Remove profile" Click="RemoveProfile" Background="#36232C" Foreground="#F1B8C4"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Style.Triggers><DataTrigger Binding="{Binding Profiles.Count}" Value="1"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers></Style></Button.Style></Button><Button Content="Restore defaults" Tag="Profiles" Click="RestoreDefaults"/></WrapPanel>
+                <WrapPanel Margin="0,8,0,8"><Button Content="Restore defaults" Tag="Profiles" Click="RestoreDefaults"/></WrapPanel>
                 <TextBlock Text="Restore defaults clears this profile's app rules and disables automatic switching. Layouts are kept." Foreground="#8095A5" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,12" />
               </StackPanel>
             </ScrollViewer>

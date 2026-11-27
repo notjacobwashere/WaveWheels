@@ -27,7 +27,7 @@ internal static class ClickActionTests
         wheel.LeftClickAction="bad";Assert(wheel.LeftClickAction=="None","Unknown actions must fail closed.");
         wheel.LeftClickAction="Mute output";wheel.LeftClickOutput="a";wheel.RightClickVolume=35;model.Save();var saved=store.Load().Wheels[0];
         Assert(saved.LeftClickAction=="Mute output"&&saved.LeftClickOutput=="a"&&saved.RightClickVolume==35,"Click settings must survive save/load.");
-        var copied=ProfileTransfer.CloneWheel(wheel);Assert(copied.LeftClickAction==wheel.LeftClickAction&&copied.LeftClickOutput=="a"&&copied.RightClickVolume==35,"Profile copies must preserve click settings.");
+        var copied=ProfileTransfer.Clone(new WheelProfile { Wheels = new() { wheel } }).Wheels[0];Assert(copied.LeftClickAction==wheel.LeftClickAction&&copied.LeftClickOutput=="a"&&copied.RightClickVolume==35,"Profile copies must preserve click settings.");
         var imported=ProfileTransfer.Parse(ProfileTransfer.Serialize(new[]{model.ActiveProfile!}))[0].Wheels[0];Assert(imported.LeftClickOutput=="a"&&imported.RightClickVolume==35,"Profile export/import must preserve actions.");
         var window=new SettingsWindow(model);Assert(window.FindName("LeftClickSection") is Expander&&window.FindName("RightClickSection") is Expander,"Both click actions must have their own wheel sections.");
         var frame=new System.Windows.Threading.DispatcherFrame();System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,new Action(()=>frame.Continue=false));System.Windows.Threading.Dispatcher.PushFrame(frame);

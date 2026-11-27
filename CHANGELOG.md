@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3-beta.2
+
+- Moved **Remove profile** next to **Duplicate layout**.
+- Duplicated layouts now include every saved profile setting, including automatic switching rules and per-wheel click actions. Each copy can be edited independently.
+
 ## 1.3.3-beta.1
 
 - Fixed volume scroll steps drifting after hitting 100% or a wheel's volume limit. With a 3% step, scrolling down from 100% now gives 99%, 96%, then 93%.

@@ -10,10 +10,29 @@ internal static class RedesignTests
     internal static void Run(MainViewModel model,SettingsWindow window,FrameworkElement root)
     {
         ((Button)window.FindName("ProfilesNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
-        var count=model.Profiles.Count;var previous=model.ActiveProfile;
-        ((Button)window.FindName("DuplicateProfileButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        if(model.Profiles.Count!=count+1||model.ActiveProfile==previous)throw new Exception("The profile menu must duplicate the active layout.");
-        ((Button)window.FindName("RemoveProfileButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var duplicateButton = (Button)window.FindName("DuplicateProfileButton");
+        var removeButton = (Button)window.FindName("RemoveProfileButton");
+        var actions = (Panel)duplicateButton.Parent;
+        if (actions.Children.IndexOf(removeButton) != actions.Children.IndexOf(duplicateButton) + 1)
+            throw new Exception("Remove profile must follow Duplicate layout.");
+        var count = model.Profiles.Count;
+        var previous = model.ActiveProfile!;
+        var previousRules = previous.Applications;
+        previous.Applications = "music.exe, game.exe";
+        var originalWheels = model.Wheels.ToArray();
+
+        duplicateButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var copy = model.ActiveProfile!;
+        if (model.Profiles.Count != count + 1 || copy.Id == previous.Id || copy.Applications != previous.Applications ||
+            !model.Wheels.Select(w => w.Name).SequenceEqual(originalWheels.Select(w => w.Name)) ||
+            model.Wheels.Zip(originalWheels).Any(pair => pair.First.Id == pair.Second.Id))
+            throw new Exception("Duplicate layout must copy app rules and the ordered wheels with fresh IDs.");
+        model.Wheels[0].Name = "Independent copy";
+        copy.Applications = "";
+        if (originalWheels[0].Name == "Independent copy" || previous.Applications != "music.exe, game.exe")
+            throw new Exception("Editing a duplicate must not edit the original layout.");
+        previous.Applications = previousRules;
+        removeButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         if(model.Profiles.Count!=count)throw new Exception("The profile menu must remove the selected layout.");
         ((Button)window.FindName("SettingsNav")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));root.UpdateLayout();
         var group=Children((FrameworkElement)window.FindName("SettingsPage")).OfType<Expander>().Single(e=>e.Header.ToString()=="Scroll and Shift steps");group.IsExpanded=true;root.UpdateLayout();

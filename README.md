@@ -51,7 +51,7 @@ In **Appearance → Effects**, expand **Wheel size** to resize the overlay, **An
 
 ## Profiles, placement, and updates
 
-Use **Wheels → Profiles** to create, duplicate, rename, or remove layouts. Each profile keeps its wheel count, ordering, names, colors, and channel/mix bindings. The first launch migrates existing wheels into **Default** without changing mixer volumes. The tray's **Profiles** submenu switches layouts quickly. Size and placement are shared across profiles.
+Use **Wheels → Profiles** to create, duplicate, rename, or remove layouts. Duplicate layout copies the wheel order, names, colors, channel and mix bindings, volume limits, both click actions, and automatic switching rules. If more than one profile matches an app, the first matching profile takes priority. The first launch migrates existing wheels into **Default** without changing mixer volumes. The tray's **Profiles** submenu switches layouts quickly. Size and placement are shared across profiles.
 
 Use **Appearance → Placement** to choose any of the four edges, all displays or a specific display, the position along that edge, and spacing between wheels. The activation strip is a reveal area, not a fader; move onto a wheel to adjust it.
 

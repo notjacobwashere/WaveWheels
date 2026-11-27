@@ -382,7 +382,25 @@ public sealed class MainViewModel : Observable
     public void AddProfile(bool duplicate)
     {
         if(Profiles.Count>=20) {Message="You can keep up to 20 profiles.";return;}
-        var profile=new WheelProfile { Name=duplicate?(ActiveProfile?.Name??"Profile")+" copy":"Profile "+(Profiles.Count+1),Wheels=duplicate?Wheels.Select(ProfileTransfer.CloneWheel).ToList():new(){new Wheel {Name="New wheel"}} };
+        WheelProfile profile;
+        if (duplicate && activeProfile is { } source)
+        {
+            // The active wheel list includes edits that have not reached the save timer yet.
+            source.Wheels = Wheels.ToList();
+            profile = ProfileTransfer.Clone(source);
+            const string suffix = " copy";
+            var length = Math.Min(source.Name.Length, 40 - suffix.Length);
+            if (char.IsHighSurrogate(source.Name[length - 1])) length--;
+            profile.Name = source.Name[..length] + suffix;
+        }
+        else
+        {
+            profile = new WheelProfile
+            {
+                Name = $"Profile {Profiles.Count + 1}",
+                Wheels = new() { new Wheel { Name = "New wheel" } }
+            };
+        }
         profile.PropertyChanged+=ProfileChanged;Profiles.Add(profile);ActiveProfile=profile;
     }
     public void RemoveProfile()
