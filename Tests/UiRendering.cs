@@ -39,6 +39,7 @@ internal static class UiRendering
                 foreach(var wheel in vm.Wheels)wheel.MaximumVolumePercent=100;
                 vm.Message="";
                 var window=new SettingsWindow(vm);
+                if (((Expander)window.FindName("WheelAppearanceSection")).IsExpanded) throw new Exception("Wheel Appearance must start collapsed.");
                 UpdateTests.ViewModel(Path.Combine(Path.GetDirectoryName(path)!,"update-lifecycle-"+Guid.NewGuid().ToString("N")));
                 Console.WriteLine("UI: constructed studio");
                 var root=(FrameworkElement)window.Content;

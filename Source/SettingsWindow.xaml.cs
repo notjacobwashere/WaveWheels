@@ -73,7 +73,7 @@ public partial class SettingsWindow : Window
         void PreviewInputSettings() {SelectedPreview.ScrollStepPercent=model.ScrollStepPercent;SelectedPreview.ShiftStepPercent=model.ShiftStepPercent;SelectedPreview.ShowShiftMarkers=model.ShowShiftMarkers;SelectedPreview.ShowOutputMuteIndicators=model.ShowOutputMuteIndicators;SelectedPreview.ScrollAccelerationEnabled=model.ScrollAccelerationEnabled;SelectedPreview.ResetScroll();}
         PreviewInputSettings();model.InputSettingsChanged+=PreviewInputSettings;
         RefreshNavigation();
-        Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); } };
+        Closing += (_,e) => { if (!App.Exiting) { e.Cancel = true; model.Save(); Hide(); WheelAppearanceSection.IsExpanded = false; } };
         SourceInitialized += (_,_) => { try { var preference=2;Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle,33,ref preference,4); } catch { } };
         Activated += (_,_) => { model.RefreshMonitors();model.Changed(nameof(model.StartupEnabled)); model.Changed(nameof(model.StartupDescription)); };
     }

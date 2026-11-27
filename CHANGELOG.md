@@ -4,6 +4,7 @@
 
 - Fixed volume scroll steps drifting after hitting 100% or a wheel's volume limit. With a 3% step, scrolling down from 100% now gives 99%, 96%, then 93%.
 - Moved Wheel hide delay to Overlay timing under Settings → Controls.
+- The Appearance section on the Wheels page now starts collapsed.
 
 ## 1.3.2
 

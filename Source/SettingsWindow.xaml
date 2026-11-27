@@ -247,7 +247,7 @@
                         </Grid>
                       </StackPanel>
                     </Border>
-                    <Expander Header="Appearance" IsExpanded="True" Margin="0,0,0,12">
+                    <Expander x:Name="WheelAppearanceSection" Header="Appearance" IsExpanded="False" Margin="0,0,0,12">
                       <StackPanel Margin="16,4,16,16">
                         <TextBlock Text="Name" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                         <TextBox Text="{Binding EditorWheel.Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="32" AutomationProperties.Name="Wheel name" />
