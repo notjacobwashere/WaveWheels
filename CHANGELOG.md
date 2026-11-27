@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3-beta.1
+
+- Fixed volume scroll steps drifting after hitting 100% or a wheel's volume limit. With a 3% step, scrolling down from 100% now gives 99%, 96%, then 93%.
+- Moved Wheel hide delay to Overlay timing under Settings → Controls.
+
 ## 1.3.2
 
 - Redesigned Profiles with clearer sections for layouts, automatic switching, and import/export, plus improved spacing and direct profile actions.

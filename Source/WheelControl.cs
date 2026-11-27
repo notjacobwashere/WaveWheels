@@ -215,6 +215,7 @@ public sealed class WheelControl : FrameworkElement
         if(PrecisionMode==enabled)return;
         PrecisionMode=enabled;ResetScroll();InvalidateVisual();
     }
+    internal Func<Wheel, int>? GetVolumeCap { get; set; }
     public int ScrollStepPercent {get;set;}=1;
     public bool ScrollAccelerationEnabled {get;set;}=true;
     private bool active;
@@ -378,14 +379,29 @@ public sealed class WheelControl : FrameworkElement
             else if(Wheel.Level>=Wheel.MaximumVolumePercent/100d&&delta>0||Wheel.Level<=0&&delta<0)StartBoundary(delta,now);
             return;
         }
-        if((Wheel.Level>=Wheel.MaximumVolumePercent/100d&&delta>0)||(Wheel.Level<=0&&delta<0)) {scroll.Reset();StartBoundary(delta,now);return;}
+        var capPercent = GetVolumeCap?.Invoke(Wheel) ?? Wheel.MaximumVolumePercent;
+        var cap = capPercent / 100d;
+        var atCap = Math.Abs(Wheel.Level - cap) < 1e-7;
+        if (((Wheel.Level >= cap || atCap) && delta > 0) || (Wheel.Level <= 0 && delta < 0))
+        {
+            scroll.Reset();
+            StartBoundary(delta, now);
+            return;
+        }
         var steps=scroll.Adjust(delta,ScrollStepPercent,ScrollAccelerationEnabled,now);
         if (steps == 0) return;
-        var requested=Wheel.Level+steps*.01;
+        var requested = Wheel.Level + steps / 100d;
+        if (atCap && steps < 0)
+        {
+            // A partial step into the cap must not shift the zero-based scroll track.
+            var stepSize = Math.Clamp(ScrollStepPercent, 1, 10);
+            var ceilingStep = ((capPercent + stepSize - 1) / stepSize) * stepSize;
+            requested = (ceilingStep + steps) / 100d;
+        }
         RequestVolumeWithBob(requested);
         if(Math.Abs(Wheel.Level-requested)>1e-7)StartBoundary(delta,now);
         // Discard acceleration and fractions consumed by a boundary (including a shared target's stricter cap).
-        if(Wheel.Level<=0||Wheel.Level>=Wheel.MaximumVolumePercent/100d||Math.Abs(Wheel.Level-requested)>1e-7)scroll.Reset();
+        if (Wheel.Level <= 0 || Wheel.Level >= cap - 1e-7 || Math.Abs(Wheel.Level - requested) > 1e-7) scroll.Reset();
     }
     public void ResetScroll() {scroll.Reset();snap.Reset();}
     internal bool TryMuteAt(Point point)=>TryClickAt(point,false);

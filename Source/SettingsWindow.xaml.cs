@@ -61,6 +61,7 @@ public partial class SettingsWindow : Window
         Loaded+=(_,_)=>QueueEditorBindings();
         IsVisibleChanged+=(_,_)=> {if(IsVisible)QueueEditorBindings();};
         QueueEditorBindings();
+        SelectedPreview.GetVolumeCap = model.GetVolumeCap;
         SelectedPreview.VolumeRequested += model.SetLevel;
         SelectedPreview.MuteRequested += model.ToggleMute;SelectedPreview.ClickRequested+=model.ExecuteClick;
         EffectsDemo.Wheel=new Wheel{Name="Preview",Color="#DA5DAD",Available=true,Level=.68};

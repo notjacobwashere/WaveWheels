@@ -29,6 +29,10 @@ internal static class QualityOfLifeTests
         window.NavigateToSetting(SettingsSearch.Find("shift dots").Single());Flush();
         Assert(((FrameworkElement)window.FindName("EffectsPage")).Visibility==Visibility.Visible,"A search result must navigate to the real page.");
         for(DependencyObject? node=(FrameworkElement)window.FindName("ShowShiftMarkersToggle");node!=null;node=LogicalTreeHelper.GetParent(node))if(node is Expander expander)Assert(expander.IsExpanded,"Search navigation must expand the target section.");
+        window.NavigateToSetting(SettingsSearch.Find("wheel hide delay").Single());Flush();
+        var delaySlider = (Slider)window.FindName("HideDelaySlider");
+        var timing = LogicalTreeHelper.GetParent(LogicalTreeHelper.GetParent(delaySlider)) as Expander;
+        Assert(timing?.Header?.ToString() == "Overlay timing" && timing.IsExpanded, "Hide delay search must open Overlay timing.");
         var notesPanel=(Expander)window.FindName("ReleaseNotesPanel");var notesButton=(Button)window.FindName("ReleaseNotesToggleButton");Flush();
         Assert(!notesPanel.IsExpanded&&notesPanel.Visibility==Visibility.Collapsed,"Release notes must occupy no space when closed.");
         notesButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Flush();

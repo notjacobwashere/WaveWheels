@@ -205,8 +205,30 @@ internal static class MaximumEffectTests
                     input.AdjustInput(-1,false,3400);Assert(Math.Abs(target.Level-(1-step*.01))<1e-7,"Reversing from 100% must use exactly the configured step.");
                     target.Level=.01;input.ResetScroll();input.AdjustInput(-1,false,4000);Assert(target.Level==0,"The lower boundary must clamp.");
                     input.AdjustInput(1,false,4010);Assert(Math.Abs(target.Level-step*.01)<1e-7,"Reversing from zero must discard prior accumulated input.");
-                    target.MaximumVolumePercent=65;target.Level=.64;input.ResetScroll();input.AdjustInput(1,false,4500);input.AdjustInput(-1,false,4510);Assert(Math.Abs(target.Level-(.65-step*.01))<1e-7,"Per-wheel limits must also consume clamped input.");
+                    target.MaximumVolumePercent=65;target.Level=.64;input.ResetScroll();input.AdjustInput(1,false,4500);input.AdjustInput(-1,false,4510);Assert(target.Level == (step == 1 ? .64 : .60), "Leaving a wheel limit must land on the next lower step.");
                 }
+                var cappedWheel = new Wheel { Available = true, Level = .99 };
+                var capControl = new WheelControl { Wheel = cappedWheel, ScrollStepPercent = 3, ScrollAccelerationEnabled = false };
+                capControl.VolumeRequested += (w, value) => w.Level = Math.Round(Math.Clamp(value, 0, (capControl.GetVolumeCap?.Invoke(w) ?? w.MaximumVolumePercent) / 100d), 2);
+                capControl.AdjustInput(1, false, 4600);
+                capControl.AdjustInput(1, false, 4610);
+                Assert(cappedWheel.Level == 1, "A partial step must still reach 100%.");
+                capControl.ResetScroll();
+                capControl.AdjustInput(-.5, false, 4620);
+                Assert(cappedWheel.Level == 1, "Leaving the cap must still accumulate fractional notches.");
+                capControl.AdjustInput(-.5, false, 4630);
+                Assert(cappedWheel.Level == .99, "The first downward step from 100% must return to 99%.");
+                capControl.AdjustInput(-1, false, 4640);
+                Assert(cappedWheel.Level == .96, "The second downward step must be 96%.");
+                capControl.AdjustInput(-1, false, 4650);
+                Assert(cappedWheel.Level == .93, "Subsequent steps must stay on the zero-based track.");
+                capControl.GetVolumeCap = _ => 65;
+                cappedWheel.Level = .63;
+                capControl.AdjustInput(2, false, 4700);
+                Assert(cappedWheel.Level == .65, "The fixture must reach the shared cap.");
+                capControl.AdjustInput(-2, false, 4710);
+                Assert(cappedWheel.Level == .60, "Each notch in a multi-notch event must count when leaving a shared cap.");
+
                 var fractional=new ScrollAccumulator();Assert(fractional.Adjust(-.8,10,false,0)==0&&fractional.Adjust(-.2,10,false,10)==-10,"Configured steps must accumulate fractional notches instead of emitting an unexpected 8% change.");
                 var numberWheel=new Wheel{Available=true,Level=.5};var number=new WheelControl{Wheel=numberWheel};number.Measure(new Size(300,120));number.Arrange(new Rect(0,0,300,120));
                 Assert(number.NumberText=="50"&&number.NumberTransitionStarts==0,"Initial binding must display the live value without rolling.");

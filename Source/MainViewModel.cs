@@ -582,6 +582,13 @@ public sealed class MainViewModel : Observable
         if (destination >= 0) MoveTo(wheel, destination);
     }
     private void UpdatePositions() { for (var i = 0; i < Wheels.Count; i++) Wheels[i].Position = i; }
+    internal int GetVolumeCap(Wheel wheel)
+    {
+        if (ReferenceEquals(wheel, WindowsWheel)) return wheel.MaximumVolumePercent;
+        return Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)
+            .Select(w => w.MaximumVolumePercent).DefaultIfEmpty(wheel.MaximumVolumePercent).Min();
+    }
+
     public void SetLevel(Wheel wheel, double level)
     {
         if(ReferenceEquals(wheel,WindowsWheel))
@@ -591,7 +598,7 @@ public sealed class MainViewModel : Observable
         }
         if(!Connected)return;
         if (!Wheels.Contains(wheel)||!wheel.Available||!double.IsFinite(level)||!RefreshInteractionPolicy()) return;
-        var cap=Wheels.Where(w=>w.ChannelId==wheel.ChannelId&&w.MixId==wheel.MixId).Select(w=>w.MaximumVolumePercent).DefaultIfEmpty(wheel.MaximumVolumePercent).Min()/100d;
+        var cap = GetVolumeCap(wheel) / 100d;
         level = Math.Round(Math.Clamp(level, 0, cap), 2);
         foreach (var other in Wheels.Where(w => w.ChannelId == wheel.ChannelId && w.MixId == wheel.MixId)) other.Level = level;
         Client.QueueLevel(new(wheel.ChannelId, wheel.MixId), level);

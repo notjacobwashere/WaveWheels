@@ -363,7 +363,12 @@
                     <TextBlock Text="{Binding ShiftStepLabel}" Foreground="#A3E6D9" TextWrapping="Wrap" />
                     <Slider x:Name="ShiftStepSlider" Minimum="5" Maximum="50" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding ShiftStepPercent}" AutomationProperties.Name="Shift precision increment" Margin="0,8,0,8" />
                     <TextBlock Text="Hold Shift to use this larger step size." Foreground="#98AABC" TextWrapping="Wrap" />
-                    <TextBlock Text="Hide delay" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Expander>
+                <Expander Header="Overlay timing" IsExpanded="False" Margin="0,0,0,12">
+                  <StackPanel Margin="16,4,16,16">
+                    <TextBlock Text="Wheel hide delay" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="How long the wheels stay visible after you stop interacting." Foreground="#98AABC" TextWrapping="Wrap" Margin="0,5,0,10" />
                     <TextBlock Text="{Binding IdleLabel}" Foreground="#A3E6D9" TextWrapping="Wrap" />
                     <Slider x:Name="HideDelaySlider" Minimum="500" Maximum="5000" TickFrequency="250" IsSnapToTickEnabled="True" Value="{Binding IdleMilliseconds}" AutomationProperties.Name="Wheel hide delay" Margin="0,8,0,0" />
                   </StackPanel>
