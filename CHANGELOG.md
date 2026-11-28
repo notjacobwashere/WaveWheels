@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.3
+
+- Scroll steps stay aligned after hitting 100% or a custom volume limit. With a 3% step, scrolling down from 100% gives 99%, 96%, and 93%.
+- Wheel hide delay now lives under **Settings → Controls → Overlay timing**.
+- The **Appearance** section on the Wheels page starts collapsed when you open configuration.
+- **Remove profile** is now beside **Duplicate layout**.
+- Duplicating a profile copies all its saved settings, including app switching rules and per-wheel click actions. Copies can be edited independently.
+
 ## 1.3.3-beta.2
 
 - Moved **Remove profile** next to **Duplicate layout**.
